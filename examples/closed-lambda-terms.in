@@ -1,0 +1,7 @@
+/* Closed lambda terms with bounded de Bruijn indices by 5 */
+L0 = App0 L0 L0 | Abs0 L1.
+L1 = App1 L1 L1 | Abs1 L2 | L1_0.
+L2 = App2 L2 L2 | Abs2 L3 | L2_1 | L2_0.
+L3 = App3 L3 L3 | Abs3 L4 | L3_2 | L3_1 | L3_0.
+L4 = App4 L4 L4 | Abs4 L5 | L4_3 | L4_2 | L4_1 | L4_0.
+L5 = App5 L5 L5 | Abs5 L5 | L5_4 | L5_3 | L5_2 | L5_1 | L5_0.
