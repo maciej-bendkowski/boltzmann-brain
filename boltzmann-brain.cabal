@@ -1,0 +1,48 @@
+name:                boltzmann-brain
+version:             0.1.0.0
+synopsis:            Boltzmann samplers for combinatorial systems (ALPHA). 
+license:             AllRightsReserved
+author:              Maciej Bendkowski
+maintainer:          maciej.bendkowski@gmail.com
+copyright:           2016 Maciej Bendkowski 
+category:            Math 
+build-type:          Simple
+-- extra-source-files:
+cabal-version:       >=1.10
+
+library
+  hs-source-dirs:      src
+  exposed-modules:     System
+                     , BoltzmannSystem
+                     , Parser
+                     , Compiler
+                     , Oracle
+  build-depends:       base >= 4.7 && < 5
+                     , containers >= 0.5.6
+                     , haskell-src-exts == 1.17.1
+                     , transformers >= 0.4.2.0
+                     , vector >= 0.11.0
+                     , megaparsec >= 5.0
+                     , mtl >= 2.2.1
+  default-language:    Haskell2010
+
+executable bb
+  hs-source-dirs:      app
+  main-is:             Main.hs
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
+  build-depends:       base
+                     , boltzmann-brain
+  default-language:    Haskell2010
+
+test-suite boltzmann-brain-test
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      test
+  main-is:             Spec.hs
+  build-depends:       base
+                     , boltzmann-brain
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
+  default-language:    Haskell2010
+
+source-repository head
+  type:     git
+  location: https://github.com/githubuser/boltzmann-brain

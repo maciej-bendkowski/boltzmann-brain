@@ -1,0 +1,6 @@
+/* Normal and neutral forms */
+
+/* natural size notion */
+N = Neutral M (0) | Abs N.
+M = App M N | Index D (0).
+D = S D | Z.
