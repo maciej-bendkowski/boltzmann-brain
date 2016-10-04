@@ -45,13 +45,13 @@ data SystemError = Inconsistent String -- type name
                  | ClashCons    [String] -- clashing constructors
 
 instance Show SystemError where
-    show (Inconsistent t con arg) = "Invalid argument type '" 
+    show (Inconsistent t con arg) = "[Error] Invalid argument type '" 
         ++ arg ++ "' in constructor " ++ con ++ " of type " ++ t ++ "."
     
-    show (InvalidCons t con) = "Invalid constructor '" ++ con 
+    show (InvalidCons t con) = "[Error] Invalid constructor '" ++ con 
         ++ "' in type " ++ t ++ ": '" ++ con ++ "' names a declared type."
 
-    show (ClashCons cons) = "Clashing constructor names: "
+    show (ClashCons cons) = "[Error] Clashing constructor names: "
         ++ foldl1 (\c c' -> "'" ++ c ++ "', " ++ "'" ++ c' ++ "'") cons
         ++ "."
 

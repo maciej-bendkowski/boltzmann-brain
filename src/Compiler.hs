@@ -139,6 +139,7 @@ declGenerator g @ (t,cons) = declTFun (genName t) type' body
     where type' = generatorType t
           body = constructGenerator g
 
+constructGenerator (t, [con]) = returnCons con
 constructGenerator (t, cons) = Do [randomDraw "p", 
                                    Qualifier $ constructCons "p" cons]
 
@@ -152,7 +153,8 @@ constructIf p c = If (InfixApp (Var $ unname p)
 variableStream = map ('x' :) nat
     where nat = map show [0..]
 
-returnCons con = Do (binds ++ [Qualifier return'])
+returnCons con = if null binds then return'
+                               else Do (binds ++ [Qualifier return'])
     where return' = App (Var $ unname "return") result
           conargs = zip (args con) variableStream
           binds = map callGenerator conargs
