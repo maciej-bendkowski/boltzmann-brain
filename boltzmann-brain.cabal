@@ -17,6 +17,7 @@ library
                      , Parser
                      , Compiler
                      , Oracle
+                     , Errors
   build-depends:       base >= 4.7 && < 5
                      , containers >= 0.5.6
                      , multiset >= 0.3.3

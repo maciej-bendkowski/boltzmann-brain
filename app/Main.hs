@@ -9,6 +9,7 @@ import System.Environment
 import Data.List (nub)
 
 import System
+import Errors
 import Parser
 import Oracle
 import Compiler
