@@ -72,7 +72,7 @@ declCombClass = ClassDecl noLoc [] (Ident "Combinatorial") [UnkindedVar $ Ident 
                           [] [ClsDecl $ TypeSig noLoc [Ident "size"]
                            (TyFun (TyVar $ Ident "a") (TyCon $ unname "Int"))]
 
-declCombInstances sys = map declCombInst $ weightPair sys
+declCombInstances sys = map declCombInst $ weightedTypes sys
 
 declCombInst (t,cons) = InstDecl noLoc Nothing [] [] (unname "Combinatorial")
                                  [TyCon $ unname t] [InsDecl sizeDecl]
@@ -118,7 +118,7 @@ declRandGen = declTFun "randomP" type' body
                      (Tuple Boxed [Lit $ Int 0, Lit $ Int 1])
 
 declADTs :: BoltzmannSystem -> [Decl]
-declADTs sys = map declADT $ typePair sys
+declADTs sys = map declADT $ paramTypes sys
 
 declADT (t,cons) = DataDecl noLoc DataType [] (Ident t) []
                             (map (QualConDecl noLoc [] [] . declCon) cons)
@@ -133,7 +133,7 @@ randomDraw var = Generator noLoc (PVar $ Ident var)
                            (Var $ unname "randomP")
 
 declGenerators :: BoltzmannSystem -> [Decl]
-declGenerators sys = concatMap declGenerator $ typePair sys
+declGenerators sys = concatMap declGenerator $ paramTypes sys
 
 declGenerator g @ (t,cons) = declTFun (genName t) type' body
     where type' = generatorType t

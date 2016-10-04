@@ -2,8 +2,8 @@
 module BoltzmannSystem
     ( BoltzmannSystem(..)
     , typeList
-    , typePair
-    , weightPair
+    , paramTypes
+    , weightedTypes
     ) where
 
 import Prelude hiding (replicate, zipWith, all, any)
@@ -23,8 +23,8 @@ data BoltzmannSystem = BoltzmannSystem { system :: System Double
 typeList :: BoltzmannSystem -> [String]
 typeList = S.toList . M.keysSet . defs . system
 
-typePair :: BoltzmannSystem -> [(String, [Cons Double])]
-typePair = M.toList . defs . system
+paramTypes :: BoltzmannSystem -> [(String, [Cons Double])]
+paramTypes = M.toList . defs . system
 
-weightPair :: BoltzmannSystem -> [(String, [Cons Integer])]
-weightPair = M.toList . defs . weights
+weightedTypes :: BoltzmannSystem -> [(String, [Cons Integer])]
+weightedTypes = M.toList . defs . weights
