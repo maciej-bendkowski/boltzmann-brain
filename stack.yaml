@@ -39,7 +39,8 @@ packages:
 - '.'
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
-extra-deps: [megaparsec-5.0.0,
+extra-deps: [multiset-0.3.3,
+             megaparsec-5.0.0,
              haskell-src-exts-1.17.1,
              cpphs-1.20.2,
              polyparse-1.12]

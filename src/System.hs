@@ -15,6 +15,9 @@ import qualified Data.Map.Strict as M
 import Data.Set (Set)
 import qualified Data.Set as S
 
+import Data.MultiSet (MultiSet)
+import qualified Data.MultiSet as MultiSet
+
 data System a = System { defs :: M.Map String [Cons a] 
                        } deriving (Show)
 
@@ -38,6 +41,8 @@ data SystemError = Inconsistent String -- type name
                  
                  | InvalidCons  String -- type name
                                 String -- constructor name
+                 
+                 | ClashCons    [String] -- clashing constructors
 
 instance Show SystemError where
     show (Inconsistent t con arg) = "Invalid argument type '" 
@@ -46,12 +51,17 @@ instance Show SystemError where
     show (InvalidCons t con) = "Invalid constructor '" ++ con 
         ++ "' in type " ++ t ++ " - '" ++ con ++ "' names a declared type."
 
+    show (ClashCons cons) = "Clashing constructor names: "
+        ++ foldl1 (\c c' -> "'" ++ c ++ "', " ++ "'" ++ c' ++ "'") cons
+        ++ "."
+
 type SystemMonad = Either SystemError
 
 errors :: System a -> SystemMonad ()
 errors sys = do
     void $ consistent sys
     void $ validCons sys
+    void $ clashCons sys
 
 consistent :: System a -> SystemMonad ()
 consistent sys = mapM_ consistentType (M.toList $ defs sys) `catchError` Left
@@ -74,3 +84,16 @@ validCons sys = mapM_ validType (M.toList $ defs sys) `catchError` Left
             | null (args con) && func con `S.member` ts = 
                 throwError $ InvalidCons t (func con)
             | otherwise = return ()
+
+consNames :: System a -> MultiSet String
+consNames sys = MultiSet.unions (map insT $ M.elems (defs sys))
+    where insT = MultiSet.fromList . map func
+
+duplicates :: System a -> [String]
+duplicates sys = map fst $ filter gather $ MultiSet.toOccurList ms
+    where gather (con,n) = n /= 1
+          ms = consNames sys
+
+clashCons :: System a -> SystemMonad ()
+clashCons sys = let cs = duplicates sys in
+                    unless (null cs) $ throwError (ClashCons cs) `catchError` Left
