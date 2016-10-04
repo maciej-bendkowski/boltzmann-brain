@@ -6,8 +6,7 @@ module System
     , Arg(..)
     , SystemError
     , SystemMonad
-    , reportSystemError
-    , consistent
+    , errors
     ) where
 
 import Control.Monad.Except
@@ -36,15 +35,23 @@ types = M.keysSet . defs
 data SystemError = Inconsistent String -- type name 
                                 String -- constructor name
                                 String -- argument name
+                 
+                 | InvalidCons  String -- type name
+                                String -- constructor name
 
 instance Show SystemError where
     show (Inconsistent t con arg) = "Invalid argument type '" 
         ++ arg ++ "' in constructor " ++ con ++ " of type " ++ t ++ "."
-
-reportSystemError :: SystemError -> IO ()
-reportSystemError = print
+    
+    show (InvalidCons t con) = "Invalid constructor '" ++ con 
+        ++ "' in type " ++ t ++ " - '" ++ con ++ "' names a declared type."
 
 type SystemMonad = Either SystemError
+
+errors :: System a -> SystemMonad ()
+errors sys = do
+    void $ consistent sys
+    void $ validCons sys
 
 consistent :: System a -> SystemMonad ()
 consistent sys = mapM_ consistentType (M.toList $ defs sys) `catchError` Left
@@ -56,3 +63,14 @@ consistent sys = mapM_ consistentType (M.toList $ defs sys) `catchError` Left
           consistentArg t con (Type s)
             | s `S.member` ts = return () 
             | otherwise = throwError $ Inconsistent t (func con) s
+
+validCons :: System a -> SystemMonad ()
+validCons sys = mapM_ validType (M.toList $ defs sys) `catchError` Left
+    where ts = types sys
+          validType (t,cons) = mapM_ (validCon t) cons
+          
+          validCon :: String -> Cons a -> SystemMonad ()
+          validCon t con
+            | null (args con) && func con `S.member` ts = 
+                throwError $ InvalidCons t (func con)
+            | otherwise = return ()

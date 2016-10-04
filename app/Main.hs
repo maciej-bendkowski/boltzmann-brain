@@ -78,11 +78,16 @@ run flags f = do
         module' = getModuleName flags
         eps = getEpsilon flags
 
-runCompiler eps module' sys = case consistent sys of
+runCompiler eps module' sys = case errors sys of
     Left err -> reportSystemError err
     Right _ -> do
         let sys' = toBoltzmann sys eps
         compile sys' module'
+
+reportSystemError :: SystemError -> IO ()
+reportSystemError err = do 
+    hPrint stderr err
+    exitWith (ExitFailure 1)
 
 main :: IO ()
 main = do
