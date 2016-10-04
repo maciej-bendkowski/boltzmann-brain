@@ -49,7 +49,7 @@ instance Show SystemError where
         ++ arg ++ "' in constructor " ++ con ++ " of type " ++ t ++ "."
     
     show (InvalidCons t con) = "Invalid constructor '" ++ con 
-        ++ "' in type " ++ t ++ " - '" ++ con ++ "' names a declared type."
+        ++ "' in type " ++ t ++ ": '" ++ con ++ "' names a declared type."
 
     show (ClashCons cons) = "Clashing constructor names: "
         ++ foldl1 (\c c' -> "'" ++ c ++ "', " ++ "'" ++ c' ++ "'") cons
