@@ -3,6 +3,7 @@ module Oracle
     ( singularity
     , BoltzmannSystem
     , toBoltzmann
+    , toBoltzmannS
     ) where
 
 import Prelude hiding (replicate, zipWith, all, any)
@@ -45,18 +46,20 @@ iter sys z vec = imap update vec
               where w = weight e
                     ts = args e
 
-toBoltzmann :: System Integer -> Double -> BoltzmannSystem
-toBoltzmann sys eps = toBoltzmann' (iter sys rho vec) vec
-    where toBoltzmann' v v'
-            | halt eps v v' = BoltzmannSystem { system = parametrize sys rho v
-                                              , values = v
-                                              , parameter = rho
-                                              , weights = sys
-                                              }
-            | otherwise = toBoltzmann' (iter sys rho v) v
-          
-          rho = singularity sys eps
+toBoltzmann' eps rho sys v v'
+  | not (halt eps v v') = toBoltzmann' eps rho sys (iter sys rho v) v
+  | otherwise = BoltzmannSystem { system = parametrize sys rho v
+                                    , values = v
+                                    , parameter = rho
+                                    , weights = sys
+                                    }
+
+toBoltzmann sys eps = toBoltzmann' eps rho sys (iter sys rho vec) vec
+    where rho = singularity sys eps
           vec = replicate (size sys) 0.0
+
+toBoltzmannS rho sys eps = toBoltzmann' eps rho sys (iter sys rho vec) vec
+    where vec = replicate (size sys) 0.0
 
 parametrize sys rho vec = sys { defs = M.mapWithKey parametrize' (defs sys) }
     where 

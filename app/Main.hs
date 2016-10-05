@@ -15,6 +15,7 @@ import Oracle
 import Compiler
 
 data Flag = Epsilon String
+          | Singularity String
           | ModuleName String
           | Version
           | Help
@@ -24,6 +25,9 @@ options :: [OptDescr Flag]
 options = [Option "e" ["eps"] (ReqArg Epsilon "e")
             "Approximation error bound. Defaults to 1.0e-6.",
            
+           Option "s" ["sing"] (ReqArg Singularity "s")
+            "Optional singularity parameter used to evaluate the system.",
+
            Option "m" ["module"] (ReqArg ModuleName "m")
             "The resulting Haskell module name. Defaults to Main.",
 
@@ -43,6 +47,11 @@ getEpsilon :: [Flag] -> Double
 getEpsilon (Epsilon eps : _) = read eps
 getEpsilon (_:fs) = getEpsilon fs
 getEpsilon [] = 1.0e-6
+
+getSingularity :: [Flag] -> Double
+getSingularity (Singularity s : _) = read s
+getSingularity (_:fs) = getSingularity fs
+getSingularity [] = -1
 
 getModuleName :: [Flag] -> String
 getModuleName (ModuleName name : _) = name
@@ -74,17 +83,18 @@ run flags f = do
     sys <- parseSystem f
     case sys of
       Left err -> printError err
-      Right sys -> runCompiler eps module' sys
+      Right sys -> runCompiler eps sing module' sys
     where
         module' = getModuleName flags
         eps = getEpsilon flags
+        sing = getSingularity flags
 
-runCompiler eps module' sys = case errors sys of
+runCompiler eps sing module' sys = case errors sys of
     Left err -> reportSystemError err
-    Right _ -> do
-        let sys' = toBoltzmann sys eps
-        compile sys' module'
-
+    Right _ -> do let oracle = if sing < 0 then toBoltzmann else toBoltzmannS sing
+                  let sys' = oracle sys eps
+                  compile sys' module'
+        
 reportSystemError :: SystemError -> IO ()
 reportSystemError err = do 
     hPrint stderr err
