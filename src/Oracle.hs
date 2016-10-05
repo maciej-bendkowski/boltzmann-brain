@@ -49,10 +49,10 @@ iter sys z vec = imap update vec
 toBoltzmann' eps rho sys v v'
   | not (halt eps v v') = toBoltzmann' eps rho sys (iter sys rho v) v
   | otherwise = BoltzmannSystem { system = parametrize sys rho v
-                                    , values = v
-                                    , parameter = rho
-                                    , weights = sys
-                                    }
+                                , values = v
+                                , parameter = rho
+                                , weights = sys
+                                }
 
 toBoltzmann sys eps = toBoltzmann' eps rho sys (iter sys rho vec) vec
     where rho = singularity sys eps
