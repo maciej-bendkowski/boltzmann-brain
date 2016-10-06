@@ -43,7 +43,8 @@ extra-deps: [multiset-0.3.3,
              megaparsec-5.0.0,
              haskell-src-exts-1.17.1,
              cpphs-1.20.2,
-             polyparse-1.12]
+             polyparse-1.12,
+             numbers-3000.2.0.1]
 
 # Override default flag values for local packages and extra-deps
 flags: {}

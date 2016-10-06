@@ -14,17 +14,17 @@ import qualified Data.Set as S
 
 import System
 
-data BoltzmannSystem = BoltzmannSystem { system :: System Double
-                                       , values :: Vector Double 
-                                       , parameter :: Double
-                                       , weights :: System Integer
-                                       } deriving (Show)
+data BoltzmannSystem a = BoltzmannSystem { system :: System a
+                                         , values :: Vector a 
+                                         , parameter :: a
+                                         , weights :: System Integer
+                                         } deriving (Show)
 
-typeList :: BoltzmannSystem -> [String]
+typeList :: BoltzmannSystem a -> [String]
 typeList = S.toList . M.keysSet . defs . system
 
-paramTypes :: BoltzmannSystem -> [(String, [Cons Double])]
+paramTypes :: BoltzmannSystem a -> [(String, [Cons a])]
 paramTypes = M.toList . defs . system
 
-weightedTypes :: BoltzmannSystem -> [(String, [Cons Integer])]
+weightedTypes :: BoltzmannSystem a -> [(String, [Cons Integer])]
 weightedTypes = M.toList . defs . weights

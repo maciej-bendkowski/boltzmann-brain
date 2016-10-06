@@ -14,9 +14,10 @@ import qualified Data.Map.Strict as M
 import System
 import BoltzmannSystem
 
+value :: String -> System b -> Vector a -> a
 value t sys vec = vec ! M.findIndex t (defs sys)
 
-singularity :: Integral a => System a -> Double -> Double
+singularity :: (Fractional a, Ord a, Integral b) => System b -> a -> a
 singularity sys eps = singularity' 0 1.0
     where singularity' l u
             | abs (u - l) < eps = l
@@ -24,10 +25,10 @@ singularity sys eps = singularity' 0 1.0
                                                  else singularity' z u
                     where z = (u + l) / 2
 
-divergent :: Integral a => System a -> Double -> Double -> Bool
+divergent :: (Fractional a, Ord a, Integral b) =>  System b -> a -> a -> Bool
 divergent sys eps z = divergent' (iter sys z vec) vec
     where divergent' v v'
-            | any (> (1.0/eps)) v = True
+            | any (> 10) v = True -- (1.0/eps)) v = True
             | halt eps v v' = False
             | otherwise = divergent' (iter sys z v) v
           vec = replicate (size sys) 0.0
@@ -36,31 +37,34 @@ halt :: (Num a, Ord a) => a -> Vector a -> Vector a -> Bool
 halt eps v v' = all (< eps) vec
     where vec = zipWith (\x y -> abs $ x-y) v v'
 
-iter :: Integral a => System a -> Double -> Vector Double -> Vector Double
+iter :: (Fractional a, Integral b) => System b -> a -> Vector a -> Vector a
 iter sys z vec = imap update vec
-    where update :: Int -> Double -> Double
-          update idx _ = sum (map evalE $ snd (M.elemAt idx $ defs sys))
+    where update idx _ = sum (map evalE $ snd (M.elemAt idx $ defs sys))
 
           evalT (Type t) = value t sys vec
           evalE e = (z ^^ w) * product (map evalT ts)
               where w = weight e
                     ts = args e
 
-toBoltzmann' eps rho sys v v'
-  | not (halt eps v v') = toBoltzmann' eps rho sys (iter sys rho v) v
+toBoltzmann' :: (Fractional a, Ord a, Show a) => a -> a -> System Integer -> Vector a -> Vector a -> BoltzmannSystem a
+toBoltzmann' sysEps rho sys v v'
+  | not (halt sysEps v v') = toBoltzmann' sysEps rho sys (iter sys rho v) v
   | otherwise = BoltzmannSystem { system = parametrize sys rho v
                                 , values = v
                                 , parameter = rho
                                 , weights = sys
                                 }
 
-toBoltzmann sys eps = toBoltzmann' eps rho sys (iter sys rho vec) vec
-    where rho = singularity sys eps
+toBoltzmann :: (Fractional a, Ord a, Show a) => System Integer -> a -> a -> BoltzmannSystem a
+toBoltzmann sys singEps sysEps = toBoltzmann' sysEps rho sys (iter sys rho vec) vec
+    where rho = singularity sys singEps
           vec = replicate (size sys) 0.0
 
-toBoltzmannS rho sys eps = toBoltzmann' eps rho sys (iter sys rho vec) vec
+toBoltzmannS :: (Fractional a, Ord a, Show a) => a -> System Integer -> t -> a -> BoltzmannSystem a
+toBoltzmannS rho sys singEps sysEps = toBoltzmann' sysEps rho sys (iter sys rho vec) vec
     where vec = replicate (size sys) 0.0
 
+parametrize :: (Fractional a, Integral b) => System b -> a -> Vector a -> System a
 parametrize sys rho vec = sys { defs = M.mapWithKey parametrize' (defs sys) }
     where 
           parametrize' t = parametrizeE tw 0.0
@@ -71,8 +75,10 @@ parametrize sys rho vec = sys { defs = M.mapWithKey parametrize' (defs sys) }
               where w' = evalCons sys rho vec e
                     x = w' + w
 
+evalCons :: (Fractional a, Integral c) => System b -> a -> Vector a -> Cons c -> a
 evalCons sys z vec e = (z ^^ w) * product (map (evalArg sys vec) ts)
     where w = weight e
           ts = args e
 
+evalArg :: System b -> Vector a -> Arg -> a
 evalArg sys vec (Type t) = value t sys vec

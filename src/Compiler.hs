@@ -10,8 +10,6 @@ import Language.Haskell.Exts.SrcLoc (noLoc)
 import System
 import BoltzmannSystem
 
-import Oracle
-
 unname :: String -> QName
 unname = UnQual . Ident
 
@@ -21,21 +19,25 @@ genName = (++) "genRandom"
 samplerName :: String -> String
 samplerName = (++) "sample"
 
+declTFun :: String -> Type -> Exp -> [Decl]
 declTFun f type' body = [decl, FunBind [main]]
     where decl = TypeSig noLoc [Ident f] type'
           main = Match noLoc (Ident f) [] Nothing
                        (UnGuardedRhs body) Nothing
 
+declPatternFun :: String -> [([Pat], Exp)] -> Decl
 declPatternFun f cases = FunBind body
     where body = map match' cases
           match' (pat,b) = Match noLoc (Ident f) pat Nothing
                            (UnGuardedRhs b) Nothing
 
+generatorType :: String -> Type
 generatorType typeName = TyForall Nothing 
     [ClassA (unname "RandomGen") [TyVar $ Ident "g"]]
     (TyApp (TyApp (TyCon (unname "Rand")) (TyVar (Ident "g")))
            (TyCon (unname typeName)))
 
+samplerType :: String -> Type
 samplerType typeName = TyForall Nothing 
     [ClassA (unname "RandomGen") [TyVar $ Ident "g"]]
     (TyFun (TyCon $ unname "Int") 
@@ -43,42 +45,50 @@ samplerType typeName = TyForall Nothing
                   (TyApp (TyApp (TyCon (unname "Rand")) (TyVar (Ident "g")))
                   (TyCon (unname typeName)))))
 
+compileModule :: Real a => BoltzmannSystem a -> String -> Module
 compileModule sys moduleName = Module noLoc (ModuleName moduleName) []
                                       Nothing (Just exports) imports decls
     where
         exports = compileExports sys
-        imports = compileImports sys
+        imports = compileImports
         decls = compileDecls sys
 
+compileExports :: Real a => BoltzmannSystem a -> [ExportSpec]
 compileExports sys = concatMap toADT $ typeList sys
     where toADT t = [EThingAll (unname t),
                      EVar (unname $ genName t),
                      EVar (unname $ samplerName t)]
 
-compileImports _ = [ImportDecl { importLoc = noLoc
-                               , importModule = ModuleName "Control.Monad.Random"
-                               , importQualified = False
-                               , importSrc = False
-                               , importSafe = False
-                               , importPkg = Nothing
-                               , importAs = Nothing
-                               , importSpecs = Nothing
-                               }]
+compileImports :: [ImportDecl]
+compileImports = [ImportDecl { importLoc = noLoc
+                             , importModule = ModuleName "Control.Monad.Random"
+                             , importQualified = False
+                             , importSrc = False
+                             , importSafe = False
+                             , importPkg = Nothing
+                             , importAs = Nothing
+                             , importSpecs = Nothing
+                             }]
 
+compileDecls :: Real a => BoltzmannSystem a -> [Decl]
 compileDecls sys = declCombClass : declADTs sys ++ declCombInstances sys 
                  ++ declRandGen ++ declGenerators sys ++ declSamplers sys
 
+declCombClass :: Decl
 declCombClass = ClassDecl noLoc [] (Ident "Combinatorial") [UnkindedVar $ Ident "a"]
                           [] [ClsDecl $ TypeSig noLoc [Ident "size"]
                            (TyFun (TyVar $ Ident "a") (TyCon $ unname "Int"))]
 
+declCombInstances :: Real a => BoltzmannSystem a -> [Decl]
 declCombInstances sys = map declCombInst $ weightedTypes sys
 
+declCombInst :: (String, [Cons Integer]) -> Decl
 declCombInst (t,cons) = InstDecl noLoc Nothing [] [] (unname "Combinatorial")
                                  [TyCon $ unname t] [InsDecl sizeDecl]
     where sizeDecl = declPatternFun "size" cases
           cases = map constructConSize cons
 
+constructConSize :: Cons Integer -> ([Pat], Exp)
 constructConSize con = ([pat], expr)
     where pat = PApp (unname $ func con) argPatterns
           argPatterns = map (PVar . Ident . snd) vars
@@ -87,12 +97,15 @@ constructConSize con = ([pat], expr)
           expr = foldl (\f g -> InfixApp f (QVarOp $ UnQual (Symbol "+")) g)
                        (Lit (Int $ weight con)) (map sizeF vars)
 
+declSamplers :: Real a => BoltzmannSystem a -> [Decl]
 declSamplers sys = concatMap declSampler $ typeList sys
 
+declSampler :: String -> [Decl]
 declSampler t = declTFun (samplerName t) type' body
     where type' = samplerType t 
           body = constructSampler t
 
+constructSampler :: String -> Exp
 constructSampler t = Lambda noLoc [PVar (Ident "lb"), PVar (Ident "ub")] 
                         $ Do [draw, bindsize, check]
     where draw = Generator noLoc (PVar $ Ident "x") 
@@ -112,47 +125,58 @@ constructSampler t = Lambda noLoc [PVar (Ident "lb"), PVar (Ident "ub")]
                              (QVarOp $ UnQual (Symbol "<")) 
                              (Var $ unname "s")
 
+declRandGen :: [Decl]
 declRandGen = declTFun "randomP" type' body
     where type' = generatorType "Double"
           body = App (Var $ unname "getRandomR") 
                      (Tuple Boxed [Lit $ Int 0, Lit $ Int 1])
 
-declADTs :: BoltzmannSystem -> [Decl]
+declADTs :: Real a => BoltzmannSystem a -> [Decl]
 declADTs sys = map declADT $ paramTypes sys
 
+declADT :: Real a => (String, [Cons a]) -> Decl
 declADT (t,cons) = DataDecl noLoc DataType [] (Ident t) []
                             (map (QualConDecl noLoc [] [] . declCon) cons)
                             [(unname "Show", [])]
 
+declCon :: Real a => Cons a -> ConDecl
 declCon expr = ConDecl (Ident $ func expr) ags
     where ags = map declArg (args expr)
 
+declArg :: Arg -> Type
 declArg (Type s) = TyVar $ Ident s
 
+randomDraw :: String -> Stmt
 randomDraw var = Generator noLoc (PVar $ Ident var)
                            (Var $ unname "randomP")
 
-declGenerators :: BoltzmannSystem -> [Decl]
+declGenerators :: Real a => BoltzmannSystem a -> [Decl]
 declGenerators sys = concatMap declGenerator $ paramTypes sys
 
+declGenerator :: Real a => (String, [Cons a]) -> [Decl]
 declGenerator g @ (t,cons) = declTFun (genName t) type' body
     where type' = generatorType t
           body = constructGenerator g
 
+constructGenerator :: Real a => (t, [Cons a]) -> Exp
 constructGenerator (t, [con]) = returnCons con
 constructGenerator (t, cons) = Do [randomDraw "p", 
                                    Qualifier $ constructCons "p" cons]
 
+constructCons :: Real a => String -> [Cons a] -> Exp
 constructCons p [c] = returnCons c
 constructCons p (c:cs) = constructIf p c (returnCons c) (constructCons p cs)
 
+constructIf :: Real a => String -> Cons a -> Exp -> Exp -> Exp
 constructIf p c = If (InfixApp (Var $ unname p)
                                (QVarOp $ UnQual (Symbol "<"))
                                (Lit $ Frac (toRational $ weight c)))
 
+variableStream :: [String]
 variableStream = map ('x' :) nat
     where nat = map show [0..]
 
+returnCons :: Cons a -> Exp
 returnCons con = if null binds then return'
                                else Do (binds ++ [Qualifier return'])
     where return' = App (Var $ unname "return") result
@@ -161,9 +185,10 @@ returnCons con = if null binds then return'
           vars = map (Var . unname . snd) conargs
           result = foldl App (Con $ unname (func con)) vars
 
+callGenerator :: (Arg, String) -> Stmt
 callGenerator (Type t, v) = Generator noLoc (PVar $ Ident v) call
     where call = Var $ unname (genName t)
 
-compile :: BoltzmannSystem -> String -> IO ()
+compile :: Real a => BoltzmannSystem a -> String -> IO ()
 compile sys moduleName = putStrLn (prettyPrint module')
     where module' = compileModule sys moduleName

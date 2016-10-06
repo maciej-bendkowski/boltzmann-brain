@@ -8,13 +8,19 @@ import System.Environment
     
 import Data.List (nub)
 
+import Data.Number.Fixed
+import Data.Number.BigFloat
+
 import System
+import BoltzmannSystem
+
 import Errors
 import Parser
 import Oracle
 import Compiler
 
-data Flag = Epsilon String
+data Flag = SingEpsilon String
+          | SysEpsilon String
           | Singularity String
           | ModuleName String
           | Version
@@ -22,9 +28,12 @@ data Flag = Epsilon String
             deriving (Eq)
 
 options :: [OptDescr Flag]
-options = [Option "e" ["eps"] (ReqArg Epsilon "e")
-            "Approximation error bound. Defaults to 1.0e-6.",
-           
+options = [Option "p" ["precision"] (ReqArg SingEpsilon "p")
+            "Singularity approximation precision. Defaults to 6.",
+
+          Option "e" ["eps"] (ReqArg SysEpsilon "e")
+            "Evaluation approximation precision. Defaults to 6.",
+
            Option "s" ["sing"] (ReqArg Singularity "s")
             "Optional singularity parameter used to evaluate the system.",
 
@@ -43,13 +52,21 @@ usageHeader = "Usage: bb [OPTIONS...]"
 versionHeader :: String
 versionHeader = "boltzmann-brain ALPHA version (c) Maciej Bendkowski 2016"
 
-getEpsilon :: [Flag] -> Double
-getEpsilon (Epsilon eps : _) = read eps
-getEpsilon (_:fs) = getEpsilon fs
-getEpsilon [] = 1.0e-6
+toEps :: (Fractional a, Integral b) => b -> a
+toEps n = 1 / (10 ^^ n)
 
-getSingularity :: [Flag] -> Double
-getSingularity (Singularity s : _) = read s
+getSingEpsilon :: [Flag] -> BigFloat Prec50
+getSingEpsilon (SingEpsilon eps : _) = fromRational $ toEps (read eps :: Int)
+getSingEpsilon (_:fs) = getSingEpsilon fs
+getSingEpsilon [] = fromRational $ toEps 6
+
+getSysEpsilon :: [Flag] -> BigFloat Prec50
+getSysEpsilon (SysEpsilon eps : _) = fromRational $ toEps (read eps :: Int)
+getSysEpsilon (_:fs) = getSysEpsilon fs
+getSysEpsilon [] = fromRational $ toEps 6
+
+getSingularity :: [Flag] -> BigFloat Prec50 
+getSingularity (Singularity s : _) = fromRational (toRational (read s :: Double))
 getSingularity (_:fs) = getSingularity fs
 getSingularity [] = -1
 
@@ -83,16 +100,17 @@ run flags f = do
     sys <- parseSystem f
     case sys of
       Left err -> printError err
-      Right sys -> runCompiler eps sing module' sys
+      Right sys -> runCompiler singEps sysEps sing module' sys
     where
         module' = getModuleName flags
-        eps = getEpsilon flags
+        singEps = getSingEpsilon flags
+        sysEps = getSysEpsilon flags
         sing = getSingularity flags
 
-runCompiler eps sing module' sys = case errors sys of
+runCompiler singEps sysEps sing module' sys = case errors sys of
     Left err -> reportSystemError err
     Right _ -> do let oracle = if sing < 0 then toBoltzmann else toBoltzmannS sing
-                  let sys' = oracle sys eps
+                  let sys' = oracle sys singEps sysEps
                   compile sys' module'
         
 reportSystemError :: SystemError -> IO ()
