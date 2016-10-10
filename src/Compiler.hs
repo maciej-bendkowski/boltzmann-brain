@@ -189,6 +189,12 @@ callGenerator :: (Arg, String) -> Stmt
 callGenerator (Type t, v) = Generator noLoc (PVar $ Ident v) call
     where call = Var $ unname (genName t)
 
-compile :: Real a => BoltzmannSystem a -> String -> IO ()
-compile sys moduleName = putStrLn (prettyPrint module')
-    where module' = compileModule sys moduleName
+moduleHeader :: Show a => BoltzmannSystem a -> String -> String
+moduleHeader sys compilerNote = unlines ["-- | Compiler: " ++ compilerNote,
+                                         "-- | Singularity: " ++ show (parameter sys)]
+
+compile :: (Real a, Show a) => BoltzmannSystem a -> String -> String -> IO ()
+compile sys moduleName compilerNote = let module' = compileModule sys moduleName
+                                        in do putStr (moduleHeader sys compilerNote)
+                                              putStrLn (prettyPrint module')
+
