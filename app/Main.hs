@@ -11,6 +11,11 @@ import Data.List (nub)
 import Data.Number.Fixed
 import Data.Number.BigFloat
 
+import Data.Time
+import Data.Maybe
+
+import Numeric
+
 import System
 import BoltzmannSystem
 
@@ -18,6 +23,8 @@ import Errors
 import Parser
 import Oracle
 import Compiler
+
+currentTime = print =<< getZonedTime
 
 data Flag = SingEpsilon String
           | SysEpsilon String
@@ -29,10 +36,10 @@ data Flag = SingEpsilon String
 
 options :: [OptDescr Flag]
 options = [Option "p" ["precision"] (ReqArg SingEpsilon "p")
-            "Singularity approximation precision. Defaults to 6.",
+            "Singularity approximation precision. Defaults to 1.0e-6.",
 
           Option "e" ["eps"] (ReqArg SysEpsilon "e")
-            "Evaluation approximation precision. Defaults to 6.",
+            "Evaluation approximation precision. Defaults to 1.0e-6.",
 
            Option "s" ["sing"] (ReqArg Singularity "s")
             "Optional singularity parameter used to evaluate the system.",
@@ -52,23 +59,29 @@ usageHeader = "Usage: bb [OPTIONS...]"
 versionHeader :: String
 versionHeader = "boltzmann-brain ALPHA version (c) Maciej Bendkowski 2016"
 
+compilerTimestamp :: String -> String 
+compilerTimestamp time = "boltzmann-brain ALPHA (" ++ time ++ ")"
+
 toEps :: (Fractional a, Integral b) => b -> a
 toEps n = 1 / (10 ^^ n)
 
+parseFloating :: String -> Rational
+parseFloating s = (fst $ head (readFloat s)) :: Rational
+
 getSingEpsilon :: [Flag] -> BigFloat Prec50
-getSingEpsilon (SingEpsilon eps : _) = fromRational $ toEps (read eps :: Int)
+getSingEpsilon (SingEpsilon eps : _) = fromRational $ parseFloating eps
 getSingEpsilon (_:fs) = getSingEpsilon fs
-getSingEpsilon [] = fromRational $ toEps 6
+getSingEpsilon [] = fromRational 1.0e-6
 
 getSysEpsilon :: [Flag] -> BigFloat Prec50
-getSysEpsilon (SysEpsilon eps : _) = fromRational $ toEps (read eps :: Int)
+getSysEpsilon (SysEpsilon eps : _) = fromRational $ parseFloating eps
 getSysEpsilon (_:fs) = getSysEpsilon fs
-getSysEpsilon [] = fromRational $ toEps 6
+getSysEpsilon [] = fromRational 1.0e-6
 
-getSingularity :: [Flag] -> BigFloat Prec50 
-getSingularity (Singularity s : _) = fromRational (toRational (read s :: Double))
+getSingularity :: [Flag] -> Maybe (BigFloat Prec50)
+getSingularity (Singularity s : _) = Just (fromRational $ parseFloating s)
 getSingularity (_:fs) = getSingularity fs
-getSingularity [] = -1
+getSingularity [] = Nothing
 
 getModuleName :: [Flag] -> String
 getModuleName (ModuleName name : _) = name
@@ -109,9 +122,10 @@ run flags f = do
 
 runCompiler singEps sysEps sing module' sys = case errors sys of
     Left err -> reportSystemError err
-    Right _ -> do let oracle = if sing < 0 then toBoltzmann else toBoltzmannS sing
+    Right _ -> do let oracle = maybe toBoltzmann toBoltzmannS sing
                   let sys' = oracle sys singEps sysEps
-                  compile sys' module'
+                  time <- getZonedTime
+                  compile sys' module' (compilerTimestamp $ show time)
         
 reportSystemError :: SystemError -> IO ()
 reportSystemError err = do 
