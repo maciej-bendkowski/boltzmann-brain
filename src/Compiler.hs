@@ -197,4 +197,3 @@ compile :: (Real a, Show a) => BoltzmannSystem a -> String -> String -> IO ()
 compile sys moduleName compilerNote = let module' = compileModule sys moduleName
                                         in do putStr (moduleHeader sys compilerNote)
                                               putStrLn (prettyPrint module')
-

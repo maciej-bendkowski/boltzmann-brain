@@ -24,6 +24,7 @@ import Parser
 import Oracle
 import Compiler
 
+currentTime :: IO ()
 currentTime = print =<< getZonedTime
 
 data Flag = SingEpsilon String
@@ -61,9 +62,6 @@ versionHeader = "boltzmann-brain ALPHA version (c) Maciej Bendkowski 2016"
 
 compilerTimestamp :: String -> String 
 compilerTimestamp time = "boltzmann-brain ALPHA (" ++ time ++ ")"
-
-toEps :: (Fractional a, Integral b) => b -> a
-toEps n = 1 / (10 ^^ n)
 
 parseFloating :: String -> Rational
 parseFloating s = (fst $ head (readFloat s)) :: Rational

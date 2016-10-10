@@ -28,7 +28,7 @@ singularity sys eps = singularity' 0 1.0
 divergent :: (Fractional a, Ord a, Integral b) =>  System b -> a -> a -> Bool
 divergent sys eps z = divergent' (iter sys z vec) vec
     where divergent' v v'
-            | any (> 10) v = True -- (1.0/eps)) v = True
+            | any (> 1.0/eps) v = True
             | halt eps v v' = False
             | otherwise = divergent' (iter sys z v) v
           vec = replicate (size sys) 0.0
