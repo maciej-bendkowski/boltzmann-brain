@@ -22,7 +22,7 @@ import BoltzmannSystem
 import Errors
 import Parser
 import Oracle
-import NaiveCompiler
+import Compiler
 
 currentTime :: IO ()
 currentTime = print =<< getZonedTime

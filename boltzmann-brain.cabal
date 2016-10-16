@@ -16,6 +16,7 @@ library
                      , BoltzmannSystem
                      , Parser
                      , NaiveCompiler
+                     , Compiler
                      , Oracle
                      , Errors
   build-depends:       base >= 4.7 && < 5
