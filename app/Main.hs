@@ -66,17 +66,17 @@ compilerTimestamp time = "boltzmann-brain ALPHA (" ++ time ++ ")"
 parseFloating :: String -> Rational
 parseFloating s = (fst $ head (readFloat s)) :: Rational
 
-getSingEpsilon :: [Flag] -> BigFloat Prec50
+getSingEpsilon :: [Flag] -> BigFloat (PrecPlus20 Eps1)
 getSingEpsilon (SingEpsilon eps : _) = fromRational $ parseFloating eps
 getSingEpsilon (_:fs) = getSingEpsilon fs
 getSingEpsilon [] = fromRational 1.0e-6
 
-getSysEpsilon :: [Flag] -> BigFloat Prec50
+getSysEpsilon :: [Flag] -> BigFloat (PrecPlus20 Eps1)
 getSysEpsilon (SysEpsilon eps : _) = fromRational $ parseFloating eps
 getSysEpsilon (_:fs) = getSysEpsilon fs
 getSysEpsilon [] = fromRational 1.0e-6
 
-getSingularity :: [Flag] -> Maybe (BigFloat Prec50)
+getSingularity :: [Flag] -> Maybe (BigFloat (PrecPlus20 Eps1))
 getSingularity (Singularity s : _) = Just (fromRational $ parseFloating s)
 getSingularity (_:fs) = getSingularity fs
 getSingularity [] = Nothing
