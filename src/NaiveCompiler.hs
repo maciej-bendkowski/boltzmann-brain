@@ -1,5 +1,5 @@
 -- | Author: Maciej Bendkowski <maciej.bendkowski@tcs.uj.edu.pl>
-module Compiler
+module NaiveCompiler
     ( compile 
     ) where
 

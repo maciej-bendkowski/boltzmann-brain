@@ -15,7 +15,7 @@ library
   exposed-modules:     System
                      , BoltzmannSystem
                      , Parser
-                     , Compiler
+                     , NaiveCompiler
                      , Oracle
                      , Errors
   build-depends:       base >= 4.7 && < 5
