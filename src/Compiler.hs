@@ -70,21 +70,28 @@ compileExports sys = concatMap toADT $ typeList sys
                      EVar (unname $ samplerName t)]
 
 compileImports :: [ImportDecl]
-compileImports = [import' "Control.Monad",
-                  import' "Control.Monad.Random",
-                  import' "Control.Monad.Trans",
-                  import' "Control.Monad.Trans.Maybe"]
+compileImports = [import' "Control.Monad" ctrlMonadS,
+                  import' "Control.Monad.Random" ctrlRandS,
+                  import' "Control.Monad.Trans" ctrlTransS,
+                  import' "Control.Monad.Trans.Maybe" ctrlMaybeTS]
+    where
+        ctrlMonadS = Just (False, [IVar $ Ident "guard"])
+        ctrlTransS = Just (False, [IVar $ Ident "lift"])
+        ctrlMaybeTS = Just (False, [IThingAll $ Ident "MaybeT",
+                                    IVar $ Ident "runMaybeT"])
+        ctrlRandS = Just (False, [IThingAll $ Ident "RandomGen",
+                                  IThingAll $ Ident "Rand",
+                                  IVar $ Ident "getRandomR"])
 
-import' :: String -> ImportDecl
-import' name = ImportDecl { importLoc = noLoc
-                          , importModule = ModuleName name
-                          , importQualified = False
-                          , importSrc = False
-                          , importSafe = False
-                          , importPkg = Nothing
-                          , importAs = Nothing
-                          , importSpecs = Nothing
-                          }
+import' name specs = ImportDecl { importLoc = noLoc
+                                , importModule = ModuleName name
+                                , importQualified = False
+                                , importSrc = False
+                                , importSafe = False
+                                , importPkg = Nothing
+                                , importAs = Nothing
+                                , importSpecs = specs
+                                }
 
 compileDecls :: Real a => BoltzmannSystem a -> [Decl]
 compileDecls sys = declADTs sys ++ declRandGen 
