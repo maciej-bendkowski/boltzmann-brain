@@ -32,7 +32,7 @@ library
 executable bb
   hs-source-dirs:      app
   main-is:             Main.hs
-  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
+  ghc-options:         -O2 -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base
                      , boltzmann-brain
                      , numbers >= 3000.2.0.1
