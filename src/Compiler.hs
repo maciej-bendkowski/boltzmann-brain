@@ -19,10 +19,11 @@ genName = (++) "genRandom"
 samplerName :: String -> String
 samplerName = (++) "sample"
 
-declTFun :: String -> Type -> Exp -> [Decl]
-declTFun f type' body = [decl, FunBind [main]]
+declTFun :: String -> Type -> [String] -> Exp -> [Decl]
+declTFun f type' args body = [decl, FunBind [main]]
     where decl = TypeSig noLoc [Ident f] type'
-          main = Match noLoc (Ident f) [] Nothing
+          args' = map (PVar . Ident) args
+          main = Match noLoc (Ident f) args' Nothing
                        (UnGuardedRhs body) Nothing
 
 declPatternFun :: String -> [([Pat], Exp)] -> Decl
@@ -101,15 +102,12 @@ declSamplers :: Real a => BoltzmannSystem a -> [Decl]
 declSamplers sys = concatMap declSampler $ typeList sys
 
 declSampler :: String -> [Decl]
-declSampler t = declTFun (samplerName t) type' body
+declSampler t = declTFun (samplerName t) type' ["lb","ub"] body
     where type' = samplerType t 
           body = constructSampler t
 
 constructSampler :: String -> Exp
-constructSampler t = Lambda noLoc [PVar (Ident "lb"), 
-                                   PVar (Ident "ub")] (Do [runMaybeT',
-                                                           runSampler',
-                                                           case'])
+constructSampler t = Do [runMaybeT', runSampler', case']
     where
         runMaybeT' = 
             LetStmt $ BDecls [PatBind noLoc (PVar $ Ident "sampler")
@@ -139,7 +137,7 @@ constructSampler t = Lambda noLoc [PVar (Ident "lb"),
                rec'
 
 declRandGen :: [Decl]
-declRandGen = declTFun "randomP" type' body
+declRandGen = declTFun "randomP" type' [] body
     where type' = randGenType "Double"
           body = App (Var $ unname "lift") 
                      (App (Var $ unname "getRandomR") 
@@ -168,16 +166,15 @@ declGenerators :: Real a => BoltzmannSystem a -> [Decl]
 declGenerators sys = concatMap declGenerator $ paramTypes' sys
 
 declGenerator :: Real a => (String, [(Cons a, Integer)]) -> [Decl]
-declGenerator (t, g @ cons) = declTFun (genName t) type' body
+declGenerator (t, g @ cons) = declTFun (genName t) type' ["ub"] body
     where type' = generatorType t
           body = constructGenerator g
 
 constructGenerator :: Real a => [(Cons a, Integer)] -> Exp
-constructGenerator [con] = Lambda noLoc [PVar $ Ident "ub"] $ returnCons "ub" con
-constructGenerator cons = Lambda noLoc [PVar $ Ident "ub"] 
-                                 (Do [Qualifier $ guardian "ub",
-                                      randomDraw "p", 
-                                      Qualifier $ constructCons "p" "ub" cons])
+constructGenerator [con] = returnCons "ub" con
+constructGenerator cons = Do [Qualifier $ guardian "ub",
+                              randomDraw "p", 
+                              Qualifier $ constructCons "p" "ub" cons]
 
 constructCons :: Real a => String -> String -> [(Cons a, Integer)] -> Exp
 constructCons p ub [c] = returnCons ub c
