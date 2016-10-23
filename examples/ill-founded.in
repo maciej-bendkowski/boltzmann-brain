@@ -1,2 +1,2 @@
-/* Plain binary trees */
-B = Leaf (1) | Node B B (0).
+/* Motzkin trees */
+M = Leaf | Binary M M | Unary M (0).
