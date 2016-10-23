@@ -1,12 +1,14 @@
+-- | Compiler: boltzmann-brain ALPHA (2016-10-23 16:39:20.027958 CEST)
+-- | Singularity: 1.82744026184082031250e-1
 module ClosedLambda
        (L0(..), genRandomL0, sampleL0, L1(..), genRandomL1, sampleL1,
         L2(..), genRandomL2, sampleL2, L3(..), genRandomL3, sampleL3,
         L4(..), genRandomL4, sampleL4, L5(..), genRandomL5, sampleL5)
        where
-import Control.Monad.Random
-
-class Combinatorial a where
-        size :: a -> Int
+import Control.Monad (guard)
+import Control.Monad.Random (RandomGen(..), Rand(..), getRandomR)
+import Control.Monad.Trans (lift)
+import Control.Monad.Trans.Maybe (MaybeT(..), runMaybeT)
 
 data L0 = App0 L0 L0
         | Abs0 L1
@@ -47,172 +49,149 @@ data L5 = App5 L5 L5
         | L5_0
         deriving Show
 
-instance Combinatorial L0 where
-        size (App0 x0 x1) = 1 + size x0 + size x1
-        size (Abs0 x0) = 1 + size x0
+randomP :: RandomGen g => MaybeT (Rand g) Double
+randomP = lift (getRandomR (0, 1))
 
-instance Combinatorial L1 where
-        size (App1 x0 x1) = 1 + size x0 + size x1
-        size (Abs1 x0) = 1 + size x0
-        size L1_0 = 1
-
-instance Combinatorial L2 where
-        size (App2 x0 x1) = 1 + size x0 + size x1
-        size (Abs2 x0) = 1 + size x0
-        size L2_1 = 1
-        size L2_0 = 1
-
-instance Combinatorial L3 where
-        size (App3 x0 x1) = 1 + size x0 + size x1
-        size (Abs3 x0) = 1 + size x0
-        size L3_2 = 1
-        size L3_1 = 1
-        size L3_0 = 1
-
-instance Combinatorial L4 where
-        size (App4 x0 x1) = 1 + size x0 + size x1
-        size (Abs4 x0) = 1 + size x0
-        size L4_3 = 1
-        size L4_2 = 1
-        size L4_1 = 1
-        size L4_0 = 1
-
-instance Combinatorial L5 where
-        size (App5 x0 x1) = 1 + size x0 + size x1
-        size (Abs5 x0) = 1 + size x0
-        size L5_4 = 1
-        size L5_3 = 1
-        size L5_2 = 1
-        size L5_1 = 1
-        size L5_0 = 1
-
-randomP :: RandomGen g => Rand g Double
-randomP = getRandomR (0, 1)
-
-genRandomL0 :: RandomGen g => Rand g L0
-genRandomL0
-  = do p <- randomP
-       if p < 1.0657573463690109e-2 then
-         do x0 <- genRandomL0
-            x1 <- genRandomL0
-            return (App0 x0 x1)
+genRandomL0 :: RandomGen g => Int -> MaybeT (Rand g) (L0, Int)
+genRandomL0 ub
+  = do guard (ub > 0)
+       p <- randomP
+       if p < 1.0657573463690107e-2 then
+         do (x0, w0) <- genRandomL0 (ub - 1)
+            (x1, w1) <- genRandomL0 (ub - 1 - w0)
+            return $! (App0 x0 x1, 1 + w0 + w1)
          else
-         do x0 <- genRandomL1
-            return (Abs0 x0)
+         do (x0, w0) <- genRandomL1 (ub - 1)
+            return $! (Abs0 x0, 1 + w0)
 
-genRandomL1 :: RandomGen g => Rand g L1
-genRandomL1
-  = do p <- randomP
-       if p < 5.769813674983114e-2 then
-         do x0 <- genRandomL1
-            x1 <- genRandomL1
-            return (App1 x0 x1)
+genRandomL1 :: RandomGen g => Int -> MaybeT (Rand g) (L1, Int)
+genRandomL1 ub
+  = do guard (ub > 0)
+       p <- randomP
+       if p < 5.7698136749831146e-2 then
+         do (x0, w0) <- genRandomL1 (ub - 1)
+            (x1, w1) <- genRandomL1 (ub - 1 - w0)
+            return $! (App1 x0 x1, 1 + w0 + w1)
          else
-         if p < 0.42120526238573536 then
-           do x0 <- genRandomL2
-              return (Abs1 x0)
-           else do return L1_0
+         if p < 0.42120526238573525 then
+           do (x0, w0) <- genRandomL2 (ub - 1)
+              return $! (Abs1 x0, 1 + w0)
+           else return $! (L1_0, 1)
 
-genRandomL2 :: RandomGen g => Rand g L2
-genRandomL2
-  = do p <- randomP
-       if p < 0.11477083154199089 then
-         do x0 <- genRandomL2
-            x1 <- genRandomL2
-            return (App2 x0 x1)
+genRandomL2 :: RandomGen g => Int -> MaybeT (Rand g) (L2, Int)
+genRandomL2 ub
+  = do guard (ub > 0)
+       p <- randomP
+       if p < 0.11477083154199086 then
+         do (x0, w0) <- genRandomL2 (ub - 1)
+            (x1, w1) <- genRandomL2 (ub - 1 - w0)
+            return $! (App2 x0 x1, 1 + w0 + w1)
          else
-         if p < 0.4180511582710219 then
-           do x0 <- genRandomL3
-              return (Abs2 x0)
+         if p < 0.41805115827102185 then
+           do (x0, w0) <- genRandomL3 (ub - 1)
+              return $! (Abs2 x0, 1 + w0)
            else
-           if p < 0.7090256041061571 then do return L2_1 else do return L2_0
+           if p < 0.7090256041061571 then return $! (L2_1, 1) else
+             return $! (L2_0, 1)
 
-genRandomL3 :: RandomGen g => Rand g L3
-genRandomL3
-  = do p <- randomP
-       if p < 0.19047263002706852 then
-         do x0 <- genRandomL3
-            x1 <- genRandomL3
-            return (App3 x0 x1)
+genRandomL3 :: RandomGen g => Int -> MaybeT (Rand g) (L3, Int)
+genRandomL3 ub
+  = do guard (ub > 0)
+       p <- randomP
+       if p < 0.19047263002706843 then
+         do (x0, w0) <- genRandomL3 (ub - 1)
+            (x1, w1) <- genRandomL3 (ub - 1 - w0)
+            return $! (App3 x0 x1, 1 + w0 + w1)
          else
-         if p < 0.4740130739007774 then
-           do x0 <- genRandomL4
-              return (Abs3 x0)
+         if p < 0.4740130739007773 then
+           do (x0, w0) <- genRandomL4 (ub - 1)
+              return $! (Abs3 x0, 1 + w0)
            else
-           if p < 0.6493420915198577 then do return L3_2 else
-             if p < 0.8246711091389379 then do return L3_1 else do return L3_0
+           if p < 0.6493420915198577 then return $! (L3_2, 1) else
+             if p < 0.824671109138938 then return $! (L3_1, 1) else
+               return $! (L3_0, 1)
 
-genRandomL4 :: RandomGen g => Rand g L4
-genRandomL4
-  = do p <- randomP
-       if p < 0.29553192622157526 then
-         do x0 <- genRandomL4
-            x1 <- genRandomL4
-            return (App4 x0 x1)
+genRandomL4 :: RandomGen g => Int -> MaybeT (Rand g) (L4, Int)
+genRandomL4 ub
+  = do guard (ub > 0)
+       p <- randomP
+       if p < 0.29553192622157504 then
+         do (x0, w0) <- genRandomL4 (ub - 1)
+            (x1, w1) <- genRandomL4 (ub - 1 - w0)
+            return $! (App4 x0 x1, 1 + w0 + w1)
          else
-         if p < 0.5479966024853486 then
-           do x0 <- genRandomL5
-              return (Abs4 x0)
+         if p < 0.5479966024853484 then
+           do (x0, w0) <- genRandomL5 (ub - 1)
+              return $! (Abs4 x0, 1 + w0)
            else
-           if p < 0.660997520974711 then do return L4_3 else
-             if p < 0.7739984394640733 then do return L4_2 else
-               if p < 0.8869993579534355 then do return L4_1 else do return L4_0
+           if p < 0.6609975209747108 then return $! (L4_3, 1) else
+             if p < 0.7739984394640731 then return $! (L4_2, 1) else
+               if p < 0.8869993579534355 then return $! (L4_1, 1) else
+                 return $! (L4_0, 1)
 
-genRandomL5 :: RandomGen g => Rand g L5
-genRandomL5
-  = do p <- randomP
-       if p < 0.40828350801454766 then
-         do x0 <- genRandomL5
-            x1 <- genRandomL5
-            return (App5 x0 x1)
+genRandomL5 :: RandomGen g => Int -> MaybeT (Rand g) (L5, Int)
+genRandomL5 ub
+  = do guard (ub > 0)
+       p <- randomP
+       if p < 0.40828350801454727 then
+         do (x0, w0) <- genRandomL5 (ub - 1)
+            (x1, w1) <- genRandomL5 (ub - 1 - w0)
+            return $! (App5 x0 x1, 1 + w0 + w1)
          else
-         if p < 0.5910275341986296 then
-           do x0 <- genRandomL5
-              return (Abs5 x0)
+         if p < 0.5910275341986293 then
+           do (x0, w0) <- genRandomL5 (ub - 1)
+              return $! (Abs5 x0, 1 + w0)
            else
-           if p < 0.6728221167630043 then do return L5_4 else
-             if p < 0.7546166993273791 then do return L5_3 else
-               if p < 0.8364112818917537 then do return L5_2 else
-                 if p < 0.9182058644561285 then do return L5_1 else do return L5_0
+           if p < 0.6728221167630041 then return $! (L5_4, 1) else
+             if p < 0.7546166993273788 then return $! (L5_3, 1) else
+               if p < 0.8364112818917536 then return $! (L5_2, 1) else
+                 if p < 0.9182058644561284 then return $! (L5_1, 1) else
+                   return $! (L5_0, 1)
 
 sampleL0 :: RandomGen g => Int -> Int -> Rand g L0
-sampleL0
-  = \ lb ub ->
-      do x <- genRandomL0
-         let s = size x
-         if s < lb || ub < s then sampleL0 lb ub else return x
+sampleL0 lb ub
+  = do let sampler = runMaybeT (genRandomL0 ub)
+       x <- sampler
+       case x of
+           Nothing -> sampleL0 lb ub
+           Just (t', s) -> if lb <= s then return t' else sampleL0 lb ub
 
 sampleL1 :: RandomGen g => Int -> Int -> Rand g L1
-sampleL1
-  = \ lb ub ->
-      do x <- genRandomL1
-         let s = size x
-         if s < lb || ub < s then sampleL1 lb ub else return x
+sampleL1 lb ub
+  = do let sampler = runMaybeT (genRandomL1 ub)
+       x <- sampler
+       case x of
+           Nothing -> sampleL1 lb ub
+           Just (t', s) -> if lb <= s then return t' else sampleL1 lb ub
 
 sampleL2 :: RandomGen g => Int -> Int -> Rand g L2
-sampleL2
-  = \ lb ub ->
-      do x <- genRandomL2
-         let s = size x
-         if s < lb || ub < s then sampleL2 lb ub else return x
+sampleL2 lb ub
+  = do let sampler = runMaybeT (genRandomL2 ub)
+       x <- sampler
+       case x of
+           Nothing -> sampleL2 lb ub
+           Just (t', s) -> if lb <= s then return t' else sampleL2 lb ub
 
 sampleL3 :: RandomGen g => Int -> Int -> Rand g L3
-sampleL3
-  = \ lb ub ->
-      do x <- genRandomL3
-         let s = size x
-         if s < lb || ub < s then sampleL3 lb ub else return x
+sampleL3 lb ub
+  = do let sampler = runMaybeT (genRandomL3 ub)
+       x <- sampler
+       case x of
+           Nothing -> sampleL3 lb ub
+           Just (t', s) -> if lb <= s then return t' else sampleL3 lb ub
 
 sampleL4 :: RandomGen g => Int -> Int -> Rand g L4
-sampleL4
-  = \ lb ub ->
-      do x <- genRandomL4
-         let s = size x
-         if s < lb || ub < s then sampleL4 lb ub else return x
+sampleL4 lb ub
+  = do let sampler = runMaybeT (genRandomL4 ub)
+       x <- sampler
+       case x of
+           Nothing -> sampleL4 lb ub
+           Just (t', s) -> if lb <= s then return t' else sampleL4 lb ub
 
 sampleL5 :: RandomGen g => Int -> Int -> Rand g L5
-sampleL5
-  = \ lb ub ->
-      do x <- genRandomL5
-         let s = size x
-         if s < lb || ub < s then sampleL5 lb ub else return x
+sampleL5 lb ub
+  = do let sampler = runMaybeT (genRandomL5 ub)
+       x <- sampler
+       case x of
+           Nothing -> sampleL5 lb ub
+           Just (t', s) -> if lb <= s then return t' else sampleL5 lb ub

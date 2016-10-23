@@ -1,31 +1,31 @@
+-- | Compiler: boltzmann-brain ALPHA (2016-10-23 16:38:24.072603 CEST)
+-- | Singularity: 5.00000000000000000000e-1
 module Binary (B(..), genRandomB, sampleB) where
-import Control.Monad.Random
-
-class Combinatorial a where
-        size :: a -> Int
+import Control.Monad (guard)
+import Control.Monad.Random (RandomGen(..), Rand(..), getRandomR)
+import Control.Monad.Trans (lift)
+import Control.Monad.Trans.Maybe (MaybeT(..), runMaybeT)
 
 data B = Leaf
        | Node B B
        deriving Show
 
-instance Combinatorial B where
-        size Leaf = 1
-        size (Node x0 x1) = 1 + size x0 + size x1
+randomP :: RandomGen g => MaybeT (Rand g) Double
+randomP = lift (getRandomR (0, 1))
 
-randomP :: RandomGen g => Rand g Double
-randomP = getRandomR (0, 1)
-
-genRandomB :: RandomGen g => Rand g B
-genRandomB
-  = do p <- randomP
-       if p < 0.5007072019510743 then do return Leaf else
-         do x0 <- genRandomB
-            x1 <- genRandomB
-            return (Node x0 x1)
+genRandomB :: RandomGen g => Int -> MaybeT (Rand g) (B, Int)
+genRandomB ub
+  = do guard (ub > 0)
+       p <- randomP
+       if p < 0.5007072019510751 then return $! (Leaf, 1) else
+         do (x0, w0) <- genRandomB (ub - 1)
+            (x1, w1) <- genRandomB (ub - 1 - w0)
+            return $! (Node x0 x1, 1 + w0 + w1)
 
 sampleB :: RandomGen g => Int -> Int -> Rand g B
-sampleB
-  = \ lb ub ->
-      do x <- genRandomB
-         let s = size x
-         if s < lb || ub < s then sampleB lb ub else return x
+sampleB lb ub
+  = do let sampler = runMaybeT (genRandomB ub)
+       x <- sampler
+       case x of
+           Nothing -> sampleB lb ub
+           Just (t', s) -> if lb <= s then return t' else sampleB lb ub
