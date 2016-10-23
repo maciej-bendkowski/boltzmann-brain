@@ -7,7 +7,7 @@ construct a working, self-contained Haskell module implementing a rejection
 Boltzmann sampler.
 
 #### Disclaimer
-As its currently under constant development, ```Boltzmann Brain``` lacks some
+As it's currently under constant development, ```Boltzmann Brain``` lacks some
 more advanced features. Currently implemented features include:
 - unlabelled combinatorial systems of varying constructor weights,
 - singularity approximation and system evaluation,
