@@ -24,6 +24,8 @@ import Parser
 import Oracle
 import Compiler
 
+import Jacobian
+
 currentTime :: IO ()
 currentTime = print =<< getZonedTime
 

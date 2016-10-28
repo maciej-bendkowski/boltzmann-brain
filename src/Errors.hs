@@ -15,15 +15,17 @@ import Data.MultiSet (MultiSet)
 import qualified Data.MultiSet as MultiSet
 
 import System
+import Jacobian
 
-data SystemError = Inconsistent String -- type name 
-                                String -- constructor name
-                                String -- argument name
+data SystemError = Inconsistent String   -- type name 
+                                String   -- constructor name
+                                String   -- argument name
                  
-                 | InvalidCons  String -- type name
-                                String -- constructor name
+                 | InvalidCons  String   -- type name
+                                String   -- constructor name
                  
                  | ClashCons    [String] -- clashing constructors
+                 | Illfounded            -- clashing constructors
 
 instance Show SystemError where
     show (Inconsistent t con arg) = "[Error] Invalid argument type '" 
@@ -36,13 +38,16 @@ instance Show SystemError where
         ++ foldl1 (\c c' -> "'" ++ c ++ "', " ++ "'" ++ c' ++ "'") cons
         ++ "."
 
+    show Illfounded = "[Error] Ill-founded system."
+
 type SystemMonad = Either SystemError
 
-errors :: System a -> SystemMonad ()
+errors :: System Integer -> SystemMonad ()
 errors sys = do
     void $ consistent sys
     void $ validCons sys
     void $ clashCons sys
+    void $ illfounded sys
 
 consistent :: System a -> SystemMonad ()
 consistent sys = mapM_ consistentType (M.toList $ defs sys) `catchError` Left
@@ -78,3 +83,6 @@ duplicates sys = map fst $ filter gather $ MultiSet.toOccurList ms
 clashCons :: System a -> SystemMonad ()
 clashCons sys = let cs = duplicates sys in
                     unless (null cs) $ throwError (ClashCons cs) `catchError` Left
+
+illfounded :: System Integer -> SystemMonad ()
+illfounded sys = unless (wellFounded sys) $ throwError Illfounded `catchError` Left
