@@ -18,7 +18,6 @@ before_install:
 
 install:
   - stack -j 2 setup --no-terminal
-  - stack solver
   - stack -j 2 build --only-snapshot --no-terminal
 
 script:
