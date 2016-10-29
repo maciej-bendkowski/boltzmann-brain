@@ -18,5 +18,9 @@ before_install:
   - travis_retry curl -L https://www.stackage.org/stack/linux-x86_64 | tar -xzO --wildcards '*/stack' > ~/.local/bin/stack
   - chmod a+x ~/.local/bin/stack
 
+install:
+  - ./travis_long stack --no-terminal --skip-ghc-check setup 
+  - ./travis_long stack --no-terminal --skip-ghc-check build
+
 script:
   - ./travis_long stack --no-terminal --skip-ghc-check build
