@@ -1,13 +1,10 @@
 language: haskell
 
+sudo: false
+
 branches:
     only:
       - master
-
-sudo: false
-
-ghc:
-  - "7.10.3"
 
 cache:
     directories:
@@ -18,11 +15,10 @@ before_install:
   - export PATH=~/.local/bin:$PATH
   - travis_retry curl -L https://www.stackage.org/stack/linux-x86_64 | tar -xzO --wildcards '*/stack' > ~/.local/bin/stack
   - chmod a+x ~/.local/bin/stack
-  - export PATH=/opt/ghc/7.10.3/bin:$PATH
 
 install:
-  - ./travis_long stack -j 2 setup --no-terminal
-  - ./travis_long stack -j 2 build --only-snapshot --no-terminal
+  - stack -j 2 setup --no-terminal
+  - stack -j 2 build --only-snapshot --no-terminal
 
 script:
   - stack -j 2 build --no-terminal
