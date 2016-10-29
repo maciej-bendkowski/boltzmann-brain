@@ -17,8 +17,8 @@ before_install:
   - chmod a+x ~/.local/bin/stack
 
 install:
-  - stack solver
   - stack -j 2 setup --no-terminal
+  - stack solver
   - stack -j 2 build --only-snapshot --no-terminal
 
 script:
