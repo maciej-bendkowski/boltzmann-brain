@@ -19,5 +19,4 @@ before_install:
   - chmod a+x ~/.local/bin/stack
 
 script:
-  - ./travis_long stack --no-terminal --skip-ghc-check setup
   - ./travis_long stack --no-terminal --skip-ghc-check build
