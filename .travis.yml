@@ -8,6 +8,8 @@ branches:
 
 cache:
     directories:
+      - $HOME/.ghc/
+      - $HOME/.cabal
       - $HOME/.stack/
 
 before_install:
@@ -15,6 +17,7 @@ before_install:
   - export PATH=~/.local/bin:$PATH
   - travis_retry curl -L https://www.stackage.org/stack/linux-x86_64 | tar -xzO --wildcards '*/stack' > ~/.local/bin/stack
   - chmod a+x ~/.local/bin/stack
+  - export PATH=/opt/ghc/7.10.3/bin:$PATH
 
 install:
   - stack -j 2 setup --no-terminal
