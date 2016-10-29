@@ -56,7 +56,7 @@ samplerType typeName = TyForall Nothing
                   (TyApp (TyApp (TyCon (unname "Rand")) (TyVar (Ident "g")))
                   (TyCon (unname typeName)))))
 
-compileModule :: Real a => BoltzmannSystem a -> String -> Module
+compileModule :: Real a => BoltzmannSystem b a -> String -> Module
 compileModule sys moduleName = Module noLoc (ModuleName moduleName) []
                                       Nothing (Just exports) imports decls
     where
@@ -64,7 +64,7 @@ compileModule sys moduleName = Module noLoc (ModuleName moduleName) []
         imports = compileImports
         decls = compileDecls sys
 
-compileExports :: Real a => BoltzmannSystem a -> [ExportSpec]
+compileExports :: Real a => BoltzmannSystem b a -> [ExportSpec]
 compileExports sys = concatMap toADT $ typeList sys
     where toADT t = [EThingAll (unname t),
                      EVar (unname $ genName t),
@@ -94,11 +94,11 @@ import' name specs = ImportDecl { importLoc = noLoc
                                 , importSpecs = specs
                                 }
 
-compileDecls :: Real a => BoltzmannSystem a -> [Decl]
+compileDecls :: Real a => BoltzmannSystem b a -> [Decl]
 compileDecls sys = declADTs sys ++ declRandGen 
                 ++ declGenerators sys ++ declSamplers sys
 
-declSamplers :: Real a => BoltzmannSystem a -> [Decl]
+declSamplers :: Real a => BoltzmannSystem b a -> [Decl]
 declSamplers sys = concatMap declSampler $ typeList sys
 
 declSampler :: String -> [Decl]
@@ -143,7 +143,7 @@ declRandGen = declTFun "randomP" type' [] body
                      (App (Var $ unname "getRandomR") 
                           (Tuple Boxed [Lit $ Int 0, Lit $ Int 1]))
 
-declADTs :: Real a => BoltzmannSystem a -> [Decl]
+declADTs :: Real a => BoltzmannSystem b a -> [Decl]
 declADTs sys = map declADT $ paramTypes sys
 
 declADT :: Real a => (String, [Cons a]) -> Decl
@@ -162,7 +162,7 @@ randomDraw :: String -> Stmt
 randomDraw var = Generator noLoc (PVar $ Ident var)
                            (Var $ unname "randomP")
 
-declGenerators :: Real a => BoltzmannSystem a -> [Decl]
+declGenerators :: Real a => BoltzmannSystem b a -> [Decl]
 declGenerators sys = concatMap declGenerator $ paramTypes' sys
 
 declGenerator :: Real a => (String, [(Cons a, Integer)]) -> [Decl]
@@ -231,11 +231,11 @@ buildArgs (Type a : as) upperBound currW t (v:vs) (w:ws) =
         upperBound' = InfixApp upperBound (QVarOp $ UnQual (Symbol "-")) w'
         currW' = InfixApp currW (QVarOp $ UnQual (Symbol "+")) w'
 
-moduleHeader :: Show a => BoltzmannSystem a -> String -> String
+moduleHeader :: Show a => BoltzmannSystem b a -> String -> String
 moduleHeader sys compilerNote = unlines ["-- | Compiler: " ++ compilerNote,
                                          "-- | Singularity: " ++ show (parameter sys)]
 
-compile :: (Real a, Show a) => BoltzmannSystem a -> String -> String -> IO ()
+compile :: (Real a, Show a) => BoltzmannSystem b a -> String -> String -> IO ()
 compile sys moduleName compilerNote = let module' = compileModule sys moduleName
                                         in do putStr (moduleHeader sys compilerNote)
                                               putStrLn (prettyPrint module')

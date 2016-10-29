@@ -21,10 +21,12 @@ import BoltzmannSystem
 
 import Errors
 import Parser
-import Oracle
 import Compiler
 
 import Jacobian
+
+import Oracle
+import Oracle.Banach
 
 currentTime :: IO ()
 currentTime = print =<< getZonedTime
@@ -120,13 +122,17 @@ run flags f = do
         sysEps = getSysEpsilon flags
         sing = getSingularity flags
 
+runCompiler' :: (Show b, Real b) => BoltzmannSystem (State b) b -> String -> IO ()
+runCompiler' sys module' = do
+    time <- getZonedTime
+    compile sys module' (compilerTimestamp $ show time)
+
 runCompiler singEps sysEps sing module' sys = case errors sys of
     Left err -> reportSystemError err
-    Right _ -> do let oracle = maybe toBoltzmann toBoltzmannS sing
-                  let sys' = oracle sys singEps sysEps
-                  time <- getZonedTime
-                  compile sys' module' (compilerTimestamp $ show time)
-        
+    Right _ -> case sing of
+                 Nothing -> runCompiler' (toBoltzmann sys singEps sysEps) module'
+                 Just s -> runCompiler' (toBoltzmannS sys s sysEps) module'
+
 reportSystemError :: SystemError -> IO ()
 reportSystemError err = do 
     hPrint stderr err

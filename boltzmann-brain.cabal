@@ -22,6 +22,7 @@ library
                      , NaiveCompiler
                      , Compiler
                      , Oracle
+                     , Oracle.Banach
                      , Errors
   build-depends:       base >= 4.7 && < 5
                      , containers >= 0.5.6

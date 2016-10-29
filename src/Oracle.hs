@@ -1,18 +1,25 @@
 -- | Author: Maciej Bendkowski <maciej.bendkowski@tcs.uj.edu.pl>
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleInstances #-}
 module Oracle
-    ( singularity
-    , BoltzmannSystem
+    ( Oracle(..)
+    , singularity
     , toBoltzmann
     , toBoltzmannS
+    , eval
     ) where
-
-import Prelude hiding (replicate, zipWith, all, any)
-import Data.Vector hiding (sum, map, product)
-
-import qualified Data.Map.Strict as M
 
 import System
 import BoltzmannSystem
+
+import Prelude hiding (iterate, init, replicate, zipWith, all, any)
+import Data.Vector hiding (init, sum, map, product)
+import qualified Data.Map.Strict as M
+
+class Fractional b => Oracle a b where
+    iterate :: System Integer -> b -> a -> a
+    init :: System Integer -> b -> a
+    yield :: a -> Vector b
 
 value :: String -> System b -> Vector a -> a
 value t sys vec = vec ! M.findIndex t (defs sys)
@@ -26,19 +33,15 @@ singularity sys eps = singularity' 0 1.0
                     where z = (u + l) / 2
 
 divergent :: (Fractional a, Ord a, Integral b) =>  System b -> a -> a -> Bool
-divergent sys eps z = divergent' (iter sys z vec) vec
+divergent sys eps z = divergent' (eval sys z vec) vec
     where divergent' v v'
             | any (> 1.0/eps) v = True
             | halt eps v v' = False
-            | otherwise = divergent' (iter sys z v) v
+            | otherwise = divergent' (eval sys z v) v
           vec = replicate (size sys) 0.0
 
-halt :: (Num a, Ord a) => a -> Vector a -> Vector a -> Bool
-halt eps v v' = all (< eps) vec
-    where vec = zipWith (\x y -> abs $ x-y) v v'
-
-iter :: (Fractional a, Integral b) => System b -> a -> Vector a -> Vector a
-iter sys z vec = imap update vec
+eval :: (Fractional a, Integral b) => System b -> a -> Vector a -> Vector a
+eval sys z vec = imap update vec
     where update idx _ = sum (map evalE $ snd (M.elemAt idx $ defs sys))
 
           evalT (Type t) = value t sys vec
@@ -46,23 +49,9 @@ iter sys z vec = imap update vec
               where w = weight e
                     ts = args e
 
-toBoltzmann' :: (Fractional a, Ord a, Show a) => a -> a -> System Integer -> Vector a -> Vector a -> BoltzmannSystem a
-toBoltzmann' sysEps rho sys v v'
-  | not (halt sysEps v v') = toBoltzmann' sysEps rho sys (iter sys rho v) v
-  | otherwise = BoltzmannSystem { system = parametrize sys rho v
-                                , values = v
-                                , parameter = rho
-                                , weights = sys
-                                }
-
-toBoltzmann :: (Fractional a, Ord a, Show a) => System Integer -> a -> a -> BoltzmannSystem a
-toBoltzmann sys singEps sysEps = toBoltzmann' sysEps rho sys (iter sys rho vec) vec
-    where rho = singularity sys singEps
-          vec = replicate (size sys) 0.0
-
-toBoltzmannS :: (Fractional a, Ord a, Show a) => a -> System Integer -> t -> a -> BoltzmannSystem a
-toBoltzmannS rho sys singEps sysEps = toBoltzmann' sysEps rho sys (iter sys rho vec) vec
-    where vec = replicate (size sys) 0.0
+halt :: (Num a, Ord a) => a -> Vector a -> Vector a -> Bool
+halt eps v v' = all (< eps) vec
+    where vec = zipWith (\x y -> abs $ x-y) v v'
 
 parametrize :: (Fractional a, Integral b) => System b -> a -> Vector a -> System a
 parametrize sys rho vec = sys { defs = M.mapWithKey parametrize' (defs sys) }
@@ -82,3 +71,23 @@ evalCons sys z vec e = (z ^^ w) * product (map (evalArg sys vec) ts)
 
 evalArg :: System b -> Vector a -> Arg -> a
 evalArg sys vec (Type t) = value t sys vec
+
+toBoltzmann' :: (Ord b, Fractional b, Oracle a b) => b -> b -> System Integer -> a -> a -> BoltzmannSystem a b
+toBoltzmann' sysEps rho sys s s'
+  | not (halt sysEps (yield s) (yield s')) = toBoltzmann' sysEps rho sys (iterate sys rho s) s
+  | otherwise = BoltzmannSystem { system = parametrize sys rho (yield s)
+                                , values = yield s
+                                , parameter = rho
+                                , weights = sys
+                                }
+
+toBoltzmann :: (Ord b, Fractional b, Oracle a b) => System Integer -> b -> b -> BoltzmannSystem a b
+toBoltzmann sys singEps sysEps = toBoltzmann' sysEps rho sys s s'
+    where rho = singularity sys singEps
+          s = iterate sys rho s'
+          s' = init sys rho
+
+toBoltzmannS :: (Ord b, Fractional b, Oracle a b) => System Integer -> b -> b -> BoltzmannSystem a b
+toBoltzmannS sys rho sysEps = toBoltzmann' sysEps rho sys s s'
+    where s = iterate sys rho s'
+          s' = init sys rho

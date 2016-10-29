@@ -15,19 +15,19 @@ import qualified Data.Set as S
 
 import System
 
-data BoltzmannSystem a = BoltzmannSystem { system :: System a
-                                         , values :: Vector a 
-                                         , parameter :: a
-                                         , weights :: System Integer
-                                         } deriving (Show)
+data BoltzmannSystem a b = BoltzmannSystem { system :: System b
+                                           , values :: Vector b
+                                           , parameter :: b
+                                           , weights :: System Integer
+                                           } deriving (Show)
 
-typeList :: BoltzmannSystem a -> [String]
+typeList :: BoltzmannSystem a b -> [String]
 typeList = S.toList . M.keysSet . defs . system
 
-paramTypes :: BoltzmannSystem a -> [(String, [Cons a])]
+paramTypes :: BoltzmannSystem a b -> [(String, [Cons b])]
 paramTypes = M.toList . defs . system
 
-paramTypes' :: BoltzmannSystem a -> [(String, [(Cons a, Integer)])]
+paramTypes' :: BoltzmannSystem a b -> [(String, [(Cons b, Integer)])]
 paramTypes' sys = map (addW $ weights sys) xs
     where xs = paramTypes sys
 
@@ -39,5 +39,5 @@ typeW sys s = case s `M.lookup` defs sys of
     Just cons -> map weight cons 
     Nothing -> []
 
-weightedTypes :: BoltzmannSystem a -> [(String, [Cons Integer])]
+weightedTypes :: BoltzmannSystem a b -> [(String, [Cons Integer])]
 weightedTypes = M.toList . defs . weights
