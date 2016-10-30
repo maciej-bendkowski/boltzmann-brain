@@ -1,6 +1,7 @@
 -- | Author: Maciej Bendkowski <maciej.bendkowski@tcs.uj.edu.pl>
-module NaiveCompiler
-    ( compile 
+module Compiler.Haskell.Naive
+    ( Configuration(..)
+    , compile 
     ) where
 
 import Language.Haskell.Exts
@@ -9,6 +10,8 @@ import Language.Haskell.Exts.SrcLoc (noLoc)
 
 import System
 import System.Boltzmann
+
+import Compiler
 
 unname :: String -> QName
 unname = UnQual . Ident
@@ -193,7 +196,16 @@ moduleHeader :: Show a => BoltzmannSystem b a -> String -> String
 moduleHeader sys compilerNote = unlines ["-- | Compiler: " ++ compilerNote,
                                          "-- | Singularity: " ++ show (parameter sys)]
 
-compile :: (Real a, Show a) => BoltzmannSystem b a -> String -> String -> IO ()
-compile sys moduleName compilerNote = let module' = compileModule sys moduleName
-                                        in do putStr (moduleHeader sys compilerNote)
-                                              putStrLn (prettyPrint module')
+data Configuration b a = Configuration { paramSys :: BoltzmannSystem b a
+                                       , moduleName :: String
+                                       , compileNote :: String
+                                       }
+
+instance (Real a, Show a) => Compiler (Configuration b a) where
+    compile conf = let sys = paramSys conf
+                       name = moduleName conf
+                       note = compileNote conf
+                       module' = compileModule sys name
+                   in do
+                       putStr $ moduleHeader sys note
+                       putStrLn $ prettyPrint module'

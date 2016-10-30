@@ -21,7 +21,8 @@ import System.Boltzmann
 
 import Errors
 import Parser
-import Compiler
+
+import Compiler.Haskell.MaybeT
 
 import Jacobian
 
@@ -125,7 +126,11 @@ run flags f = do
 runCompiler' :: (Show b, Real b) => BoltzmannSystem (State b) b -> String -> IO ()
 runCompiler' sys module' = do
     time <- getZonedTime
-    compile sys module' (compilerTimestamp $ show time)
+    let conf = Configuration { paramSys = sys
+                             , moduleName = module'
+                             , compileNote = compilerTimestamp $ show time
+                             }
+    compile conf
 
 runCompiler singEps sysEps sing module' sys = case errors sys of
     Left err -> reportSystemError err

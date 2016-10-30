@@ -19,8 +19,9 @@ library
                      , Semiring
                      , Combinatorial
                      , Jacobian
-                     , NaiveCompiler
                      , Compiler
+                     , Compiler.Haskell.Naive
+                     , Compiler.Haskell.MaybeT
                      , Oracle
                      , Oracle.Banach
                      , Oracle.Newton
