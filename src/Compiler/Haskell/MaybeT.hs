@@ -237,9 +237,8 @@ guardian name = App (Var $ unname "guard")
 
 returnCons :: String -> (Cons a, Integer) -> Exp
 returnCons ub (con, w)
-    | null (args con) = InfixApp (Var $ unname "return")
-                                 (QVarOp $ UnQual $ Symbol "$!")
-                                 (Tuple Boxed [Con (unname $ func con), 
+    | null (args con) = App (Var $ unname "return")
+                            (Tuple Boxed [Con (unname $ func con), 
                                           Lit (Int w)])
     | otherwise = Do (buildArgs (args con) (InfixApp (Var $ unname ub)
                                                      (QVarOp $ UnQual (Symbol "-"))
@@ -249,9 +248,8 @@ returnCons ub (con, w)
                                 variableStream weightVariableStream)
 
 buildArgs [] upperBound currW t vs ws = 
-    [Qualifier $ InfixApp (Var $ unname "return")
-                          (QVarOp $ UnQual $ Symbol "$!")
-                          (Tuple Boxed [t, currW])]
+    [Qualifier $ App (Var $ unname "return")
+                     (Tuple Boxed [t, currW])]
 
 buildArgs (Type a : as) upperBound currW t (v:vs) (w:ws) =
     Generator noLoc (PTuple Boxed [pv', pw'])
