@@ -201,7 +201,7 @@ data Configuration b a = Configuration { paramSys :: BoltzmannSystem b a
                                        , compileNote :: String
                                        }
 
-instance (Real a, Show a) => Compiler (Configuration b a) where
+instance (Real a, Show a) => Compilable (Configuration b a) where
     compile conf = let sys = paramSys conf
                        name = moduleName conf
                        note = compileNote conf

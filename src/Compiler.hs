@@ -1,7 +1,7 @@
 -- | Author: Maciej Bendkowski <maciej.bendkowski@tcs.uj.edu.pl>
 module Compiler
-    ( Compiler(..)
+    ( Compilable(..)
     ) where
 
-class Compiler a where
+class Compilable a where
     compile :: a -> IO ()

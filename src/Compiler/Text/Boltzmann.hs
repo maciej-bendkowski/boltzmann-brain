@@ -39,5 +39,5 @@ writeSystem sys = let sys' = system sys
 
 data Configuration b a = Configuration { paramSys :: BoltzmannSystem b a }
 
-instance (Real a, Show a) => Compiler (Configuration b a) where
+instance (Real a, Show a) => Compilable (Configuration b a) where
     compile = writeSystem . paramSys
