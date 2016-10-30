@@ -11,7 +11,7 @@ module Oracle
     ) where
 
 import System
-import BoltzmannSystem
+import System.Boltzmann
 
 import Prelude hiding (iterate, init, replicate, zipWith, all, any)
 import Data.Vector hiding (init, sum, map, product)
@@ -44,7 +44,6 @@ divergent sys eps z = divergent' (eval sys z vec) vec
 eval :: (Fractional a, Integral b) => System b -> a -> Vector a -> Vector a
 eval sys z vec = imap update vec
     where update idx _ = sum (map evalE $ snd (M.elemAt idx $ defs sys))
-
           evalT (Type t) = value t sys vec
           evalE e = (z ^^ w) * product (map evalT ts)
               where w = weight e
@@ -56,8 +55,7 @@ halt eps v v' = all (< eps) vec
 
 parametrize :: (Fractional a, Integral b) => System b -> a -> Vector a -> System a
 parametrize sys rho vec = sys { defs = M.mapWithKey parametrize' (defs sys) }
-    where 
-          parametrize' t = parametrizeE tw 0.0
+    where parametrize' t = parametrizeE tw 0.0
               where tw = value t sys vec
 
           parametrizeE tw w [] = []

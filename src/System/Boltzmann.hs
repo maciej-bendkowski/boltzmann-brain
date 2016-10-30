@@ -1,5 +1,5 @@
 -- | Author: Maciej Bendkowski <maciej.bendkowski@tcs.uj.edu.pl>
-module BoltzmannSystem
+module System.Boltzmann
     ( BoltzmannSystem(..)
     , typeList
     , paramTypes

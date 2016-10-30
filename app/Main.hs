@@ -17,7 +17,7 @@ import Data.Maybe
 import Numeric
 
 import System
-import BoltzmannSystem
+import System.Boltzmann
 
 import Errors
 import Parser

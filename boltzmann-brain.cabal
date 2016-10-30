@@ -14,7 +14,7 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     System
-                     , BoltzmannSystem
+                     , System.Boltzmann
                      , Parser
                      , Semiring
                      , Combinatorial

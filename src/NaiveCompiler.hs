@@ -8,7 +8,7 @@ import Language.Haskell.Exts.Pretty (prettyPrint)
 import Language.Haskell.Exts.SrcLoc (noLoc)
 
 import System
-import BoltzmannSystem
+import System.Boltzmann
 
 unname :: String -> QName
 unname = UnQual . Ident
