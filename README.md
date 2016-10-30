@@ -17,15 +17,15 @@ MotzkinTree = Leaf
             | Unary MotzkinTree (2)
             | Binary MotzkinTree MotzkinTree.
    ```
-In the example, a ```MotzkinTree``` type is defined. It contains three constructors: a constant ```Leaf``` of weight one (default value if not annotated), a unary ```Unary``` constructor of weight two and a binary contructor ```Binary``` of default weight one. The dedinition ends with an obligatory dot.
+In the example, a ```MotzkinTree``` type is defined. It contains three constructors: a constant ```Leaf``` of weight one (default value if not annotated), a unary ```Unary``` constructor of weight two and a binary contructor ```Binary``` of default weight one. The definition ends with an obligatory dot.
 
-Each definition constitutes an algebraic data type where each inhabitant has an intrinsic *size*, defined as the sum of all its building constructor weights. *Boltzmann Brain* generates a rejection Boltzmann sampler for such a system, able to sample *uniformly random*, with respect to size, inhabitants. Though the exact size of the outcome is a random variable, the generated sampler allows to control the desired lower and upper bounds. See the *examples* directory for more examples of supported inputs and corresponding sampler modules.
+Each definition constitutes an algebraic data type where each inhabitant has an intrinsic *size*, defined as the sum of all its building constructor weights. *Boltzmann Brain* generates a rejection Boltzmann sampler able to sample *uniformly random*, with respect to size, inhabitants of the system types. Though the exact size of the outcome is a random variable, the generated sampler allows to control the desired lower and upper bounds. See the *examples* directory for more examples of supported inputs and corresponding sampler modules.
 
 #### Features
 - easy and intuitive text-based API,
 - automated well-foudness check for the given combinatorial specification (see [3]),
 - optimised Newton oracle (see [3]) for numerical system evaluation,
-- singularity approximation with desired error bound,
+- singularity approximation within a desired error bound,
 - working, self-contained Haskell module generation utilizing ```Control.Monad.Random``` and ```Control.Monad.Trans.Maybe``` in the implementation of dedicated Boltzmann sampler,
 - text-based compilator annotating constructors with appropriate *branching probabilities*.
 
