@@ -10,7 +10,7 @@ Boltzmann sampler.
 As it's currently under constant development, ```Boltzmann Brain``` lacks some
 more advanced features. Currently implemented features include:
 - unlabelled combinatorial systems of varying constructor weights,
-- singularity approximation and system evaluation,
+- singularity approximation and system evaluation using Newton iteration,
 - well-foundness check,
 - working, self-contained Haskell module utilizing ```Control.Monad.Random```
   and ```Control.Monad.Trans.Maybe``` in the implementation of a dedicated
@@ -18,7 +18,6 @@ Boltzmann sampler,
 - simple, context-free text-based input API.
 
 #### TODO List
-- fast Newton oracle,
 - support for a list-based ```SEQ``` constructor,
 - documentation.
 
