@@ -38,6 +38,7 @@ data Flag = SingEpsilon String
           | Singularity String
           | ModuleName String
           | Oracle String
+          | WithIO
           | Version
           | Help
             deriving (Eq)
@@ -60,7 +61,10 @@ options = [Option "p" ["precision"] (ReqArg SingEpsilon "p")
 
            Option "o" ["oracle"] (ReqArg Oracle "o")
             "Boltzmann oracle (newton|banach). Defauts to newton.",
-
+           
+           Option "i" ["with-io"] (NoArg WithIO)
+            "Whether to generate IO actions for the samplers.",
+    
            Option "v" ["version"] (NoArg Version)
             "Prints the program version number.",
 
@@ -105,7 +109,10 @@ getOracle (Oracle name : fs)
     | name == "newton" = Newton
     | otherwise = getOracle fs
 getOracle (_:fs) = getOracle fs
-getOracle [] = Newton 
+getOracle [] = Newton
+
+useIO :: [Flag] -> Bool 
+useIO flags = WithIO `elem` flags
 
 parse :: [String] -> IO ([Flag], [String])
 parse argv = case getOpt Permute options argv of 
@@ -161,6 +168,7 @@ confCompiler sys flags = do
     let conf = Configuration { paramSys = sys
                              , moduleName = getModuleName flags
                              , compileNote = compilerTimestamp $ show time
+                             , withIO = useIO flags
                              }
     compile conf
 

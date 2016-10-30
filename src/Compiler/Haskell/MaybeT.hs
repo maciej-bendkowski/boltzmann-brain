@@ -22,6 +22,9 @@ genName = (++) "genRandom"
 samplerName :: String -> String
 samplerName = (++) "sample"
 
+samplerIOName :: String -> String
+samplerIOName s = samplerName s ++ "IO"
+
 declTFun :: String -> Type -> [String] -> Exp -> [Decl]
 declTFun f type' args body = [decl, FunBind [main]]
     where decl = TypeSig noLoc [Ident f] type'
@@ -59,33 +62,45 @@ samplerType typeName = TyForall Nothing
                   (TyApp (TyApp (TyCon (unname "Rand")) (TyVar (Ident "g")))
                   (TyCon (unname typeName)))))
 
-compileModule :: Real a => BoltzmannSystem b a -> String -> Module
-compileModule sys moduleName = Module noLoc (ModuleName moduleName) []
-                                      Nothing (Just exports) imports decls
+samplerIOType :: String -> Type
+samplerIOType typeName = TyForall Nothing []
+    (TyFun (TyCon $ unname "Int") 
+           (TyFun (TyCon $ unname "Int") 
+                  (TyApp (TyCon (unname "IO")) (TyVar (Ident typeName)))))
+
+compileModule sys moduleName withIO = Module noLoc (ModuleName moduleName) []
+                                        Nothing (Just exports) imports decls
     where
-        exports = compileExports sys
-        imports = compileImports
-        decls = compileDecls sys
+        exports = compileExports sys withIO
+        imports = compileImports withIO
+        decls = compileDecls sys withIO
 
-compileExports :: Real a => BoltzmannSystem b a -> [ExportSpec]
-compileExports sys = concatMap toADT $ typeList sys
-    where toADT t = [EThingAll (unname t),
-                     EVar (unname $ genName t),
-                     EVar (unname $ samplerName t)]
+compileExports sys withIO = concatMap toADT $ typeList sys
+    where toADT' t = [EThingAll (unname t),
+                      EVar (unname $ genName t),
+                      EVar (unname $ samplerName t)]
+          toADT t
+            | not withIO = toADT' t
+            | otherwise = toADT' t ++ [EVar (unname $ samplerIOName t)]
 
-compileImports :: [ImportDecl]
-compileImports = [import' "Control.Monad" ctrlMonadS,
-                  import' "Control.Monad.Random" ctrlRandS,
-                  import' "Control.Monad.Trans" ctrlTransS,
-                  import' "Control.Monad.Trans.Maybe" ctrlMaybeTS]
+compileImports withIO = [import' "Control.Monad" ctrlMonadS,
+                         import' "Control.Monad.Random" ctrlRandS,
+                         import' "Control.Monad.Trans" ctrlTransS,
+                         import' "Control.Monad.Trans.Maybe" ctrlMaybeTS]
     where
         ctrlMonadS = Just (False, [IVar $ Ident "guard"])
         ctrlTransS = Just (False, [IVar $ Ident "lift"])
         ctrlMaybeTS = Just (False, [IThingAll $ Ident "MaybeT",
                                     IVar $ Ident "runMaybeT"])
-        ctrlRandS = Just (False, [IThingAll $ Ident "RandomGen",
-                                  IThingAll $ Ident "Rand",
-                                  IVar $ Ident "getRandomR"])
+        ctrlRandS
+            | not withIO = Just (False, [IThingAll $ Ident "RandomGen",
+                                         IVar $ Ident "Rand",
+                                         IVar $ Ident "getRandomR"])
+            
+            | otherwise = Just (False, [IThingAll $ Ident "RandomGen",
+                                        IVar $ Ident "Rand",
+                                        IVar $ Ident "getRandomR",
+                                        IVar $ Ident "evalRandIO"])
 
 import' name specs = ImportDecl { importLoc = noLoc
                                 , importModule = ModuleName name
@@ -97,9 +112,19 @@ import' name specs = ImportDecl { importLoc = noLoc
                                 , importSpecs = specs
                                 }
 
-compileDecls :: Real a => BoltzmannSystem b a -> [Decl]
-compileDecls sys = declADTs sys ++ declRandGen 
-                ++ declGenerators sys ++ declSamplers sys
+compileDecls sys withIO
+    | not withIO = dec
+    | otherwise = dec ++ declSamplersIO sys
+    where dec = declADTs sys ++ declRandGen 
+                    ++ declGenerators sys ++ declSamplers sys
+
+declSamplersIO :: Real a => BoltzmannSystem b a -> [Decl]
+declSamplersIO sys = concatMap declSamplerIO $ typeList sys
+
+declSamplerIO :: String -> [Decl]
+declSamplerIO t = declTFun (samplerIOName t) type' ["lb", "ub"] body
+    where type' = samplerIOType t
+          body = constructSamplerIO t
 
 declSamplers :: Real a => BoltzmannSystem b a -> [Decl]
 declSamplers sys = concatMap declSampler $ typeList sys
@@ -138,6 +163,11 @@ constructSampler t = Do [runMaybeT', runSampler', case']
                (App (Var $ unname "return")
                     (Var $ unname "t'"))
                rec'
+
+constructSamplerIO :: String -> Exp
+constructSamplerIO t =  App (Var $ unname "evalRandIO")
+                            (App (App (Var $ unname (samplerName t)) 
+                                (Var $ unname "lb")) (Var $ unname "ub"))
 
 declRandGen :: [Decl]
 declRandGen = declTFun "randomP" type' [] body
@@ -241,13 +271,15 @@ moduleHeader sys compilerNote = unlines ["-- | Compiler: " ++ compilerNote,
 data Configuration b a = Configuration { paramSys :: BoltzmannSystem b a
                                        , moduleName :: String
                                        , compileNote :: String
+                                       , withIO :: Bool
                                        }
 
 instance (Real a, Show a) => Compilable (Configuration b a) where
     compile conf = let sys = paramSys conf
                        name = moduleName conf
                        note = compileNote conf
-                       module' = compileModule sys name
+                       withIO' = withIO conf
+                       module' = compileModule sys name withIO'
                    in do
                        putStr $ moduleHeader sys note
                        putStrLn $ prettyPrint module'
