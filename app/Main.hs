@@ -27,7 +27,8 @@ import Compiler.Haskell.MaybeT
 import Jacobian
 
 import Oracle
-import Oracle.Newton
+import qualified Oracle.Newton as Newton
+import qualified Oracle.Banach as Banach
 
 currentTime :: IO ()
 currentTime = print =<< getZonedTime
@@ -36,9 +37,13 @@ data Flag = SingEpsilon String
           | SysEpsilon String
           | Singularity String
           | ModuleName String
+          | Oracle String
           | Version
           | Help
             deriving (Eq)
+
+data BoltzmannOracle = Newton
+                     | Banach
 
 options :: [OptDescr Flag]
 options = [Option "p" ["precision"] (ReqArg SingEpsilon "p")
@@ -52,6 +57,9 @@ options = [Option "p" ["precision"] (ReqArg SingEpsilon "p")
 
            Option "m" ["module"] (ReqArg ModuleName "m")
             "The resulting Haskell module name. Defaults to Main.",
+
+           Option "o" ["oracle"] (ReqArg Oracle "o")
+            "Boltzmann oracle (newton|banach). Defauts to newton.",
 
            Option "v" ["version"] (NoArg Version)
             "Prints the program version number.",
@@ -71,17 +79,17 @@ compilerTimestamp time = "boltzmann-brain ALPHA (" ++ time ++ ")"
 parseFloating :: String -> Rational
 parseFloating s = (fst $ head (readFloat s)) :: Rational
 
-getSingEpsilon :: [Flag] -> BigFloat (PrecPlus20 Eps1)
+getSingEpsilon :: [Flag] -> P 
 getSingEpsilon (SingEpsilon eps : _) = fromRational $ parseFloating eps
 getSingEpsilon (_:fs) = getSingEpsilon fs
 getSingEpsilon [] = fromRational 1.0e-6
 
-getSysEpsilon :: [Flag] -> BigFloat (PrecPlus20 Eps1)
+getSysEpsilon :: [Flag] -> P
 getSysEpsilon (SysEpsilon eps : _) = fromRational $ parseFloating eps
 getSysEpsilon (_:fs) = getSysEpsilon fs
 getSysEpsilon [] = fromRational 1.0e-6
 
-getSingularity :: [Flag] -> Maybe (BigFloat (PrecPlus20 Eps1))
+getSingularity :: [Flag] -> Maybe P
 getSingularity (Singularity s : _) = Just (fromRational $ parseFloating s)
 getSingularity (_:fs) = getSingularity fs
 getSingularity [] = Nothing
@@ -90,6 +98,14 @@ getModuleName :: [Flag] -> String
 getModuleName (ModuleName name : _) = name
 getModuleName (_:fs) = getModuleName fs
 getModuleName [] = "Main"
+
+getOracle :: [Flag] -> BoltzmannOracle
+getOracle (Oracle name : fs)
+    | name == "banach" = Banach
+    | name == "newton" = Newton
+    | otherwise = getOracle fs
+getOracle (_:fs) = getOracle fs
+getOracle [] = Newton 
 
 parse :: [String] -> IO ([Flag], [String])
 parse argv = case getOpt Permute options argv of 
@@ -116,27 +132,47 @@ run flags f = do
     sys <- parseSystem f
     case sys of
       Left err -> printError err
-      Right sys -> runCompiler singEps sysEps sing module' sys
-    where
-        module' = getModuleName flags
-        singEps = getSingEpsilon flags
-        sysEps = getSysEpsilon flags
-        sing = getSingularity flags
+      Right sys -> runCompiler sys flags
 
-runCompiler' :: (Show b, Real b) => BoltzmannSystem (State b) b -> String -> IO ()
-runCompiler' sys module' = do
+type P = BigFloat (PrecPlus20 Eps1)
+type NewtonSystem = BoltzmannSystem (Newton.State P) P
+type BanachSystem = BoltzmannSystem (Banach.State P) P
+
+getBoltzmannNewton :: [Flag] -> System Integer -> NewtonSystem
+getBoltzmannNewton flags sys = case getSingularity flags of
+                           Nothing -> let singEps = getSingEpsilon flags
+                                          sysEps = getSysEpsilon flags in
+                                          toBoltzmann sys singEps sysEps
+                           
+                           Just s -> let sysEps = getSysEpsilon flags in
+                                         toBoltzmannS sys s sysEps
+
+getBoltzmannBanach :: [Flag] -> System Integer -> BanachSystem
+getBoltzmannBanach flags sys = case getSingularity flags of
+                           Nothing -> let singEps = getSingEpsilon flags
+                                          sysEps = getSysEpsilon flags in
+                                          toBoltzmann sys singEps sysEps
+                           
+                           Just s -> let sysEps = getSysEpsilon flags in
+                                         toBoltzmannS sys s sysEps
+  
+confCompiler sys flags = do
     time <- getZonedTime
     let conf = Configuration { paramSys = sys
-                             , moduleName = module'
+                             , moduleName = getModuleName flags
                              , compileNote = compilerTimestamp $ show time
                              }
     compile conf
 
-runCompiler singEps sysEps sing module' sys = case errors sys of
+
+runCompiler :: System Integer -> [Flag] -> IO ()
+runCompiler sys flags = case errors sys of
     Left err -> reportSystemError err
-    Right _ -> case sing of
-                 Nothing -> runCompiler' (toBoltzmann sys singEps sysEps) module'
-                 Just s -> runCompiler' (toBoltzmannS sys s sysEps) module'
+    Right _ -> case getOracle flags of
+                 Newton -> let sys' = getBoltzmannNewton flags sys in
+                               confCompiler sys' flags 
+                 Banach -> let sys' = getBoltzmannBanach flags sys in
+                               confCompiler sys' flags 
 
 reportSystemError :: SystemError -> IO ()
 reportSystemError err = do 
