@@ -44,7 +44,9 @@ extra-deps: [multiset-0.3.3,
              haskell-src-exts-1.17.1,
              cpphs-1.20.2,
              polyparse-1.12,
-             numbers-3000.2.0.1]
+             numbers-3000.2.0.1,
+             matrix-0.3.5.0,
+             loop-0.3.0]
 
 # Override default flag values for local packages and extra-deps
 flags: {}

@@ -26,7 +26,7 @@ import Compiler
 import Jacobian
 
 import Oracle
-import Oracle.Banach
+import Oracle.Newton
 
 currentTime :: IO ()
 currentTime = print =<< getZonedTime

@@ -7,6 +7,7 @@ module Oracle
     , toBoltzmann
     , toBoltzmannS
     , eval
+    , value
     ) where
 
 import System
