@@ -57,7 +57,7 @@ options = [Option "p" ["precision"] (ReqArg SingEpsilon "p")
             "Optional singularity parameter used to evaluate the system.",
 
            Option "m" ["module"] (ReqArg ModuleName "m")
-            "The resulting Haskell module name. Defaults to Main.",
+            "The resulting Haskell module name. Defaults to Sampler.",
 
            Option "o" ["oracle"] (ReqArg Oracle "o")
             "Boltzmann oracle (newton|banach). Defauts to newton.",
@@ -101,7 +101,7 @@ getSingularity [] = Nothing
 getModuleName :: [Flag] -> String
 getModuleName (ModuleName name : _) = name
 getModuleName (_:fs) = getModuleName fs
-getModuleName [] = "Main"
+getModuleName [] = "Sampler"
 
 getOracle :: [Flag] -> BoltzmannOracle
 getOracle (Oracle name : fs)
