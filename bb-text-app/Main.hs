@@ -55,7 +55,7 @@ options = [Option "p" ["precision"] (ReqArg SingEpsilon "p")
             "Optional singularity parameter used to evaluate the system.",
 
            Option "o" ["oracle"] (ReqArg Oracle "o")
-            "Boltzmann oracle (newton|banach). Defauts to newton.",
+            "Boltzmann oracle (newton|banach). Defauts to banach.",
 
            Option "v" ["version"] (NoArg Version)
             "Prints the program version number.",
@@ -93,7 +93,7 @@ getOracle (Oracle name : fs)
     | name == "newton" = Newton
     | otherwise = getOracle fs
 getOracle (_:fs) = getOracle fs
-getOracle [] = Newton 
+getOracle [] = Banach 
 
 parse :: [String] -> IO ([Flag], [String])
 parse argv = case getOpt Permute options argv of 

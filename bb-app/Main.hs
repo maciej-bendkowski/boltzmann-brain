@@ -60,7 +60,7 @@ options = [Option "p" ["precision"] (ReqArg SingEpsilon "p")
             "The resulting Haskell module name. Defaults to Sampler.",
 
            Option "o" ["oracle"] (ReqArg Oracle "o")
-            "Boltzmann oracle (newton|banach). Defauts to newton.",
+            "Boltzmann oracle (newton|banach). Defauts to banach.",
            
            Option "i" ["with-io"] (NoArg WithIO)
             "Whether to generate IO actions for the samplers.",
@@ -109,7 +109,7 @@ getOracle (Oracle name : fs)
     | name == "newton" = Newton
     | otherwise = getOracle fs
 getOracle (_:fs) = getOracle fs
-getOracle [] = Newton
+getOracle [] = Banach
 
 useIO :: [Flag] -> Bool 
 useIO flags = WithIO `elem` flags
