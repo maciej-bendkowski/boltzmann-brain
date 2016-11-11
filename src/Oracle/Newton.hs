@@ -75,7 +75,7 @@ data State a = State { ys :: V.Vector a
                      , us :: Matrix a
                      , jac :: Jacobian Int Spec }
 
-instance Fractional a => Oracle (State a) a where
+instance (Fractional a, Ord a) => Oracle (State a) a where
     yield = ys
     
     iterate sys z state = let (ys', us') = iterateN sys z state in

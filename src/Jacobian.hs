@@ -10,8 +10,8 @@ import Semiring
 import Combinatorial
 import System
 
-import qualified Data.Map as M
 import Data.Array
+import qualified Data.Map as M
 
 type Jacobian i a = Array (i,i) a
 
