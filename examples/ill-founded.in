@@ -1,2 +1,2 @@
-/* Motzkin trees */
+-- Motzkin trees
 M = Leaf | Binary M M | Unary M (0).

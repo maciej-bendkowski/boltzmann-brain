@@ -1,8 +1,8 @@
--- | Compiler: boltzmann-brain ALPHA (2016-10-23 16:38:24.072603 CEST)
+-- | Compiler: boltzmann-brain ALPHA (2016-11-27 12:15:50.651482 CET)
 -- | Singularity: 5.00000000000000000000e-1
-module Binary (B(..), genRandomB, sampleB) where
+module Sampler (B(..), genRandomB, sampleB) where
 import Control.Monad (guard)
-import Control.Monad.Random (RandomGen(..), Rand(..), getRandomR)
+import Control.Monad.Random (RandomGen(..), Rand, getRandomR)
 import Control.Monad.Trans (lift)
 import Control.Monad.Trans.Maybe (MaybeT(..), runMaybeT)
 
@@ -17,10 +17,10 @@ genRandomB :: RandomGen g => Int -> MaybeT (Rand g) (B, Int)
 genRandomB ub
   = do guard (ub > 0)
        p <- randomP
-       if p < 0.5007072019510751 then return $! (Leaf, 1) else
+       if p < 0.5007072019510751 then return (Leaf, 1) else
          do (x0, w0) <- genRandomB (ub - 1)
             (x1, w1) <- genRandomB (ub - 1 - w0)
-            return $! (Node x0 x1, 1 + w0 + w1)
+            return (Node x0 x1, 1 + w0 + w1)
 
 sampleB :: RandomGen g => Int -> Int -> Rand g B
 sampleB lb ub

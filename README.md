@@ -12,7 +12,7 @@ The input format mimics that of Haskell algebraic data types where in addition e
 constructor may be annotated with an additional *weight* parameter. For instance:
 
 ```hs
-/* Motzkin trees */
+-- Motzkin trees
 MotzkinTree = Leaf
             | Unary MotzkinTree (2)
             | Binary MotzkinTree MotzkinTree.
@@ -30,8 +30,8 @@ Each definition constitutes an algebraic data type where each inhabitant has an 
 - text-based compilator annotating constructors with appropriate *branching probabilities*.
 
 #### Installation and usage
-*Boltzmann Brain* is developed using ```stack```. For usage details please
-see the *examples* directory and/or type ```bb -h```.
+*Boltzmann Brain* is developed using ```stack``` on top of ```cabal```.
+ For usage details please see the *examples* directory and/or type ```bb -h```.
 
 #### TODO
 - [ ] Support for a list-based Seq constructor,

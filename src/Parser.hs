@@ -17,8 +17,8 @@ import qualified System as S
 
 sc :: Parser ()
 sc = L.space (void spaceChar) lineCmnt blockCmnt
-    where lineCmnt  = L.skipLineComment "//"
-          blockCmnt = L.skipBlockComment "/*" "*/"
+    where lineCmnt  = L.skipLineComment "--"
+          blockCmnt = L.skipBlockComment "{-" "-}"
 
 lexeme :: Parser a -> Parser a
 lexeme = L.lexeme sc

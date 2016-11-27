@@ -1,2 +1,2 @@
-/* Plain binary trees */
+-- Plain binary trees
 B = Leaf | Node B B.

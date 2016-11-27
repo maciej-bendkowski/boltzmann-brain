@@ -1,11 +1,11 @@
--- | Compiler: boltzmann-brain ALPHA (2016-10-23 16:40:26.039624 CEST)
+-- | Compiler: boltzmann-brain ALPHA (2016-11-27 12:18:26.44639 CET)
 -- | Singularity: 3.33333015441894531250e-1
-module NormalF
+module Sampler
        (D(..), genRandomD, sampleD, M(..), genRandomM, sampleM, N(..),
         genRandomN, sampleN)
        where
 import Control.Monad (guard)
-import Control.Monad.Random (RandomGen(..), Rand(..), getRandomR)
+import Control.Monad.Random (RandomGen(..), Rand, getRandomR)
 import Control.Monad.Trans (lift)
 import Control.Monad.Trans.Maybe (MaybeT(..), runMaybeT)
 
@@ -30,8 +30,8 @@ genRandomD ub
        p <- randomP
        if p < 0.33333301544189453 then
          do (x0, w0) <- genRandomD (ub - 1)
-            return $! (S x0, 1 + w0)
-         else return $! (Z, 1)
+            return (S x0, 1 + w0)
+         else return (Z, 1)
 
 genRandomM :: RandomGen g => Int -> MaybeT (Rand g) (M, Int)
 genRandomM ub
@@ -40,10 +40,10 @@ genRandomM ub
        if p < 0.498861137602297 then
          do (x0, w0) <- genRandomM (ub - 1)
             (x1, w1) <- genRandomN (ub - 1 - w0)
-            return $! (App x0 x1, 1 + w0 + w1)
+            return (App x0 x1, 1 + w0 + w1)
          else
          do (x0, w0) <- genRandomD (ub - 0)
-            return $! (Index x0, 0 + w0)
+            return (Index x0, 0 + w0)
 
 genRandomN :: RandomGen g => Int -> MaybeT (Rand g) (N, Int)
 genRandomN ub
@@ -51,10 +51,10 @@ genRandomN ub
        p <- randomP
        if p < 0.6666676510292284 then
          do (x0, w0) <- genRandomM (ub - 0)
-            return $! (Neutral x0, 0 + w0)
+            return (Neutral x0, 0 + w0)
          else
          do (x0, w0) <- genRandomN (ub - 1)
-            return $! (Abs x0, 1 + w0)
+            return (Abs x0, 1 + w0)
 
 sampleD :: RandomGen g => Int -> Int -> Rand g D
 sampleD lb ub

@@ -1,11 +1,11 @@
--- | Compiler: boltzmann-brain ALPHA (2016-10-23 16:39:59.540686 CEST)
+-- | Compiler: boltzmann-brain ALPHA (2016-11-27 12:17:58.617074 CET)
 -- | Singularity: 2.95597076416015625000e-1
-module Lambda
+module Sampler
        (DeBruijn(..), genRandomDeBruijn, sampleDeBruijn, Lambda(..),
         genRandomLambda, sampleLambda)
        where
 import Control.Monad (guard)
-import Control.Monad.Random (RandomGen(..), Rand(..), getRandomR)
+import Control.Monad.Random (RandomGen(..), Rand, getRandomR)
 import Control.Monad.Trans (lift)
 import Control.Monad.Trans.Maybe (MaybeT(..), runMaybeT)
 
@@ -28,8 +28,8 @@ genRandomDeBruijn ub
        p <- randomP
        if p < 0.2955970764160156 then
          do (x0, w0) <- genRandomDeBruijn (ub - 1)
-            return $! (S x0, 1 + w0)
-         else return $! (Z, 1)
+            return (S x0, 1 + w0)
+         else return (Z, 1)
 
 genRandomLambda ::
                   RandomGen g => Int -> MaybeT (Rand g) (Lambda, Int)
@@ -39,14 +39,14 @@ genRandomLambda ub
        if p < 0.3511035359841748 then
          do (x0, w0) <- genRandomLambda (ub - 1)
             (x1, w1) <- genRandomLambda (ub - 1 - w0)
-            return $! (App x0 x1, 1 + w0 + w1)
+            return (App x0 x1, 1 + w0 + w1)
          else
          if p < 0.6467006124001904 then
            do (x0, w0) <- genRandomLambda (ub - 1)
-              return $! (Abs x0, 1 + w0)
+              return (Abs x0, 1 + w0)
            else
            do (x0, w0) <- genRandomDeBruijn (ub - 0)
-              return $! (Index x0, 0 + w0)
+              return (Index x0, 0 + w0)
 
 sampleDeBruijn :: RandomGen g => Int -> Int -> Rand g DeBruijn
 sampleDeBruijn lb ub
