@@ -45,7 +45,6 @@ executable bb
   ghc-options:         -O2 -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base
                      , boltzmann-brain
-                     , numbers >= 3000.2.0.1
                      , time >= 1.5.0
   default-language:    Haskell2010
 
@@ -55,7 +54,6 @@ executable bb-text
   ghc-options:         -O2 -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base
                      , boltzmann-brain
-                     , numbers >= 3000.2.0.1
                      , time >= 1.5.0
   default-language:    Haskell2010
 

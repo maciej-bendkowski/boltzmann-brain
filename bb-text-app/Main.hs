@@ -8,9 +8,6 @@ import System.Environment
     
 import Data.List (nub)
 
-import Data.Number.Fixed
-import Data.Number.BigFloat
-
 import Data.Time
 import Data.Maybe
 
@@ -22,9 +19,8 @@ import System.Boltzmann
 import Errors
 import Parser
 
-import Compiler.Text.Boltzmann
-
 import Jacobian
+import Compiler.Text.Boltzmann
 
 import Oracle
 import qualified Oracle.Newton as Newton
@@ -122,7 +118,7 @@ run flags f = do
       Left err -> printError err
       Right sys -> runCompiler sys flags
 
-type P = BigFloat (PrecPlus20 Eps1)
+type P = Double
 type NewtonSystem = BoltzmannSystem (Newton.State P) P
 type BanachSystem = BoltzmannSystem (Banach.State P) P
 

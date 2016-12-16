@@ -7,10 +7,6 @@ import System.Console.GetOpt
 import System.Environment
     
 import Data.List (nub)
-
-import Data.Number.Fixed
-import Data.Number.BigFloat
-
 import Data.Time
 import Data.Maybe
 
@@ -23,7 +19,6 @@ import Errors
 import Parser
 
 import Compiler.Haskell.MaybeT
-
 import Jacobian
 
 import Oracle
@@ -108,6 +103,7 @@ getOracle (Oracle name : fs)
     | name == "banach" = Banach
     | name == "newton" = Newton
     | otherwise = getOracle fs
+
 getOracle (_:fs) = getOracle fs
 getOracle [] = Banach
 
@@ -141,7 +137,7 @@ run flags f = do
       Left err -> printError err
       Right sys -> runCompiler sys flags
 
-type P = BigFloat (PrecPlus20 Eps1)
+type P = Double 
 type NewtonSystem = BoltzmannSystem (Newton.State P) P
 type BanachSystem = BoltzmannSystem (Banach.State P) P
 
