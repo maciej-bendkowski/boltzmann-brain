@@ -27,6 +27,7 @@ Each definition constitutes an algebraic data type where each inhabitant has an 
 - optimised Newton oracle (see [3]) for numerical system evaluation,
 - singularity approximation within a desired error bound,
 - working, self-contained Haskell module generation utilizing ```Control.Monad.Random``` and ```Control.Monad.Trans.Maybe``` in the implementation of dedicated Boltzmann sampler,
+- support for the admisible list-based sequence constructor,
 - text-based compilator annotating constructors with appropriate *branching probabilities*.
 
 #### Installation and usage
@@ -34,7 +35,6 @@ Each definition constitutes an algebraic data type where each inhabitant has an 
  For usage details please see the *examples* directory and/or type ```bb -h```.
 
 #### TODO
-- [ ] Support for a list-based Seq constructor,
 - [ ] Provide a hackage package with haddock documentation,
 - [ ] Support pointing operations and labelled structures.
 
