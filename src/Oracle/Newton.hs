@@ -21,6 +21,7 @@ import qualified Data.Vector as V
 evalSpec :: Fractional a => System b -> a -> Vector a -> Spec -> a
 evalSpec sys z ys (Union x y) = evalSpec sys z ys x + evalSpec sys z ys y
 evalSpec sys z ys (Product x y) = evalSpec sys z ys x * evalSpec sys z ys y
+evalSpec sys z ys (Seq x) = 1 / (1 - evalSpec sys z ys x)
 evalSpec sys z ys (Class c) = value c sys ys 
 evalSpec sys z ys (Z n) = z ^^ n
 evalSpec sys z ys Empty = 0

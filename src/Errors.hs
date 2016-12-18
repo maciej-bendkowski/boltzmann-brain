@@ -56,6 +56,9 @@ consistent sys = mapM_ consistentType (M.toList $ defs sys) `catchError` Left
           consistentCons t con = mapM_ (consistentArg t con) $ args con
           
           consistentArg :: String -> Cons a -> Arg -> SystemMonad ()
+          consistentArg t con (List s)
+            | s `S.member` ts = return () 
+            | otherwise = throwError $ Inconsistent t (func con) s
           consistentArg t con (Type s)
             | s `S.member` ts = return () 
             | otherwise = throwError $ Inconsistent t (func con) s

@@ -21,6 +21,9 @@ writeCons [con] = writeCon con
 parens :: Show a => a -> String
 parens s = "(" ++ show s ++ ")"
 
+brackets :: Show a => a -> String
+brackets s = "[" ++ show s ++ "]"
+
 writeCon :: Show a => Cons a -> String
 writeCon con
   | null (args con) = func con ++ " " ++ parens (weight con)
@@ -30,7 +33,9 @@ writeCon con
 writeArgs :: [Arg] -> String 
 writeArgs [] = ""
 writeArgs [Type t] = t
+writeArgs [List t] = brackets t
 writeArgs (Type t : args) = t ++ " " ++ writeArgs args
+writeArgs (List t : args) = brackets t ++ " " ++ writeArgs args
 
 writeSystem :: (Real a, Show a) => BoltzmannSystem b a -> IO ()
 writeSystem sys = let sys' = system sys 

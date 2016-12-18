@@ -29,6 +29,9 @@ symbol = L.symbol sc
 parens :: Parser a -> Parser a
 parens = between (symbol "(") (symbol ")")
 
+brackets :: Parser a -> Parser a
+brackets = between (symbol "[") (symbol "]")
+
 integer :: Parser Integer
 integer = lexeme L.integer
 
@@ -65,7 +68,15 @@ exprStmt = do
                   } 
 
 argStmt :: Parser S.Arg
-argStmt = do
+argStmt = try listStmt <|> typeStmt
+
+listStmt :: Parser S.Arg
+listStmt = do
+    t <- brackets identifier
+    return $ S.List t
+
+typeStmt :: Parser S.Arg
+typeStmt = do
     t <- identifier
     return $ S.Type t
 

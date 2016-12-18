@@ -1,0 +1,2 @@
+-- Plain trees
+Tree = Node [Tree].

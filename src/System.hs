@@ -24,6 +24,7 @@ data Cons a = Cons { func :: String
                    } deriving (Show)
 
 data Arg = Type String
+         | List String
            deriving (Show)
 
 types :: System a -> Set String

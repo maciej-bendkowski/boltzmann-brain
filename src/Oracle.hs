@@ -38,7 +38,7 @@ singularity sys eps = singularity' 0 1.0
 divergent :: (Fractional a, Ord a) =>  System Integer -> a -> a -> Bool
 divergent sys eps z = divergent' (eval sys z vec) vec
     where divergent' v v'
-            | V.any (> 1.0/eps) v = True
+            | V.any (> 1) v = True
             | halt eps v v' = False
             | otherwise = divergent' (eval sys z v) v
           vec = V.replicate (size sys) 0.0
@@ -46,6 +46,7 @@ divergent sys eps z = divergent' (eval sys z vec) vec
 eval :: Fractional a => System Integer -> a -> Vector a -> Vector a
 eval sys z vec = V.imap update vec
     where update idx _ = sum (map evalE $ snd (M.elemAt idx $ defs sys))
+          evalT (List t) = 1 / (1 - value t sys vec)
           evalT (Type t) = value t sys vec
           evalE e = (z ^^ w) * product (map evalT ts)
               where w = weight e
@@ -70,7 +71,8 @@ evalCons sys z vec e = (z ^^ w) * product (map (evalArg sys vec) ts)
     where w = weight e
           ts = args e
 
-evalArg :: System Integer -> Vector a -> Arg -> a
+evalArg :: Fractional a => System Integer -> Vector a -> Arg -> a
+evalArg sys vec (List t) = 1 / (1 - value t sys vec)
 evalArg sys vec (Type t) = value t sys vec
 
 toBoltzmann' :: Oracle a b => b -> b -> System Integer -> a -> a -> BoltzmannSystem a b

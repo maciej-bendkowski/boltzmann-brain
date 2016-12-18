@@ -4,7 +4,8 @@ module Compiler.Haskell.MaybeT
     , compile
     ) where
 
-import Language.Haskell.Exts
+import Language.Haskell.Exts hiding (List)
+import qualified Language.Haskell.Exts as LHE
 import Language.Haskell.Exts.Pretty (prettyPrint)
 import Language.Haskell.Exts.SrcLoc (noLoc)
 
@@ -41,8 +42,11 @@ compileModule sys mod withIO = Module noLoc (ModuleName mod) []
         imports = declareImports withIO
         decls = declareADTs sys ++
                     declareGenerators sys ++
+                    declareListGenerators sys ++
                     declareSamplers sys ++
-                    declareSamplersIO sys withIO
+                    declareListSamplers sys ++
+                    declareSamplersIO sys withIO ++
+                    declareListSamplersIO sys withIO
 
 declareImports withIO = 
     [importFrom "Control.Monad" [importFunc "guard"],
@@ -60,19 +64,32 @@ importIO True = [importFunc "evalRandIO"]
 
 -- Naming functions.
 genName = (++) "genRandom"
+listGenName t = genName t ++ "List"
+
 samplerName = (++) "sample"
+listSamplerName t = samplerName t ++ "List"
+
 samplerIOName t = samplerName t ++ "IO"
+listSamplerIOName t = listSamplerName t ++ "IO"
 
 declareExports sys withIO =
     exportGenerators sys ++
+    exportListGenerators sys ++
     exportSamplers sys ++
-    exportSamplersIO sys withIO
+    exportListSamplers sys ++
+    exportSamplersIO sys withIO ++
+    exportListSamplersIO sys withIO
 
 exportGenerators sys = map (exportFunc . genName) $ typeList sys
+exportListGenerators sys = map (exportFunc . listGenName) $ typeList sys
 exportSamplers sys = map (exportFunc . samplerName) $ typeList sys
+exportListSamplers sys = map (exportFunc . listSamplerName) $ typeList sys
 
 exportSamplersIO sys False = []
 exportSamplersIO sys True = map (exportFunc . samplerIOName) $ typeList sys
+
+exportListSamplersIO sys False = []
+exportListSamplersIO sys True = map (exportFunc . listSamplerIOName) $ typeList sys
 
 -- Utils.
 maybeT' = typeCons "MaybeT"
@@ -139,8 +156,11 @@ rec constr w = case arguments (args constr) (toLit w) variableStream weightStrea
     where cons = conExp $ func constr
 
 arguments [] ub _ _ = ([], toLit 0, [])
-arguments (Type arg:args) ub (x:xs) (w:ws) = (stmt : stmts, argW', v : vs)
-    where stmt = bindP x w $ applyF (varExp $ genName arg) [varExp "ub" `sub` ub]
+arguments (Type arg:args) ub xs ws = arguments' genName arg args ub xs ws
+arguments (List arg:args) ub xs ws = arguments' listGenName arg args ub xs ws
+
+arguments' f arg args ub (x:xs) (w:ws) = (stmt : stmts, argW', v : vs)
+    where stmt = bindP x w $ applyF (varExp $ f arg) [varExp "ub" `sub` ub]
           (stmts, argW, vs) = arguments args ub' xs ws
           argW' = argW `add` varExp w
           ub' = ub `sub` varExp w
@@ -149,6 +169,36 @@ arguments (Type arg:args) ub (x:xs) (w:ws) = (stmt : stmts, argW', v : vs)
 ret f [] w = Qualifier $ applyF return' [Tuple Boxed [f, w]]
 ret f xs w = Qualifier $ applyF return' [Tuple Boxed [t, w]]
     where t = applyF f xs
+
+-- List generators.
+listGeneratorType :: Type -> Type
+listGeneratorType type' = TyForall Nothing 
+    [ClassA randomGen' [g']]
+        (TyFun int' (maybeTType $ TyTuple Boxed [TyList type', int']))
+
+declareListGenerators sys = concatMap (declListGenerator sys) $ typeList sys
+
+declListGenerator sys t = declTFun (listGenName t) type' ["ub"] body
+    where type' = listGeneratorType (typeCons t) 
+          body = constrListGenerator sys t
+
+constrListGenerator sys t = Do (initSteps ++ branching)
+    where branching = [Qualifier $ constrListGenerator' sys t]
+          initSteps = [guardian "ub", 
+                       randomP "p"]
+
+constrListGenerator' sys t = 
+    If (lessF (varExp "p") (typeWeight sys t))
+       (retHeadList t)
+       (retNil t)
+
+retHeadList t = Do 
+    [bindP "x" "w" (applyF (varExp $ genName t) [varExp "ub"]),
+     bindP "xs" "ws" (applyF (varExp $ listGenName t) [varExp "ub" `sub` varExp "w"]),
+     ret (InfixApp (varExp "x") (symbol ":") (varExp "xs")) 
+            [] (varExp "w" `add` varExp "ws")]
+
+retNil t = applyF return' [Tuple Boxed [LHE.List [], toLit 0]]
 
 -- Samplers.
 samplerType :: Type -> Type
@@ -165,9 +215,9 @@ declSampler t = declTFun (samplerName t) type' ["lb","ub"] body
     where type' = samplerType (typeCons t) 
           body = constructSampler t
 
-constructSampler t =
+constructSampler' gen sam t =
     Do [bind "sample" (applyF (varExp "runMaybeT") 
-            [applyF (varExp $ genName t) [varExp "ub"]]),
+            [applyF (varExp $ gen t) [varExp "ub"]]),
             caseSample t] 
     where caseSample t = Qualifier $ Case (varExp "sample") 
                  [Alt noLoc (PApp (unname "Nothing") [])
@@ -177,10 +227,20 @@ constructSampler t =
                   PVar $ Ident "s"]])
                   (UnGuardedRhs return') Nothing]
 
-          rec' = applyF (varExp $ samplerName t) [varExp "lb", varExp "ub"]
+          rec' = applyF (varExp $ sam t) [varExp "lb", varExp "ub"]
           return' = If (lessEq (varExp "lb") (varExp "s"))
                       (applyF (varExp "return") [varExp "x"])
                       rec'
+
+constructSampler = constructSampler' genName samplerName
+
+declareListSamplers sys = concatMap declListSampler $ typeList sys
+
+declListSampler t = declTFun (listSamplerName t) type' ["lb","ub"] body
+    where type' = samplerType (TyList $ typeCons t) 
+          body = constructListSampler t
+
+constructListSampler = constructSampler' listGenName listSamplerName
 
 -- IO Samplers.
 samplerIOType :: Type -> Type
@@ -195,6 +255,18 @@ declSamplerIO t = declTFun (samplerIOName t) type' ["lb","ub"] body
     where type' = samplerIOType (typeCons t) 
           body = constructSamplerIO t
 
-constructSamplerIO t = applyF (varExp "evalRandIO")
-                              [applyF (varExp $ samplerName t) [varExp "lb",
-                                                                varExp "ub"]]
+constructSamplerIO' sam t = applyF (varExp "evalRandIO")
+                               [applyF (varExp $ sam t) [varExp "lb",
+                                                         varExp "ub"]]
+
+constructSamplerIO = constructSamplerIO' samplerName
+
+declareListSamplersIO sys False = []
+declareListSamplersIO sys True = concatMap declListSamplerIO $ typeList sys
+
+declListSamplerIO :: String -> [Decl]
+declListSamplerIO t = declTFun (listSamplerIOName t) type' ["lb","ub"] body
+    where type' = samplerIOType (TyList $ typeCons t) 
+          body = constructListSamplerIO t
+
+constructListSamplerIO = constructSamplerIO' listSamplerName

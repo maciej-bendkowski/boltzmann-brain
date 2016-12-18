@@ -1,7 +1,7 @@
 -- | Author: Maciej Bendkowski <maciej.bendkowski@tcs.uj.edu.pl>
 module Compiler.Haskell.Helpers where
 
-import Language.Haskell.Exts
+import Language.Haskell.Exts hiding (List)
 import Language.Haskell.Exts.SrcLoc (noLoc)
 
 import System
@@ -92,3 +92,4 @@ declCon expr = ConDecl (Ident $ func expr) ags
 
 declArg :: Arg -> Type
 declArg (Type s) = typeVar s
+declArg (List s) = TyList $ typeVar s

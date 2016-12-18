@@ -16,6 +16,7 @@ data Spec = Bud
           | Class String
           | Union Spec Spec
           | Product Spec Spec
+          | Seq Spec
           deriving (Show, Eq)
 
 simplify :: Spec -> Spec
@@ -31,6 +32,10 @@ simplify (Product x y) = case (simplify x, simplify y) of
                            (l, Neutral) -> l
                            (l, r) -> Product l r
 
+simplify (Seq x) = case simplify x of
+                     Empty -> Neutral
+                     x' -> Seq x'
+
 simplify x = x
 
 instance Semiring Spec where
@@ -45,6 +50,7 @@ evalZero = simplify . evalZero'
 evalZero' :: Spec -> Spec
 evalZero' (Union x y) = Union (evalZero' x) (evalZero' y)
 evalZero' (Product x y) = Product (evalZero' x) (evalZero' y)
+evalZero' (Seq x) = Seq (evalZero' x)
 evalZero' (Class _) = Empty
 evalZero' (Z _) = Empty
 evalZero' x = x
@@ -57,6 +63,9 @@ deriv' d (Union x y) = Union (deriv' d x) (deriv' d y)
 deriv' d (Product x y) = Union (Product x' y) (Product y' x)
     where x' = deriv' d x
           y' = deriv' d y
+
+deriv' d s @ (Seq x) = Product s (Product x' s)
+    where x' = deriv' d x
 
 deriv' d (Class t)
   | d == t = Bud
@@ -71,6 +80,7 @@ consSpec con = foldl Product zk (map argSpec $ args con)
 
 argSpec :: Arg -> Spec
 argSpec (Type t) = Class t
+argSpec (List t) = Seq (Class t)
 
 typeSpec :: [Cons Integer] -> Spec
 typeSpec cons = foldl1 Union (map consSpec cons)
@@ -78,5 +88,6 @@ typeSpec cons = foldl1 Union (map consSpec cons)
 graft :: Spec -> Spec -> Spec
 graft (Union x y) spec = Union (graft x spec) (graft y spec)
 graft (Product x y) spec = Product (graft x spec) (graft y spec)
+graft (Seq x) spec = Seq (graft x spec)
 graft Bud spec = spec
 graft x _ = x

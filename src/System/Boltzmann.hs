@@ -4,10 +4,11 @@ module System.Boltzmann
     , typeList
     , paramTypes
     , paramTypes'
+    , typeWeight
     , weightedTypes
     ) where
 
-import Prelude hiding (replicate, zipWith, all, any)
+import Prelude hiding (replicate, zipWith, all, any, (!))
 import Data.Vector hiding (sum, map, zip, product)
 
 import qualified Data.Map.Strict as M
@@ -41,3 +42,9 @@ typeW sys s = case s `M.lookup` defs sys of
 
 weightedTypes :: BoltzmannSystem a b -> [(String, [Cons Integer])]
 weightedTypes = M.toList . defs . weights
+
+typeWeight :: BoltzmannSystem a b -> String -> b
+typeWeight sys t = vec ! idx
+    where m = defs (system sys)
+          vec = values sys
+          idx = M.findIndex t m
