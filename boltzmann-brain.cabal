@@ -21,7 +21,6 @@ library
                      , Jacobian
                      , Compiler
                      , Compiler.Haskell.Helpers
-                     , Compiler.Haskell.Naive
                      , Compiler.Haskell.MaybeT
                      , Compiler.Text.Boltzmann
                      , Oracle
