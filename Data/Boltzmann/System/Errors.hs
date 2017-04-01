@@ -31,8 +31,11 @@ data SystemError = Inconsistent String   -- type name
                  | InvalidCons  String   -- type name
                                 String   -- constructor name
                  
+                 | NullCons     String   -- type name
+                                String   -- constructor name
+                 
                  | ClashCons    [String] -- clashing constructors
-                 | Illfounded            -- clashing constructors
+                 | Illfounded            -- ill-founded system 
 
 instance Show SystemError where
     show (Inconsistent t con arg) = "[Error] Invalid argument type '" 
@@ -40,6 +43,9 @@ instance Show SystemError where
     
     show (InvalidCons t con) = "[Error] Invalid constructor '" ++ con 
         ++ "' in type " ++ t ++ ": '" ++ con ++ "' names a declared type."
+    
+    show (NullCons t con) = "[Error] Invalid constructor '" ++ con 
+        ++ "' in type " ++ t ++ ": encountered a structure of size 0."
 
     show (ClashCons cons) = "[Error] Clashing constructor names: "
         ++ foldl1 (\c c' -> "'" ++ c ++ "', " ++ "'" ++ c' ++ "'") cons
@@ -54,6 +60,7 @@ errors sys = do
     void $ consistent sys
     void $ validCons sys
     void $ clashCons sys
+    void $ nullCons sys
     void $ illfounded sys
 
 consistent :: System a -> ErrorMonad ()
@@ -80,6 +87,16 @@ validCons sys = mapM_ validType (M.toList $ defs sys) `catchError` Left
             | null (args con) && func con `S.member` ts = 
                 throwError $ InvalidCons t (func con)
             | otherwise = return ()
+
+nullCons :: (Num a, Eq a) => System a -> ErrorMonad ()
+nullCons sys = mapM_ nullType (M.toList $ defs sys) `catchError` Left
+    where nullType (t,cons) = mapM_ (nullCon t) cons
+
+          nullCon :: (Num a, Eq a) => String -> Cons a -> ErrorMonad ()
+          nullCon t con
+            | null (args con) && weight con == 0 =
+                throwError $ NullCons t (func con)
+            | otherwise = return () 
 
 consNames :: System a -> MultiSet String
 consNames sys = MultiSet.unions (map insT $ M.elems (defs sys))
