@@ -1,8 +1,0 @@
--- Lambda terms in unary de Bruijn notation
-
--- Binary size notion
-Lambda = App Lambda Lambda (2) | Abs Lambda (2) | Index DeBruijn (0).
-DeBruijn = S DeBruijn | Z (2).
-   
-{- Note that if no size is given one is assumed
-   hence the successor S is of size one. -}

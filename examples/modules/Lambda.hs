@@ -1,13 +1,16 @@
--- | Compiler: boltzmann-brain ALPHA (2016-11-27 12:17:58.617074 CET)
--- | Singularity: 2.95597076416015625000e-1
+-- | Compiler: Boltzmann brain v1.0
+-- | Singularity: 0.2955970764160156
 module Sampler
-       (DeBruijn(..), genRandomDeBruijn, sampleDeBruijn, Lambda(..),
-        genRandomLambda, sampleLambda)
+       (genRandomDeBruijn, genRandomLambda, genRandomDeBruijnList,
+        genRandomLambdaList, sampleDeBruijn, sampleLambda,
+        sampleDeBruijnList, sampleLambdaList, sampleDeBruijnIO,
+        sampleLambdaIO, sampleDeBruijnListIO, sampleLambdaListIO)
        where
 import Control.Monad (guard)
-import Control.Monad.Random (RandomGen(..), Rand, getRandomR)
 import Control.Monad.Trans (lift)
 import Control.Monad.Trans.Maybe (MaybeT(..), runMaybeT)
+import Control.Monad.Random
+       (RandomGen(..), Rand, getRandomR, evalRandIO)
 
 data DeBruijn = S DeBruijn
               | Z
@@ -36,30 +39,78 @@ genRandomLambda ::
 genRandomLambda ub
   = do guard (ub > 0)
        p <- randomP
-       if p < 0.3511035359841748 then
+       if p < 0.35110353598417565 then
          do (x0, w0) <- genRandomLambda (ub - 1)
             (x1, w1) <- genRandomLambda (ub - 1 - w0)
-            return (App x0 x1, 1 + w0 + w1)
+            return (App x0 x1, 1 + w1 + w0)
          else
-         if p < 0.6467006124001904 then
+         if p < 0.6467006124001913 then
            do (x0, w0) <- genRandomLambda (ub - 1)
               return (Abs x0, 1 + w0)
            else
-           do (x0, w0) <- genRandomDeBruijn (ub - 0)
-              return (Index x0, 0 + w0)
+           do (x0, w0) <- genRandomDeBruijn ub
+              return (Index x0, w0)
+
+genRandomDeBruijnList ::
+                        RandomGen g => Int -> MaybeT (Rand g) ([DeBruijn], Int)
+genRandomDeBruijnList ub
+  = do guard (ub > 0)
+       p <- randomP
+       if p < 0.4196420351466248 then
+         do (x, w) <- genRandomDeBruijn ub
+            (xs, ws) <- genRandomDeBruijnList (ub - w)
+            return (x : xs, w + ws)
+         else return ([], 0)
+
+genRandomLambdaList ::
+                      RandomGen g => Int -> MaybeT (Rand g) ([Lambda], Int)
+genRandomLambdaList ub
+  = do guard (ub > 0)
+       p <- randomP
+       if p < 1.1877774308229005 then
+         do (x, w) <- genRandomLambda ub
+            (xs, ws) <- genRandomLambdaList (ub - w)
+            return (x : xs, w + ws)
+         else return ([], 0)
 
 sampleDeBruijn :: RandomGen g => Int -> Int -> Rand g DeBruijn
 sampleDeBruijn lb ub
-  = do let sampler = runMaybeT (genRandomDeBruijn ub)
-       x <- sampler
-       case x of
+  = do sample <- runMaybeT (genRandomDeBruijn ub)
+       case sample of
            Nothing -> sampleDeBruijn lb ub
-           Just (t', s) -> if lb <= s then return t' else sampleDeBruijn lb ub
+           Just (x, s) -> if lb <= s then return x else sampleDeBruijn lb ub
 
 sampleLambda :: RandomGen g => Int -> Int -> Rand g Lambda
 sampleLambda lb ub
-  = do let sampler = runMaybeT (genRandomLambda ub)
-       x <- sampler
-       case x of
+  = do sample <- runMaybeT (genRandomLambda ub)
+       case sample of
            Nothing -> sampleLambda lb ub
-           Just (t', s) -> if lb <= s then return t' else sampleLambda lb ub
+           Just (x, s) -> if lb <= s then return x else sampleLambda lb ub
+
+sampleDeBruijnList ::
+                     RandomGen g => Int -> Int -> Rand g [DeBruijn]
+sampleDeBruijnList lb ub
+  = do sample <- runMaybeT (genRandomDeBruijnList ub)
+       case sample of
+           Nothing -> sampleDeBruijnList lb ub
+           Just (x, s) -> if lb <= s then return x else
+                            sampleDeBruijnList lb ub
+
+sampleLambdaList :: RandomGen g => Int -> Int -> Rand g [Lambda]
+sampleLambdaList lb ub
+  = do sample <- runMaybeT (genRandomLambdaList ub)
+       case sample of
+           Nothing -> sampleLambdaList lb ub
+           Just (x, s) -> if lb <= s then return x else sampleLambdaList lb ub
+
+sampleDeBruijnIO :: Int -> Int -> IO DeBruijn
+sampleDeBruijnIO lb ub = evalRandIO (sampleDeBruijn lb ub)
+
+sampleLambdaIO :: Int -> Int -> IO Lambda
+sampleLambdaIO lb ub = evalRandIO (sampleLambda lb ub)
+
+sampleDeBruijnListIO :: Int -> Int -> IO [DeBruijn]
+sampleDeBruijnListIO lb ub = evalRandIO (sampleDeBruijnList lb ub)
+
+sampleLambdaListIO :: Int -> Int -> IO [Lambda]
+sampleLambdaListIO lb ub = evalRandIO (sampleLambdaList lb ub)
