@@ -1,60 +1,44 @@
 name:                boltzmann-brain
-version:             0.1.0.0
-synopsis:            Boltzmann sampler compiler for combinatorial systems. 
+version:             1.0.0.0
+synopsis:            Boltzmann sampler compiler for combinatorial systems.
+homepage:            https://github.com/maciej-bendkowski/boltzmann-brain
 license:             BSD3
 license-file:        LICENSE
 author:              Maciej Bendkowski
 maintainer:          maciej.bendkowski@tcs.uj.edu.pl
-copyright:           2016 Maciej Bendkowski 
-category:            Math 
+copyright:           2017 Maciej Bendkowski
+category:            Math
 build-type:          Simple
 -- extra-source-files:
 cabal-version:       >=1.10
 
 library
-  hs-source-dirs:      src
-  exposed-modules:     System
-                     , System.Boltzmann
-                     , Parser
-                     , Semiring
-                     , Combinatorial
-                     , Jacobian
-                     , Compiler
-                     , Compiler.Haskell.Helpers
-                     , Compiler.Haskell.MaybeT
-                     , Compiler.Text.Boltzmann
-                     , Oracle
-                     , Oracle.Banach
-                     , Oracle.Newton
-                     , Errors
+  exposed-modules:     Data.Boltzmann.System
+                     , Data.Boltzmann.System.Oracle
+                     , Data.Boltzmann.System.Parser
+                     , Data.Boltzmann.System.Specification
+                     , Data.Boltzmann.System.Jacobian
+                     , Data.Boltzmann.System.Errors
+                     , Data.Boltzmann.Compiler
+                     , Data.Boltzmann.Compiler.Haskell.Helpers
+                     , Data.Boltzmann.Compiler.Haskell.MaybeT
   build-depends:       base >= 4.7 && < 5
                      , containers >= 0.5.6
-                     , array >= 0.5.1
-                     , multiset >= 0.3.3
-                     , haskell-src-exts == 1.17.1
-                     , transformers >= 0.4.2.0
+                     , megaparsec >= 5.2.0
                      , vector >= 0.11.0
-                     , megaparsec >= 5.0
+                     , array >= 0.5.1
+                     , haskell-src-exts == 1.17.1
                      , mtl >= 2.2.1
-                     , matrix >= 0.3.5.0
+                     , multiset >= 0.3.3
+  ghc-options:         -O2 -Wall
   default-language:    Haskell2010
 
 executable bb
-  hs-source-dirs:      bb-app
+  hs-source-dirs:      app
   main-is:             Main.hs
-  ghc-options:         -O2 -threaded -rtsopts -with-rtsopts=-N
+  ghc-options:         -O2 -Wall -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base
                      , boltzmann-brain
-                     , time >= 1.5.0
-  default-language:    Haskell2010
-
-executable bb-text
-  hs-source-dirs:      bb-text-app
-  main-is:             Main.hs
-  ghc-options:         -O2 -threaded -rtsopts -with-rtsopts=-N
-  build-depends:       base
-                     , boltzmann-brain
-                     , time >= 1.5.0
   default-language:    Haskell2010
 
 source-repository head

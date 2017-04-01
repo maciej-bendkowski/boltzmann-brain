@@ -1,5 +1,13 @@
--- | Author: Maciej Bendkowski <maciej.bendkowski@tcs.uj.edu.pl>
-module Parser
+{-|
+ Module      : Data.Boltzmann.System.Parser 
+ Description : Parser utilities for combinatorial systems.
+ Copyright   : (c) Maciej Bendkowski, 2017
+ 
+ License     : BSD3
+ Maintainer  : maciej.bendkowski@tcs.uj.edu.pl
+ Stability   : experimental
+ -}
+module Data.Boltzmann.System.Parser
     ( parseSystem
     , printError
     ) where
@@ -7,13 +15,13 @@ module Parser
 import Control.Monad (void)
 
 import Text.Megaparsec
-import Text.Megaparsec.Expr
 import Text.Megaparsec.String
 
 import qualified Text.Megaparsec.Lexer as L
+
 import qualified Data.Map.Strict as M
 
-import qualified System as S
+import qualified Data.Boltzmann.System as S
 
 sc :: Parser ()
 sc = L.space (void spaceChar) lineCmnt blockCmnt
@@ -32,32 +40,34 @@ parens = between (symbol "(") (symbol ")")
 brackets :: Parser a -> Parser a
 brackets = between (symbol "[") (symbol "]")
 
-integer :: Parser Integer
-integer = lexeme L.integer
+integer :: Parser Int
+integer = lexeme $ do
+    n <- L.integer
+    return $ fromIntegral n
 
 identifier :: Parser String
 identifier = lexeme $ (:) <$> upperChar <*> many (alphaNumChar <|> char '_')
 
-systemStmt :: Parser (S.System Integer)
+systemStmt :: Parser (S.System Int)
 systemStmt = sc *> systemStmt' <* eof
     where systemStmt' = do
             ds <- some defsStmt
             return S.System { S.defs = M.fromList ds } 
 
-defsStmt :: Parser (String, [S.Cons Integer])
+defsStmt :: Parser (String, [S.Cons Int])
 defsStmt = do
     t <- identifier
     void (symbol "=")
     exprs <- exprListStmt
     return (t, exprs)
 
-exprListStmt :: Parser [S.Cons Integer]
+exprListStmt :: Parser [S.Cons Int]
 exprListStmt = do
     stms <- exprStmt `sepBy` symbol "|"
     void (symbol ".")
     return stms
 
-exprStmt :: Parser (S.Cons Integer)
+exprStmt :: Parser (S.Cons Int)
 exprStmt = do
     f <- identifier
     as <- many argStmt
@@ -87,7 +97,7 @@ parseFromFile :: Parsec e String a
 parseFromFile p file = runParser p file <$> readFile file
 
 parseSystem :: String 
-            -> IO (Either (ParseError Char Dec) (S.System Integer))
+            -> IO (Either (ParseError Char Dec) (S.System Int))
 
 parseSystem = parseFromFile systemStmt
 

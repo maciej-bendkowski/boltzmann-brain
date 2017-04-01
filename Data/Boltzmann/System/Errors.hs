@@ -1,21 +1,28 @@
--- | Author: Maciej Bendkowski <maciej.bendkowski@tcs.uj.edu.pl>
-module Errors
+{-|
+ Module      : Data.Boltzmann.System.Errors
+ Description : Various error handling utilities.
+ Copyright   : (c) Maciej Bendkowski, 2017
+ 
+ License     : BSD3
+ Maintainer  : maciej.bendkowski@tcs.uj.edu.pl
+ Stability   : experimental
+ -}
+module Data.Boltzmann.System.Errors
     ( SystemError
-    , SystemMonad
+    , ErrorMonad
     , errors
     ) where
 
 import Control.Monad.Except
 import qualified Data.Map.Strict as M
 
-import Data.Set (Set)
 import qualified Data.Set as S
 
 import Data.MultiSet (MultiSet)
 import qualified Data.MultiSet as MultiSet
 
-import System
-import Jacobian
+import Data.Boltzmann.System
+import Data.Boltzmann.System.Jacobian
 
 data SystemError = Inconsistent String   -- type name 
                                 String   -- constructor name
@@ -40,22 +47,22 @@ instance Show SystemError where
 
     show Illfounded = "[Error] Ill-founded system."
 
-type SystemMonad = Either SystemError
+type ErrorMonad = Either SystemError
 
-errors :: System Integer -> SystemMonad ()
+errors :: System Int -> ErrorMonad ()
 errors sys = do
     void $ consistent sys
     void $ validCons sys
     void $ clashCons sys
     void $ illfounded sys
 
-consistent :: System a -> SystemMonad ()
+consistent :: System a -> ErrorMonad ()
 consistent sys = mapM_ consistentType (M.toList $ defs sys) `catchError` Left
     where ts = types sys
           consistentType (t,cons) = mapM_ (consistentCons t) cons
-          consistentCons t con = mapM_ (consistentArg t con) $ args con
+          consistentCons t con    = mapM_ (consistentArg t con) $ args con
           
-          consistentArg :: String -> Cons a -> Arg -> SystemMonad ()
+          consistentArg :: String -> Cons a -> Arg -> ErrorMonad ()
           consistentArg t con (List s)
             | s `S.member` ts = return () 
             | otherwise = throwError $ Inconsistent t (func con) s
@@ -63,12 +70,12 @@ consistent sys = mapM_ consistentType (M.toList $ defs sys) `catchError` Left
             | s `S.member` ts = return () 
             | otherwise = throwError $ Inconsistent t (func con) s
 
-validCons :: System a -> SystemMonad ()
+validCons :: System a -> ErrorMonad ()
 validCons sys = mapM_ validType (M.toList $ defs sys) `catchError` Left
     where ts = types sys
           validType (t,cons) = mapM_ (validCon t) cons
           
-          validCon :: String -> Cons a -> SystemMonad ()
+          validCon :: String -> Cons a -> ErrorMonad ()
           validCon t con
             | null (args con) && func con `S.member` ts = 
                 throwError $ InvalidCons t (func con)
@@ -80,12 +87,12 @@ consNames sys = MultiSet.unions (map insT $ M.elems (defs sys))
 
 duplicates :: System a -> [String]
 duplicates sys = map fst $ filter gather $ MultiSet.toOccurList ms
-    where gather (con,n) = n /= 1
-          ms = consNames sys
+    where gather (_,n) = n /= 1
+          ms           = consNames sys
 
-clashCons :: System a -> SystemMonad ()
+clashCons :: System a -> ErrorMonad ()
 clashCons sys = let cs = duplicates sys in
                     unless (null cs) $ throwError (ClashCons cs) `catchError` Left
 
-illfounded :: System Integer -> SystemMonad ()
+illfounded :: System Int -> ErrorMonad ()
 illfounded sys = unless (wellFounded sys) $ throwError Illfounded `catchError` Left
