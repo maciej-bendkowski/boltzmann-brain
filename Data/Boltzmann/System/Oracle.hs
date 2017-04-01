@@ -46,6 +46,7 @@ computeProb sys z vec = sys { defs = M.mapWithKey computeProb' (defs sys) }
               where w' = evalExp sys vec z e
                     x  = w' + w
 
+-- | Compute the numerical Boltzmann probabilities for the given system.
 parametrise :: (Fractional a, Ord a) => System Int -> a -> a -> PSystem a
 parametrise sys rho eps = parametrise' initState state sys rho eps
     where initState = V.replicate (size sys) 0.0
@@ -62,6 +63,7 @@ parametrise' state' state sys rho eps
                           , weights = sys
                           }
 
+-- | Finds a numerical approximation of the system's dominating singularity.
 singularity :: (Fractional a, Integral b, Ord a) => System b -> a -> a
 singularity sys eps = singularity' 0 1.0
     where singularity' lb ub

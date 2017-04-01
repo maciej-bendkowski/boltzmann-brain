@@ -29,36 +29,44 @@ import qualified Data.Map.Strict as M
 import Data.Vector (Vector)
 import qualified Data.Vector as V
 
-newtype System a = System { defs :: Map String [Cons a] 
+-- | System of combinatorial structures.
+newtype System a = System { defs :: Map String [Cons a]   -- ^ Type definitions. 
                           } deriving (Show)
 
 size :: System a -> Int
 size = M.size . defs
 
-data Cons a = Cons { func   :: String
-                   , args   :: [Arg]
-                   , weight :: a
+-- | Type constructor.
+data Cons a = Cons { func   :: String       -- ^ Constructor name.
+                   , args   :: [Arg]        -- ^ Argument list.
+                   , weight :: a            -- ^ Constructor weight.
                    } deriving (Show)
 
-data Arg = Type String
-         | List String
+-- | Type constructor arguments.
+data Arg = Type String                      -- ^ Regular type reference.
+         | List String                      -- ^ Type list reference.
            deriving (Show)
 
+-- | Type set of the given system.
 types :: System a -> Set String
 types = M.keysSet . defs
 
-data PSystem a = PSystem { system  :: System a
-                         , values  :: Vector a
-                         , param   :: a
-                         , weights :: System Int
+-- | Parametrised system of combinatorial structures.
+data PSystem a = PSystem { system  :: System a      -- ^ System with probability weights.
+                         , values  :: Vector a      -- ^ Numerical values of corresponding types.
+                         , param   :: a             -- ^ Evaluation parameter.
+                         , weights :: System Int    -- ^ System with input weights.
                          } deriving (Show)
 
+-- | Type list of the given parametrised system.
 typeList :: PSystem a -> [String]
 typeList = S.toList . M.keysSet . defs . system
 
+-- | List of types with coresponding constructors.
 paramTypes :: PSystem a -> [(String, [Cons a])]
 paramTypes = M.toList . defs . system
 
+-- | List of types with coresponding constructors and input weights.
 paramTypesW :: PSystem a -> [(String, [(Cons a, Int)])]
 paramTypesW sys = map (addW $ weights sys) xs
     where xs = paramTypes sys
@@ -72,6 +80,7 @@ typeW sys s = case s `M.lookup` defs sys of
     Just cons -> map weight cons 
     Nothing -> []
 
+-- | Type weight of the given parametrised system.
 typeWeight :: PSystem a -> String -> a
 typeWeight sys t = vec V.! idx
     where m   = defs $ system sys

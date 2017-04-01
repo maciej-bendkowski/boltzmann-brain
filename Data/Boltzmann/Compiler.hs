@@ -11,5 +11,6 @@ module Data.Boltzmann.Compiler
     ( Configuration(..) 
     ) where
 
+-- | Compiler configurations.
 class Configuration a where
     compile :: a -> IO ()

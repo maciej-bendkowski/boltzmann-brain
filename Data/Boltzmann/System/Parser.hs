@@ -96,10 +96,12 @@ parseFromFile :: Parsec e String a
 
 parseFromFile p file = runParser p file <$> readFile file
 
+-- | Parses the given system specification.
 parseSystem :: String 
             -> IO (Either (ParseError Char Dec) (S.System Int))
 
 parseSystem = parseFromFile systemStmt
 
+-- | Prints the given parsing errors.
 printError :: ParseError Char Dec -> IO ()
 printError err = putStr $ parseErrorPretty err

@@ -19,8 +19,10 @@ import Data.Boltzmann.System.Specification
 import Data.Array
 import qualified Data.Map as M
 
+-- | Combinatorial Jacobian matrix.
 type Jacobian idx a = Array (idx,idx) a
 
+-- | Jacobian matrix for the given combinatorial system. 
 jacobian :: System Int -> Jacobian Int Spec
 jacobian sys = array ((0,0),(m-1,m-1)) contents
     where contents = [((i,j), find sys i j) | i <- [0..m-1], j <- [0..m-1]]
@@ -48,6 +50,8 @@ power n matrix
     | odd n     = matrix .@. square (power (n-1) matrix)
     | otherwise = square $ power (n `div` 2) matrix
 
+-- | Is the system well-founded?
+--   Note: The system is assumed to define no structures of size zero.
 wellFounded :: System Int -> Bool
 wellFounded sys = isEmpty jacP
     where jac  = jacobian sys

@@ -20,10 +20,12 @@ import Data.Boltzmann.System
 infixr 8 @+
 infixr 9 @.
 
+-- | Semiring type class.
 class Semiring a where
     (@+), (@.) :: a -> a -> a
     zero, one :: a
 
+-- | Combinatorial specification by Pivoteau et al.
 data Spec = Bud
           | Empty
           | Neutral
@@ -59,6 +61,7 @@ simplify (Seq x) =
       xs    -> Seq xs
 simplify x = x
 
+-- | Evaluates the specification in zero.
 evalZ :: Spec -> Spec
 evalZ = simplify . evalZ'
 
@@ -70,6 +73,7 @@ evalZ' (Class _)     = Empty
 evalZ' (Z _)         = Empty
 evalZ' x             = x
 
+-- | Compute the combinatorial derivative with respect to the given class.
 deriv :: String -> Spec -> Spec
 deriv d spec = simplify $ deriv' d spec
 
@@ -94,6 +98,7 @@ consSpec con = foldl Product zk $ map argSpec (args con)
     where zk = if w > 0 then Z w else Neutral
           w = weight con
 
+-- | Turns a given type into a corresponding combinatorial specification.
 typeSpec :: [Cons Int] -> Spec
 typeSpec cons = foldl1 Union $ map consSpec cons
 

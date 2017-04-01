@@ -24,6 +24,8 @@ import qualified Data.MultiSet as MultiSet
 import Data.Boltzmann.System
 import Data.Boltzmann.System.Jacobian
 
+-- | Semantic system errors referring to invalid
+--   input data, for instance ill-founded systems.
 data SystemError = Inconsistent String   -- type name 
                                 String   -- constructor name
                                 String   -- argument name
@@ -53,8 +55,11 @@ instance Show SystemError where
 
     show Illfounded = "[Error] Ill-founded system."
 
+-- | Monadic error handling wrapper.
 type ErrorMonad = Either SystemError
 
+-- | Checks whether the given input system is correct. 
+--   If not, return an approapriate SystemError.
 errors :: System Int -> ErrorMonad ()
 errors sys = do
     void $ consistent sys

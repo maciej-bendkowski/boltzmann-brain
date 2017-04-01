@@ -22,10 +22,11 @@ import Data.Boltzmann.System
 import Data.Boltzmann.Compiler
 import Data.Boltzmann.Compiler.Haskell.Helpers
 
-data Conf a = Conf { paramSys    :: PSystem a
-                   , moduleName  :: String
-                   , compileNote :: String
-                   , withIO      :: Bool
+-- | Default configuration type.
+data Conf a = Conf { paramSys    :: PSystem a   -- ^ Parametrised system.
+                   , moduleName  :: String      -- ^ Module name.
+                   , compileNote :: String      -- ^ Header comment note.
+                   , withIO      :: Bool        -- ^ Generate IO actions?
                    }
 
 instance (Real a, Show a) => Configuration (Conf a) where
