@@ -24,11 +24,9 @@ Each definition constitutes an algebraic data type where each inhabitant has an 
 #### Features
 - easy and intuitive text-based API,
 - automated well-foudness check for the given combinatorial specification (see [3]),
-- optimised Newton oracle (see [3]) for numerical system evaluation,
 - singularity approximation within a desired error bound,
 - working, self-contained Haskell module generation utilizing ```Control.Monad.Random``` and ```Control.Monad.Trans.Maybe``` in the implementation of dedicated Boltzmann sampler,
-- support for the admisible list-based sequence constructor,
-- text-based compilator annotating constructors with appropriate *branching probabilities*.
+- support for the admissible list-based sequence constructor.
 
 #### Installation and usage
 *Boltzmann Brain* is developed using ```stack``` on top of ```cabal```.
