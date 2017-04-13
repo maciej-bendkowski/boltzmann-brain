@@ -1,15 +1,15 @@
 {-|
- Module      : Data.Boltzmann.System 
+ Module      : Data.Boltzmann.System
  Description : System utilities for combinatorial specifications.
  Copyright   : (c) Maciej Bendkowski, 2017
- 
+
  License     : BSD3
  Maintainer  : maciej.bendkowski@tcs.uj.edu.pl
  Stability   : experimental
  -}
 module Data.Boltzmann.System
     ( System(..)
-    , size 
+    , size
     , Cons(..)
     , Arg(..)
     , types
@@ -30,7 +30,7 @@ import Data.Vector (Vector)
 import qualified Data.Vector as V
 
 -- | System of combinatorial structures.
-newtype System a = System { defs :: Map String [Cons a]   -- ^ Type definitions. 
+newtype System a = System { defs :: Map String [Cons a]   -- ^ Type definitions.
                           } deriving (Show)
 
 size :: System a -> Int
@@ -77,7 +77,7 @@ addW sys (s, cons) = (s, zip cons ws)
 
 typeW :: System Int -> String -> [Int]
 typeW sys s = case s `M.lookup` defs sys of
-    Just cons -> map weight cons 
+    Just cons -> map weight cons
     Nothing -> []
 
 -- | Type weight of the given parametrised system.

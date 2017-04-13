@@ -2,7 +2,7 @@
  Module      : Data.Boltzmann.System.Specification
  Description : Combinatorial specification utilities.
  Copyright   : (c) Maciej Bendkowski, 2017
- 
+
  License     : BSD3
  Maintainer  : maciej.bendkowski@tcs.uj.edu.pl
  Stability   : experimental
@@ -43,7 +43,7 @@ instance Semiring Spec where
     zero   = Empty
 
 simplify :: Spec -> Spec
-simplify (Union x y) = 
+simplify (Union x y) =
     case (simplify x, simplify y) of
       (Empty,rs) -> rs
       (ls,Empty) -> ls

@@ -2,7 +2,7 @@
  Module      : Data.Boltzmann.System.Jacobian
  Description : Jacobian matrix utilities.
  Copyright   : (c) Maciej Bendkowski, 2017
- 
+
  License     : BSD3
  Maintainer  : maciej.bendkowski@tcs.uj.edu.pl
  Stability   : experimental
@@ -22,7 +22,7 @@ import qualified Data.Map as M
 -- | Combinatorial Jacobian matrix.
 type Jacobian idx a = Array (idx,idx) a
 
--- | Jacobian matrix for the given combinatorial system. 
+-- | Jacobian matrix for the given combinatorial system.
 jacobian :: System Int -> Jacobian Int Spec
 jacobian sys = array ((0,0),(m-1,m-1)) contents
     where contents = [((i,j), find sys i j) | i <- [0..m-1], j <- [0..m-1]]
@@ -34,7 +34,7 @@ find sys i j = evalZ $ deriv d (typeSpec cons)
           d    = fst (M.elemAt j sys')
           sys' = defs sys
 
-(.@.) :: (Ix idx, Semiring a) => Jacobian idx a -> Jacobian idx a -> Jacobian idx a 
+(.@.) :: (Ix idx, Semiring a) => Jacobian idx a -> Jacobian idx a -> Jacobian idx a
 (.@.) x y = array ((x0,y1),(x0',y1')) contents
   where
     (((x0,x1),(x0',x1')), ((_,y1),(_,y1'))) = (bounds x, bounds y)

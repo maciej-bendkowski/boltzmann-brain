@@ -2,7 +2,7 @@
  Module      : Data.Boltzmann.System.Errors
  Description : Various error handling utilities.
  Copyright   : (c) Maciej Bendkowski, 2017
- 
+
  License     : BSD3
  Maintainer  : maciej.bendkowski@tcs.uj.edu.pl
  Stability   : experimental
@@ -26,27 +26,27 @@ import Data.Boltzmann.System.Jacobian
 
 -- | Semantic system errors referring to invalid
 --   input data, for instance ill-founded systems.
-data SystemError = Inconsistent String   -- type name 
+data SystemError = Inconsistent String   -- type name
                                 String   -- constructor name
                                 String   -- argument name
-                 
+
                  | InvalidCons  String   -- type name
                                 String   -- constructor name
-                 
+
                  | NullCons     String   -- type name
                                 String   -- constructor name
-                 
+
                  | ClashCons    [String] -- clashing constructors
-                 | Illfounded            -- ill-founded system 
+                 | Illfounded            -- ill-founded system
 
 instance Show SystemError where
-    show (Inconsistent t con arg) = "[Error] Invalid argument type '" 
+    show (Inconsistent t con arg) = "[Error] Invalid argument type '"
         ++ arg ++ "' in constructor " ++ con ++ " of type " ++ t ++ "."
-    
-    show (InvalidCons t con) = "[Error] Invalid constructor '" ++ con 
+
+    show (InvalidCons t con) = "[Error] Invalid constructor '" ++ con
         ++ "' in type " ++ t ++ ": '" ++ con ++ "' names a declared type."
-    
-    show (NullCons t con) = "[Error] Invalid constructor '" ++ con 
+
+    show (NullCons t con) = "[Error] Invalid constructor '" ++ con
         ++ "' in type " ++ t ++ ": encountered a structure of size 0."
 
     show (ClashCons cons) = "[Error] Clashing constructor names: "
@@ -58,7 +58,7 @@ instance Show SystemError where
 -- | Monadic error handling wrapper.
 type ErrorMonad = Either SystemError
 
--- | Checks whether the given input system is correct. 
+-- | Checks whether the given input system is correct.
 --   If not, return an approapriate SystemError.
 errors :: System Int -> ErrorMonad ()
 errors sys = do
@@ -73,23 +73,23 @@ consistent sys = mapM_ consistentType (M.toList $ defs sys) `catchError` Left
     where ts = types sys
           consistentType (t,cons) = mapM_ (consistentCons t) cons
           consistentCons t con    = mapM_ (consistentArg t con) $ args con
-          
+
           consistentArg :: String -> Cons a -> Arg -> ErrorMonad ()
           consistentArg t con (List s)
-            | s `S.member` ts = return () 
+            | s `S.member` ts = return ()
             | otherwise = throwError $ Inconsistent t (func con) s
           consistentArg t con (Type s)
-            | s `S.member` ts = return () 
+            | s `S.member` ts = return ()
             | otherwise = throwError $ Inconsistent t (func con) s
 
 validCons :: System a -> ErrorMonad ()
 validCons sys = mapM_ validType (M.toList $ defs sys) `catchError` Left
     where ts = types sys
           validType (t,cons) = mapM_ (validCon t) cons
-          
+
           validCon :: String -> Cons a -> ErrorMonad ()
           validCon t con
-            | null (args con) && func con `S.member` ts = 
+            | null (args con) && func con `S.member` ts =
                 throwError $ InvalidCons t (func con)
             | otherwise = return ()
 
@@ -101,7 +101,7 @@ nullCons sys = mapM_ nullType (M.toList $ defs sys) `catchError` Left
           nullCon t con
             | null (args con) && weight con == 0 =
                 throwError $ NullCons t (func con)
-            | otherwise = return () 
+            | otherwise = return ()
 
 consNames :: System a -> MultiSet String
 consNames sys = MultiSet.unions (map insT $ M.elems (defs sys))

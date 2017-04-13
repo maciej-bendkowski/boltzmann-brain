@@ -1,13 +1,13 @@
 {-|
- Module      : Data.Boltzmann.System.Oracle 
+ Module      : Data.Boltzmann.System.Oracle
  Description : Numeric oracle utilities.
  Copyright   : (c) Maciej Bendkowski, 2017
- 
+
  License     : BSD3
  Maintainer  : maciej.bendkowski@tcs.uj.edu.pl
  Stability   : experimental
  -}
-module Data.Boltzmann.System.Oracle 
+module Data.Boltzmann.System.Oracle
     ( singularity
     , parametrise
     ) where
@@ -28,7 +28,7 @@ eval :: (Fractional b, Integral a) => System a -> Vector b -> b -> Vector b
 eval sys vec z = V.imap update vec
     where update idx _ = sum $ map (evalExp sys vec z) (f idx)
           f n          = snd $ M.elemAt n $ defs sys
-         
+
 evalType :: (Fractional a, Integral b) => System b -> Vector a -> Arg -> a
 evalType sys vec (List t) = 1 / (1 - value t sys vec)
 evalType sys vec (Type t) = value t sys vec
@@ -54,7 +54,7 @@ parametrise sys rho eps = parametrise' initState state sys rho eps
 
 parametrise' :: (Fractional a, Ord a) => Vector a -> Vector a -> System Int -> a -> a -> PSystem a
 parametrise' state' state sys rho eps
-    | not (halt eps state' state) = 
+    | not (halt eps state' state) =
             let newState = eval sys state rho
                 in parametrise' state newState sys rho eps
     | otherwise = PSystem { system = computeProb sys rho state

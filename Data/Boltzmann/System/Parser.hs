@@ -1,8 +1,8 @@
 {-|
- Module      : Data.Boltzmann.System.Parser 
+ Module      : Data.Boltzmann.System.Parser
  Description : Parser utilities for combinatorial systems.
  Copyright   : (c) Maciej Bendkowski, 2017
- 
+
  License     : BSD3
  Maintainer  : maciej.bendkowski@tcs.uj.edu.pl
  Stability   : experimental
@@ -52,7 +52,7 @@ systemStmt :: Parser (S.System Int)
 systemStmt = sc *> systemStmt' <* eof
     where systemStmt' = do
             ds <- some defsStmt
-            return S.System { S.defs = M.fromList ds } 
+            return S.System { S.defs = M.fromList ds }
 
 defsStmt :: Parser (String, [S.Cons Int])
 defsStmt = do
@@ -75,7 +75,7 @@ exprStmt = do
     return S.Cons { S.func = f
                   , S.args = as
                   , S.weight = w
-                  } 
+                  }
 
 argStmt :: Parser S.Arg
 argStmt = try listStmt <|> typeStmt
@@ -90,14 +90,14 @@ typeStmt = do
     t <- identifier
     return $ S.Type t
 
-parseFromFile :: Parsec e String a 
-              -> String 
+parseFromFile :: Parsec e String a
+              -> String
               -> IO (Either (ParseError Char e) a)
 
 parseFromFile p file = runParser p file <$> readFile file
 
 -- | Parses the given system specification.
-parseSystem :: String 
+parseSystem :: String
             -> IO (Either (ParseError Char Dec) (S.System Int))
 
 parseSystem = parseFromFile systemStmt

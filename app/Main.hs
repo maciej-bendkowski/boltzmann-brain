@@ -1,13 +1,13 @@
 {-|
- Module      : Main 
+ Module      : Main
  Description : Boltzmann brain executable.
  Copyright   : (c) Maciej Bendkowski, 2017
- 
+
  License     : BSD3
  Maintainer  : maciej.bendkowski@tcs.uj.edu.pl
  Stability   : experimental
  -}
-module Main 
+module Main
     ( main
     ) where
 
@@ -15,7 +15,7 @@ import System.IO
 import System.Exit
 import System.Console.GetOpt
 import System.Environment
-    
+
 import Data.List (nub)
 
 import Numeric
@@ -51,7 +51,7 @@ options = [Option "e" ["eps"] (ReqArg SingEpsilon "e")
 
            Option "i" ["with-io"] (NoArg WithIO)
             "Whether to generate IO actions for the samplers.",
-    
+
            Option "v" ["version"] (NoArg Version)
             "Prints the program version number.",
 
@@ -64,13 +64,13 @@ usageHeader = "Usage: bb [OPTIONS...]"
 versionHeader :: String
 versionHeader = "Boltzmann brain v1.0 (c) Maciej Bendkowski 2017"
 
-compilerTimestamp :: String 
+compilerTimestamp :: String
 compilerTimestamp = "Boltzmann brain v1.0"
 
 parseFloating :: String -> Rational
 parseFloating s = (fst $ head (readFloat s)) :: Rational
 
-getSingEpsilon :: [Flag] -> Double 
+getSingEpsilon :: [Flag] -> Double
 getSingEpsilon (SingEpsilon eps : _) = fromRational $ parseFloating eps
 getSingEpsilon (_:fs) = getSingEpsilon fs
 getSingEpsilon [] = fromRational 1.0e-6
@@ -90,11 +90,11 @@ getModuleName (ModuleName name : _) = name
 getModuleName (_:fs) = getModuleName fs
 getModuleName [] = "Sampler"
 
-useIO :: [Flag] -> Bool 
+useIO :: [Flag] -> Bool
 useIO flags = WithIO `elem` flags
 
 parse :: [String] -> IO ([Flag], [String])
-parse argv = case getOpt Permute options argv of 
+parse argv = case getOpt Permute options argv of
                (ops, nonops, [])
                     | Help `elem` ops -> do
                         putStr $ usageInfo usageHeader options
@@ -110,8 +110,8 @@ parse argv = case getOpt Permute options argv of
                     hPutStr stderr (concat errs ++ usageInfo usageHeader options)
                     exitWith (ExitFailure 1)
 
-run :: [Flag] 
-    -> String 
+run :: [Flag]
+    -> String
     -> IO ()
 
 run flags f = do
@@ -123,14 +123,14 @@ run flags f = do
 oracle :: [Flag] -> System Int -> PSystem Double
 oracle flags sys = case getSingularity flags of
                            Nothing -> let singEps = getSingEpsilon flags
-                                          sysEps = getSysEpsilon flags 
+                                          sysEps = getSysEpsilon flags
                                           rho = singularity sys singEps
                                        in
                                           parametrise sys rho sysEps
-                           
+
                            Just rho -> let sysEps = getSysEpsilon flags in
                                          parametrise sys rho sysEps
-  
+
 confCompiler :: PSystem Double -> [Flag] -> IO ()
 confCompiler sys flags = do
     let conf = Conf { paramSys = sys
@@ -146,10 +146,10 @@ runCompiler sys flags = case errors sys of
     Left err -> reportSystemError err
     Right _ -> do
         let sys' = oracle flags sys
-        confCompiler sys' flags 
+        confCompiler sys' flags
 
 reportSystemError :: SystemError -> IO ()
-reportSystemError err = do 
+reportSystemError err = do
     hPrint stderr err
     exitWith (ExitFailure 1)
 

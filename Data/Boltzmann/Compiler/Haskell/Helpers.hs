@@ -2,7 +2,7 @@
  Module      : Data.Boltzmann.Compiler.Haskell.Helpers
  Description : Helper methods for ghc-7.10.3 compiler syntax.
  Copyright   : (c) Maciej Bendkowski, 2017
- 
+
  License     : BSD3
  Maintainer  : maciej.bendkowski@tcs.uj.edu.pl
  Stability   : experimental
@@ -33,10 +33,10 @@ toLit :: Int -> Exp
 toLit = Lit . Int . toInteger
 
 importType :: String -> ImportSpec
-importType = IThingAll . Ident 
+importType = IThingAll . Ident
 
 importFunc :: String -> ImportSpec
-importFunc = IVar . Ident 
+importFunc = IVar . Ident
 
 importFrom :: String -> [ImportSpec] -> ImportDecl
 importFrom module' specs = ImportDecl { importLoc = noLoc
@@ -82,7 +82,7 @@ bind v = Generator noLoc (PVar $ Ident v)
 
 bindP :: String -> String -> Exp -> Stmt
 bindP x y = Generator noLoc (PTuple Boxed [PVar (Ident x), PVar (Ident y)])
-    
+
 sub :: Exp -> Exp -> Exp
 sub x (Lit (Int 0)) = x
 sub x y             = InfixApp x (symbol "-") y
