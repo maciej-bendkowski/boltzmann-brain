@@ -59,7 +59,7 @@ instance Show SystemError where
 type ErrorMonad = Either SystemError
 
 -- | Checks whether the given input system is correct.
---   If not, return an approapriate SystemError.
+--   If not, returns an approapriate SystemError.
 errors :: System Int -> ErrorMonad ()
 errors sys = do
     void $ consistent sys

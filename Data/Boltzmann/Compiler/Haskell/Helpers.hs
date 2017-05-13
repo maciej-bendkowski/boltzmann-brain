@@ -102,6 +102,14 @@ declareADTs :: Real a => PSystem a -> [Decl]
 declareADTs sys = map declADT $ paramTypes sys
 
 declADT :: Real a => (String, [Cons a]) -> Decl
+declADT (t,[con]) = DataDecl noLoc flag [] (Ident t) []
+                             [QualConDecl noLoc [] [] (declCon con)]
+                             [(unname "Show", [])]
+
+    -- generate a newtype or data type?
+   where flag = if length (args con) == 1 then NewType
+                                          else DataType
+
 declADT (t,cons) = DataDecl noLoc DataType [] (Ident t) []
                             (map (QualConDecl noLoc [] [] . declCon) cons)
                             [(unname "Show", [])]

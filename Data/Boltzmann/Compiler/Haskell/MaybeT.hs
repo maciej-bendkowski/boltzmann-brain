@@ -195,7 +195,7 @@ constrGenerator' ((constr, w) : cs) =
     If (lessF (varExp "p") $ weight constr)
        (rec constr w)
        (constrGenerator' cs)
-constrGenerator' _ = error "I wasn't expecting the spanish inquisition!"
+constrGenerator' _ = error "I wasn't expecting the Spanish inquisition!"
 
 rec :: Cons a -> Int -> Exp
 rec constr w = case arguments (args constr) (toLit w) variableStream weightStream of
@@ -216,7 +216,7 @@ arguments' f arg args' ub (x:xs) (w:ws) = (stmt : stmts, argW', v : vs)
           argW'             = argW `add` varExp w
           ub'               = ub `sub` varExp w
           v                 = varExp x
-arguments' _ _ _ _ _ _ = error "I wasn't expecting the spanish inquisition!"
+arguments' _ _ _ _ _ _ = error "I wasn't expecting the Spanish inquisition!"
 
 ret :: Exp -> [Exp] -> Exp -> Stmt
 ret f [] w = Qualifier $ applyF return' [Tuple Boxed [f, w]]

@@ -45,6 +45,13 @@ integer = lexeme $ do
     n <- L.integer
     return $ fromIntegral n
 
+sepBy2 :: Parser a -> Parser b -> Parser [a]
+sepBy2 p q = do
+    x <- p
+    void q
+    xs <- p `sepBy1` q
+    return (x : xs)
+
 identifier :: Parser String
 identifier = lexeme $ (:) <$> upperChar <*> many (alphaNumChar <|> char '_')
 
@@ -58,12 +65,33 @@ defsStmt :: Parser (String, [S.Cons Int])
 defsStmt = do
     t <- identifier
     void (symbol "=")
-    exprs <- exprListStmt
+    exprs <- try (abbrevdef t) <|> exprListStmt
     return (t, exprs)
+
+abbrevdef :: String -> Parser [S.Cons Int]
+abbrevdef f = try (listdef f) <|> tupledef f
+
+listdef :: String -> Parser [S.Cons Int]
+listdef f = do
+    xs <- listStmt
+    void (symbol ".")
+    return [S.Cons { S.func = f
+                   , S.args = [xs]
+                   , S.weight = 0
+                   }]
+
+tupledef :: String -> Parser [S.Cons Int]
+tupledef f = do
+    ids <- parens $ identifier `sepBy2` symbol ","
+    void (symbol ".")
+    return [S.Cons { S.func = f
+                   , S.args = map S.Type ids
+                   , S.weight = 0
+                   }]
 
 exprListStmt :: Parser [S.Cons Int]
 exprListStmt = do
-    stms <- exprStmt `sepBy` symbol "|"
+    stms <- exprStmt `sepBy1` symbol "|"
     void (symbol ".")
     return stms
 
