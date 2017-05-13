@@ -37,6 +37,7 @@ TreeTupleList = [TreeTuple].
 
 #### Installation and usage
 *Boltzmann Brain* is developed using ```stack``` on top of ```cabal```.
+
  For usage details please see the *examples* directory and/or type ```bb -h```.
 
 #### TODO
