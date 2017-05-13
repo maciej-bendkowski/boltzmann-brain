@@ -27,6 +27,13 @@ Each definition constitutes an algebraic data type where each inhabitant has an 
 - singularity approximation within a desired error bound,
 - working, self-contained Haskell module generation utilizing ```Control.Monad.Random``` and ```Control.Monad.Trans.Maybe``` in the implementation of dedicated Boltzmann sampler,
 - support for the admissible list-based sequence constructor.
+- syntactic sugar for lists and tuples (see below).
+
+```hs
+Tree = Node [Tree].
+TreeTuple = (Tree, Tree, Tree).
+TreeTupleList = [TreeTuple].
+    ```
 
 #### Installation and usage
 *Boltzmann Brain* is developed using ```stack``` on top of ```cabal```.
