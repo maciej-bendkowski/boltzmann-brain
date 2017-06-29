@@ -318,7 +318,7 @@ samplerIOType type' = TyForall Nothing
 
 declareSamplersIO :: PSystem a -> Bool -> [Decl]
 declareSamplersIO _ False = []
-declareSamplersIO sys True = concatMap declSamplerIO $ seqTypes sys
+declareSamplersIO sys True = concatMap declSamplerIO $ typeList sys
 
 declSamplerIO :: String -> [Decl]
 declSamplerIO t = declTFun (samplerIOName t) type' ["lb","ub"] body

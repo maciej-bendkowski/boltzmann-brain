@@ -1,12 +1,14 @@
 -- | Compiler: Boltzmann brain v1.0
 -- | Singularity: 0.25
 module Sampler
-       (genRandomTree, genRandomTreeList, sampleTree, sampleTreeList)
+       (genRandomTree, genRandomTreeList, sampleTree, sampleTreeList,
+        sampleTreeIO, sampleTreeListIO)
        where
 import Control.Monad (guard)
 import Control.Monad.Trans (lift)
 import Control.Monad.Trans.Maybe (MaybeT(..), runMaybeT)
-import Control.Monad.Random (RandomGen(..), Rand, getRandomR)
+import Control.Monad.Random
+       (RandomGen(..), Rand, getRandomR, evalRandIO)
 
 newtype Tree = Node [Tree]
              deriving Show
@@ -43,3 +45,9 @@ sampleTreeList lb ub
        case sample of
            Nothing -> sampleTreeList lb ub
            Just (x, s) -> if lb <= s then return x else sampleTreeList lb ub
+
+sampleTreeIO :: Int -> Int -> IO Tree
+sampleTreeIO lb ub = evalRandIO (sampleTree lb ub)
+
+sampleTreeListIO :: Int -> Int -> IO [Tree]
+sampleTreeListIO lb ub = evalRandIO (sampleTreeList lb ub)

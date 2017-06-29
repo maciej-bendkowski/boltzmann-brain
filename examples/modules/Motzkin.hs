@@ -1,11 +1,14 @@
 -- | Compiler: Boltzmann brain v1.0
 -- | Singularity: 0.33333301544189453
-module Sampler (genRandomM, genRandomMList, sampleM, sampleMList)
+module Sampler
+       (genRandomM, genRandomMList, sampleM, sampleMList, sampleMIO,
+        sampleMListIO)
        where
 import Control.Monad (guard)
 import Control.Monad.Trans (lift)
 import Control.Monad.Trans.Maybe (MaybeT(..), runMaybeT)
-import Control.Monad.Random (RandomGen(..), Rand, getRandomR)
+import Control.Monad.Random
+       (RandomGen(..), Rand, getRandomR, evalRandIO)
 
 data M = Leaf
        | Unary M
@@ -34,3 +37,6 @@ sampleM lb ub
        case sample of
            Nothing -> sampleM lb ub
            Just (x, s) -> if lb <= s then return x else sampleM lb ub
+
+sampleMIO :: Int -> Int -> IO M
+sampleMIO lb ub = evalRandIO (sampleM lb ub)

@@ -3,12 +3,14 @@
 module Sampler
        (genRandomDeBruijn, genRandomLambda, genRandomDeBruijnList,
         genRandomLambdaList, sampleDeBruijn, sampleLambda,
-        sampleDeBruijnList, sampleLambdaList)
+        sampleDeBruijnList, sampleLambdaList, sampleDeBruijnIO,
+        sampleLambdaIO, sampleDeBruijnListIO, sampleLambdaListIO)
        where
 import Control.Monad (guard)
 import Control.Monad.Trans (lift)
 import Control.Monad.Trans.Maybe (MaybeT(..), runMaybeT)
-import Control.Monad.Random (RandomGen(..), Rand, getRandomR)
+import Control.Monad.Random
+       (RandomGen(..), Rand, getRandomR, evalRandIO)
 
 data DeBruijn = S DeBruijn
               | Z
@@ -62,3 +64,9 @@ sampleLambda lb ub
        case sample of
            Nothing -> sampleLambda lb ub
            Just (x, s) -> if lb <= s then return x else sampleLambda lb ub
+
+sampleDeBruijnIO :: Int -> Int -> IO DeBruijn
+sampleDeBruijnIO lb ub = evalRandIO (sampleDeBruijn lb ub)
+
+sampleLambdaIO :: Int -> Int -> IO Lambda
+sampleLambdaIO lb ub = evalRandIO (sampleLambda lb ub)
