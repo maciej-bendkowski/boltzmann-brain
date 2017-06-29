@@ -31,6 +31,7 @@ data Flag = SingEpsilon String
           | SysEpsilon String
           | Singularity String
           | ModuleName String
+          | WithLists
           | WithIO
           | Version
           | Help
@@ -51,6 +52,9 @@ options = [Option "e" ["eps"] (ReqArg SingEpsilon "e")
 
            Option "i" ["with-io"] (NoArg WithIO)
             "Whether to generate IO actions for the samplers.",
+
+           Option "l" ["with-lists"] (NoArg WithLists)
+            "Whether to generate lists samplers for all types.",
 
            Option "v" ["version"] (NoArg Version)
             "Prints the program version number.",
@@ -93,6 +97,9 @@ getModuleName [] = "Sampler"
 useIO :: [Flag] -> Bool
 useIO flags = WithIO `elem` flags
 
+genLists :: [Flag] -> Bool
+genLists flags = WithLists `elem` flags
+
 parse :: [String] -> IO ([Flag], [String])
 parse argv = case getOpt Permute options argv of
                (ops, nonops, [])
@@ -117,7 +124,7 @@ run :: [Flag]
 run flags f = do
     sys <- parseSystem f
     case sys of
-      Left err -> printError err
+      Left err   -> printError err
       Right sys' -> runCompiler sys' flags
 
 oracle :: [Flag] -> System Int -> PSystem Double
@@ -133,10 +140,11 @@ oracle flags sys = case getSingularity flags of
 
 confCompiler :: PSystem Double -> [Flag] -> IO ()
 confCompiler sys flags = do
-    let conf = Conf { paramSys = sys
-                    , moduleName = getModuleName flags
+    let conf = Conf { paramSys    = sys
+                    , moduleName  = getModuleName flags
                     , compileNote = compilerTimestamp
-                    , withIO = useIO flags
+                    , withIO      = useIO flags
+                    , withLists   = genLists flags
                     }
     compile conf
 

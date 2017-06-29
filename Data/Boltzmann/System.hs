@@ -18,6 +18,7 @@ module Data.Boltzmann.System
     , paramTypes
     , paramTypesW
     , typeWeight
+    , seqTypes
     ) where
 
 import Data.Set (Set)
@@ -28,6 +29,8 @@ import qualified Data.Map.Strict as M
 
 import Data.Vector (Vector)
 import qualified Data.Vector as V
+
+import Data.Maybe (mapMaybe)
 
 -- | System of combinatorial structures.
 newtype System a = System { defs :: Map String [Cons a]   -- ^ Type definitions.
@@ -57,6 +60,16 @@ data PSystem a = PSystem { system  :: System a      -- ^ System with probability
                          , param   :: a             -- ^ Evaluation parameter.
                          , weights :: System Int    -- ^ System with input weights.
                          } deriving (Show)
+
+seqTypesCons :: Cons a -> [String]
+seqTypesCons = mapMaybe listN . args
+    where listN (List s) = Just s
+          listN _        = Nothing
+
+-- | List of sequence types.
+seqTypes :: PSystem a -> [String]
+seqTypes = S.elems . S.fromList . concatMap seqTypesCons
+            . concat . M.elems . defs . system
 
 -- | Type list of the given parametrised system.
 typeList :: PSystem a -> [String]

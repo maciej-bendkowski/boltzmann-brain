@@ -27,14 +27,16 @@ data Conf a = Conf { paramSys    :: PSystem a   -- ^ Parametrised system.
                    , moduleName  :: String      -- ^ Module name.
                    , compileNote :: String      -- ^ Header comment note.
                    , withIO      :: Bool        -- ^ Generate IO actions?
+                   , withLists   :: Bool        -- ^ Generate all list samplers?
                    }
 
 instance (Real a, Show a) => Configuration (Conf a) where
-    compile conf = let sys     = paramSys conf
-                       name'   = moduleName conf
-                       note    = compileNote conf
-                       withIO' = withIO conf
-                       module' = compileModule sys name' withIO'
+    compile conf = let sys        = paramSys conf
+                       name'      = moduleName conf
+                       note       = compileNote conf
+                       withIO'    = withIO conf
+                       withLists' = withLists conf
+                       module'    = compileModule sys name' withIO' withLists'
                    in do
                        putStr $ moduleHeader sys note
                        putStrLn $ prettyPrint module'
@@ -43,19 +45,19 @@ moduleHeader :: Show a => PSystem a -> String -> String
 moduleHeader sys compilerNote = unlines ["-- | Compiler: " ++ compilerNote,
                                          "-- | Singularity: " ++ show (param sys)]
 
-compileModule :: Real a => PSystem a -> String -> Bool -> Module
-compileModule sys mod' withIO' = Module noLoc (ModuleName mod') []
-                                      Nothing (Just exports) imports decls
+compileModule :: Real a => PSystem a -> String -> Bool -> Bool -> Module
+compileModule sys mod' withIO' withLists' = Module noLoc (ModuleName mod') []
+                                             Nothing (Just exports) imports decls
     where
         exports = declareExports sys withIO'
         imports = declareImports withIO'
         decls = declareADTs sys ++
                     declareGenerators sys ++
-                    declareListGenerators sys ++
+                    declareListGenerators sys withLists' ++
                     declareSamplers sys ++
                     declareListSamplers sys ++
                     declareSamplersIO sys withIO' ++
-                    declareListSamplersIO sys withIO'
+                    declareListSamplersIO sys withIO' withLists'
 
 declareImports :: Bool -> [ImportDecl]
 declareImports withIO' =
@@ -229,8 +231,10 @@ listGeneratorType type' = TyForall Nothing
     [ClassA randomGen' [g']]
         (TyFun int' (maybeTType $ TyTuple Boxed [TyList type', int']))
 
-declareListGenerators :: Real a => PSystem a -> [Decl]
-declareListGenerators sys = concatMap (declListGenerator sys) $ typeList sys
+declareListGenerators :: Real a => PSystem a -> Bool -> [Decl]
+declareListGenerators sys withLists' = concatMap (declListGenerator sys) $ types' sys
+    where types' = if withLists' then typeList
+                                 else seqTypes
 
 declListGenerator :: Real a => PSystem a -> String -> [Decl]
 declListGenerator sys t = declTFun (listGenName t) type' ["ub"] body
@@ -297,7 +301,7 @@ constructSampler :: String -> Exp
 constructSampler = constructSampler' genName samplerName
 
 declareListSamplers :: PSystem a -> [Decl]
-declareListSamplers sys = concatMap declListSampler $ typeList sys
+declareListSamplers sys = concatMap declListSampler $ seqTypes sys
 
 declListSampler :: String -> [Decl]
 declListSampler t = declTFun (listSamplerName t) type' ["lb","ub"] body
@@ -314,7 +318,7 @@ samplerIOType type' = TyForall Nothing
 
 declareSamplersIO :: PSystem a -> Bool -> [Decl]
 declareSamplersIO _ False = []
-declareSamplersIO sys True = concatMap declSamplerIO $ typeList sys
+declareSamplersIO sys True = concatMap declSamplerIO $ seqTypes sys
 
 declSamplerIO :: String -> [Decl]
 declSamplerIO t = declTFun (samplerIOName t) type' ["lb","ub"] body
@@ -329,9 +333,11 @@ constructSamplerIO' sam t = applyF (varExp "evalRandIO")
 constructSamplerIO :: String -> Exp
 constructSamplerIO = constructSamplerIO' samplerName
 
-declareListSamplersIO :: PSystem a -> Bool -> [Decl]
-declareListSamplersIO _ False = []
-declareListSamplersIO sys True = concatMap declListSamplerIO $ typeList sys
+declareListSamplersIO :: PSystem a -> Bool -> Bool -> [Decl]
+declareListSamplersIO _ False _ = []
+declareListSamplersIO sys True withLists' = concatMap declListSamplerIO $ types' sys
+    where types' = if withLists' then typeList
+                                 else seqTypes
 
 declListSamplerIO :: String -> [Decl]
 declListSamplerIO t = declTFun (listSamplerIOName t) type' ["lb","ub"] body
