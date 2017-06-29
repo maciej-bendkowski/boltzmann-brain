@@ -3,14 +3,12 @@
 module Sampler
        (genRandomDeBruijn, genRandomLambda, genRandomDeBruijnList,
         genRandomLambdaList, sampleDeBruijn, sampleLambda,
-        sampleDeBruijnList, sampleLambdaList, sampleDeBruijnIO,
-        sampleLambdaIO, sampleDeBruijnListIO, sampleLambdaListIO)
+        sampleDeBruijnList, sampleLambdaList)
        where
 import Control.Monad (guard)
 import Control.Monad.Trans (lift)
 import Control.Monad.Trans.Maybe (MaybeT(..), runMaybeT)
-import Control.Monad.Random
-       (RandomGen(..), Rand, getRandomR, evalRandIO)
+import Control.Monad.Random (RandomGen(..), Rand, getRandomR)
 
 data DeBruijn = S DeBruijn
               | Z
@@ -51,28 +49,6 @@ genRandomLambda ub
            do (x0, w0) <- genRandomDeBruijn ub
               return (Index x0, w0)
 
-genRandomDeBruijnList ::
-                        RandomGen g => Int -> MaybeT (Rand g) ([DeBruijn], Int)
-genRandomDeBruijnList ub
-  = do guard (ub > 0)
-       p <- randomP
-       if p < 0.4196420351466248 then
-         do (x, w) <- genRandomDeBruijn ub
-            (xs, ws) <- genRandomDeBruijnList (ub - w)
-            return (x : xs, w + ws)
-         else return ([], 0)
-
-genRandomLambdaList ::
-                      RandomGen g => Int -> MaybeT (Rand g) ([Lambda], Int)
-genRandomLambdaList ub
-  = do guard (ub > 0)
-       p <- randomP
-       if p < 1.1877774308229005 then
-         do (x, w) <- genRandomLambda ub
-            (xs, ws) <- genRandomLambdaList (ub - w)
-            return (x : xs, w + ws)
-         else return ([], 0)
-
 sampleDeBruijn :: RandomGen g => Int -> Int -> Rand g DeBruijn
 sampleDeBruijn lb ub
   = do sample <- runMaybeT (genRandomDeBruijn ub)
@@ -86,31 +62,3 @@ sampleLambda lb ub
        case sample of
            Nothing -> sampleLambda lb ub
            Just (x, s) -> if lb <= s then return x else sampleLambda lb ub
-
-sampleDeBruijnList ::
-                     RandomGen g => Int -> Int -> Rand g [DeBruijn]
-sampleDeBruijnList lb ub
-  = do sample <- runMaybeT (genRandomDeBruijnList ub)
-       case sample of
-           Nothing -> sampleDeBruijnList lb ub
-           Just (x, s) -> if lb <= s then return x else
-                            sampleDeBruijnList lb ub
-
-sampleLambdaList :: RandomGen g => Int -> Int -> Rand g [Lambda]
-sampleLambdaList lb ub
-  = do sample <- runMaybeT (genRandomLambdaList ub)
-       case sample of
-           Nothing -> sampleLambdaList lb ub
-           Just (x, s) -> if lb <= s then return x else sampleLambdaList lb ub
-
-sampleDeBruijnIO :: Int -> Int -> IO DeBruijn
-sampleDeBruijnIO lb ub = evalRandIO (sampleDeBruijn lb ub)
-
-sampleLambdaIO :: Int -> Int -> IO Lambda
-sampleLambdaIO lb ub = evalRandIO (sampleLambda lb ub)
-
-sampleDeBruijnListIO :: Int -> Int -> IO [DeBruijn]
-sampleDeBruijnListIO lb ub = evalRandIO (sampleDeBruijnList lb ub)
-
-sampleLambdaListIO :: Int -> Int -> IO [Lambda]
-sampleLambdaListIO lb ub = evalRandIO (sampleLambdaList lb ub)

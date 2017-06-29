@@ -1,14 +1,11 @@
 -- | Compiler: Boltzmann brain v1.0
 -- | Singularity: 0.33333301544189453
-module Sampler
-       (genRandomM, genRandomMList, sampleM, sampleMList, sampleMIO,
-        sampleMListIO)
+module Sampler (genRandomM, genRandomMList, sampleM, sampleMList)
        where
 import Control.Monad (guard)
 import Control.Monad.Trans (lift)
 import Control.Monad.Trans.Maybe (MaybeT(..), runMaybeT)
-import Control.Monad.Random
-       (RandomGen(..), Rand, getRandomR, evalRandIO)
+import Control.Monad.Random (RandomGen(..), Rand, getRandomR)
 
 data M = Leaf
        | Unary M
@@ -31,32 +28,9 @@ genRandomM ub
               (x1, w1) <- genRandomM (ub - 1 - w0)
               return (Binary x0 x1, 1 + w1 + w0)
 
-genRandomMList :: RandomGen g => Int -> MaybeT (Rand g) ([M], Int)
-genRandomMList ub
-  = do guard (ub > 0)
-       p <- randomP
-       if p < 0.9975824027628529 then
-         do (x, w) <- genRandomM ub
-            (xs, ws) <- genRandomMList (ub - w)
-            return (x : xs, w + ws)
-         else return ([], 0)
-
 sampleM :: RandomGen g => Int -> Int -> Rand g M
 sampleM lb ub
   = do sample <- runMaybeT (genRandomM ub)
        case sample of
            Nothing -> sampleM lb ub
            Just (x, s) -> if lb <= s then return x else sampleM lb ub
-
-sampleMList :: RandomGen g => Int -> Int -> Rand g [M]
-sampleMList lb ub
-  = do sample <- runMaybeT (genRandomMList ub)
-       case sample of
-           Nothing -> sampleMList lb ub
-           Just (x, s) -> if lb <= s then return x else sampleMList lb ub
-
-sampleMIO :: Int -> Int -> IO M
-sampleMIO lb ub = evalRandIO (sampleM lb ub)
-
-sampleMListIO :: Int -> Int -> IO [M]
-sampleMListIO lb ub = evalRandIO (sampleMList lb ub)

@@ -43,17 +43,6 @@ genRandomTreeList ub
             return (x : xs, w + ws)
          else return ([], 0)
 
-genRandomTreeTupleList ::
-                         RandomGen g => Int -> MaybeT (Rand g) ([TreeTuple], Int)
-genRandomTreeTupleList ub
-  = do guard (ub > 0)
-       p <- randomP
-       if p < 0.12447033968897885 then
-         do (x, w) <- genRandomTreeTuple ub
-            (xs, ws) <- genRandomTreeTupleList (ub - w)
-            return (x : xs, w + ws)
-         else return ([], 0)
-
 sampleTree :: RandomGen g => Int -> Int -> Rand g Tree
 sampleTree lb ub
   = do sample <- runMaybeT (genRandomTree ub)
@@ -74,12 +63,3 @@ sampleTreeList lb ub
        case sample of
            Nothing -> sampleTreeList lb ub
            Just (x, s) -> if lb <= s then return x else sampleTreeList lb ub
-
-sampleTreeTupleList ::
-                      RandomGen g => Int -> Int -> Rand g [TreeTuple]
-sampleTreeTupleList lb ub
-  = do sample <- runMaybeT (genRandomTreeTupleList ub)
-       case sample of
-           Nothing -> sampleTreeTupleList lb ub
-           Just (x, s) -> if lb <= s then return x else
-                            sampleTreeTupleList lb ub
