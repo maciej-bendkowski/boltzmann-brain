@@ -66,10 +66,10 @@ usageHeader :: String
 usageHeader = "Usage: bb [OPTIONS...]"
 
 versionHeader :: String
-versionHeader = "Boltzmann brain v1.0 (c) Maciej Bendkowski 2017"
+versionHeader = "Boltzmann brain v1.1 (c) Maciej Bendkowski 2017-(18)"
 
 compilerTimestamp :: String
-compilerTimestamp = "Boltzmann brain v1.0"
+compilerTimestamp = "Boltzmann brain v1.1"
 
 parseFloating :: String -> Rational
 parseFloating s = (fst $ head (readFloat s)) :: Rational

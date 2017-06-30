@@ -1,4 +1,4 @@
--- | Compiler: Boltzmann brain v1.0
+-- | Compiler: Boltzmann brain v1.1
 -- | Singularity: 0.33333301544189453
 module Sampler
        (genRandomM, genRandomMList, sampleM, sampleMList, sampleMIO,

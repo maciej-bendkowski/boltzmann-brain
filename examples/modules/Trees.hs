@@ -1,4 +1,4 @@
--- | Compiler: Boltzmann brain v1.0
+-- | Compiler: Boltzmann brain v1.1
 -- | Singularity: 0.25
 module Sampler
        (genRandomTree, genRandomTreeList, sampleTree, sampleTreeList,
