@@ -1,10 +1,8 @@
 -- | Compiler: Boltzmann brain v1.1
 -- | Singularity: 0.2955970764160156
 module Sampler
-       (genRandomDeBruijn, genRandomLambda, genRandomDeBruijnList,
-        genRandomLambdaList, sampleDeBruijn, sampleLambda,
-        sampleDeBruijnList, sampleLambdaList, sampleDeBruijnIO,
-        sampleLambdaIO, sampleDeBruijnListIO, sampleLambdaListIO)
+       (genRandomDeBruijn, genRandomLambda, sampleDeBruijn, sampleLambda,
+        sampleDeBruijnIO, sampleLambdaIO)
        where
 import Control.Monad (guard)
 import Control.Monad.Trans (lift)

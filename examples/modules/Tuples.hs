@@ -1,10 +1,9 @@
 -- | Compiler: Boltzmann brain v1.1
 -- | Singularity: 0.25
 module Sampler
-       (genRandomTree, genRandomTreeTuple, genRandomTreeList,
-        genRandomTreeTupleList, sampleTree, sampleTreeTuple,
-        sampleTreeList, sampleTreeTupleList, sampleTreeIO,
-        sampleTreeTupleIO, sampleTreeListIO, sampleTreeTupleListIO)
+       (genRandomTree, genRandomTreeTuple, genRandomTreeList, sampleTree,
+        sampleTreeTuple, sampleTreeList, sampleTreeIO, sampleTreeTupleIO,
+        sampleTreeListIO)
        where
 import Control.Monad (guard)
 import Control.Monad.Trans (lift)

@@ -49,7 +49,7 @@ compileModule :: Real a => PSystem a -> String -> Bool -> Bool -> Module
 compileModule sys mod' withIO' withLists' = Module noLoc (ModuleName mod') []
                                              Nothing (Just exports) imports decls
     where
-        exports = declareExports sys withIO'
+        exports = declareExports sys withIO' withLists'
         imports = declareImports withIO'
         decls = declareADTs sys ++
                     declareGenerators sys ++
@@ -94,34 +94,40 @@ samplerIOName t = samplerName t ++ "IO"
 listSamplerIOName  :: ShowS
 listSamplerIOName t = listSamplerName t ++ "IO"
 
-declareExports :: PSystem a -> Bool -> [ExportSpec]
-declareExports sys withIO' =
+declareExports :: PSystem a -> Bool -> Bool -> [ExportSpec]
+declareExports sys withIO' withLists' =
     exportGenerators sys ++
-    exportListGenerators sys ++
+    exportListGenerators sys withLists' ++
     exportSamplers sys ++
-    exportListSamplers sys ++
+    exportListSamplers sys withLists' ++
     exportSamplersIO sys withIO' ++
-    exportListSamplersIO sys withIO'
+    exportListSamplersIO sys withIO' withLists'
 
 exportGenerators :: PSystem a -> [ExportSpec]
 exportGenerators sys = map (exportFunc . genName) $ typeList sys
 
-exportListGenerators :: PSystem a -> [ExportSpec]
-exportListGenerators sys = map (exportFunc . listGenName) $ typeList sys
+exportListGenerators :: PSystem a -> Bool -> [ExportSpec]
+exportListGenerators sys withLists' = map (exportFunc . listGenName) $ types' sys
+    where types' = if withLists' then typeList
+                                 else seqTypes
 
 exportSamplers :: PSystem a -> [ExportSpec]
 exportSamplers sys = map (exportFunc . samplerName) $ typeList sys
 
-exportListSamplers :: PSystem a -> [ExportSpec]
-exportListSamplers sys = map (exportFunc . listSamplerName) $ typeList sys
+exportListSamplers :: PSystem a -> Bool -> [ExportSpec]
+exportListSamplers sys withLists' = map (exportFunc . listSamplerName) $ types' sys
+    where types' = if withLists' then typeList
+                                 else seqTypes
 
 exportSamplersIO :: PSystem a -> Bool -> [ExportSpec]
 exportSamplersIO _ False = []
 exportSamplersIO sys True = map (exportFunc . samplerIOName) $ typeList sys
 
-exportListSamplersIO :: PSystem a -> Bool -> [ExportSpec]
-exportListSamplersIO _ False = []
-exportListSamplersIO sys True = map (exportFunc . listSamplerIOName) $ typeList sys
+exportListSamplersIO :: PSystem a -> Bool -> Bool -> [ExportSpec]
+exportListSamplersIO _ False _ = []
+exportListSamplersIO sys True withLists' = map (exportFunc . listSamplerIOName) $ types' sys
+    where types' = if withLists' then typeList
+                                 else seqTypes
 
 -- Utils.
 maybeT' :: Type

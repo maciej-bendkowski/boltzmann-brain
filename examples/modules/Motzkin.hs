@@ -1,9 +1,6 @@
 -- | Compiler: Boltzmann brain v1.1
 -- | Singularity: 0.33333301544189453
-module Sampler
-       (genRandomM, genRandomMList, sampleM, sampleMList, sampleMIO,
-        sampleMListIO)
-       where
+module Sampler (genRandomM, sampleM, sampleMIO) where
 import Control.Monad (guard)
 import Control.Monad.Trans (lift)
 import Control.Monad.Trans.Maybe (MaybeT(..), runMaybeT)
