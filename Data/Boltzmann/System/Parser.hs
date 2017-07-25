@@ -9,6 +9,7 @@
  -}
 module Data.Boltzmann.System.Parser
     ( parseSystem
+    , parsePaganini
     , printError
     ) where
 
@@ -22,6 +23,7 @@ import qualified Text.Megaparsec.Lexer as L
 import qualified Data.Map.Strict as M
 
 import qualified Data.Boltzmann.System as S
+import qualified Data.Boltzmann.System.Paganini as P
 
 sc :: Parser ()
 sc = L.space (void spaceChar) lineCmnt blockCmnt
@@ -45,6 +47,9 @@ integer = lexeme $ do
     n <- L.integer
     return $ fromIntegral n
 
+double :: Parser Double
+double = lexeme L.float
+
 sepBy2 :: Parser a -> Parser b -> Parser [a]
 sepBy2 p q = do
     x <- p
@@ -54,6 +59,11 @@ sepBy2 p q = do
 
 identifier :: Parser String
 identifier = lexeme $ (:) <$> upperChar <*> many (alphaNumChar <|> char '_')
+
+toFreq :: Double -> Maybe Double
+toFreq x
+    | x < 0     = Nothing
+    | otherwise = Just x
 
 systemStmt :: Parser (S.System Int)
 systemStmt = sc *> systemStmt' <* eof
@@ -74,19 +84,23 @@ abbrevdef f = try (listdef f) <|> tupledef f
 listdef :: String -> Parser [S.Cons Int]
 listdef f = do
     xs <- listStmt
+    m  <- option (-1.0) (brackets double)
     void (symbol ".")
-    return [S.Cons { S.func = f
-                   , S.args = [xs]
-                   , S.weight = 0
+    return [S.Cons { S.func      = f
+                   , S.args      = [xs]
+                   , S.weight    = 0
+                   , S.frequency = toFreq m
                    }]
 
 tupledef :: String -> Parser [S.Cons Int]
 tupledef f = do
     ids <- parens $ identifier `sepBy2` symbol ","
+    m  <- option (-1.0) (brackets double)
     void (symbol ".")
-    return [S.Cons { S.func = f
-                   , S.args = map S.Type ids
-                   , S.weight = 0
+    return [S.Cons { S.func      = f
+                   , S.args      = map S.Type ids
+                   , S.weight    = 0
+                   , S.frequency = toFreq m
                    }]
 
 exprListStmt :: Parser [S.Cons Int]
@@ -97,12 +111,14 @@ exprListStmt = do
 
 exprStmt :: Parser (S.Cons Int)
 exprStmt = do
-    f <- identifier
+    f  <- identifier
     as <- many argStmt
-    w <- option 1 (parens integer)
-    return S.Cons { S.func = f
-                  , S.args = as
-                  , S.weight = w
+    w  <- option 1 (parens integer)
+    m  <- option (-1.0) (brackets double)
+    return S.Cons { S.func      = f
+                  , S.args      = as
+                  , S.weight    = w
+                  , S.frequency = toFreq m
                   }
 
 argStmt :: Parser S.Arg
@@ -133,3 +149,23 @@ parseSystem = parseFromFile systemStmt
 -- | Prints the given parsing errors.
 printError :: ParseError Char Dec -> IO ()
 printError err = putStr $ parseErrorPretty err
+
+parseN :: Parser a -> Int -> Parser [a]
+parseN _ 0 = return []
+parseN p n = do
+    x <- p
+    xs <- parseN p (n-1)
+    return $ x : xs
+
+paganiniStmt :: P.PSpec -> Parser (Double, [Double], [Double])
+paganiniStmt spec = do
+    z <- double
+    us <- parseN double $ P.numFreqs spec
+    ts <- parseN double $ P.numTypes spec
+    return (z,us,ts)
+
+-- | Parses the given Paganini specification.
+parsePaganini :: P.PSpec -> String
+              -> IO (Either (ParseError Char Dec) (Double, [Double], [Double]))
+
+parsePaganini spec = parseFromFile (paganiniStmt spec)

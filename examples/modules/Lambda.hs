@@ -5,6 +5,7 @@ module Sampler
         sampleDeBruijnIO, sampleLambdaIO)
        where
 import Control.Monad (guard)
+import Control.Applicative
 import Control.Monad.Trans (lift)
 import Control.Monad.Trans.Maybe (MaybeT(..), runMaybeT)
 import Control.Monad.Random

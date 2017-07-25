@@ -1,17 +1,18 @@
 {-|
- Module      : Data.Boltzmann.Compiler.Haskell.MaybeT
- Description : Boltzmann system compiler for ghc-7.10.3.
+ Module      : Data.Boltzmann.Compiler.Haskell.Algebraic
+ Description : Algebraic Boltzmann system compiler for ghc-7.10.3.
  Copyright   : (c) Maciej Bendkowski, 2017
 
  License     : BSD3
  Maintainer  : maciej.bendkowski@tcs.uj.edu.pl
  Stability   : experimental
  -}
-module Data.Boltzmann.Compiler.Haskell.MaybeT
+module Data.Boltzmann.Compiler.Haskell.Algebraic
     ( Conf(..)
     , compile
     ) where
 
+import Prelude hiding (and)
 import Language.Haskell.Exts hiding (List)
 import qualified Language.Haskell.Exts as LHE
 
@@ -23,35 +24,40 @@ import Data.Boltzmann.Compiler
 import Data.Boltzmann.Compiler.Haskell.Helpers
 
 -- | Default configuration type.
-data Conf a = Conf { paramSys    :: PSystem a   -- ^ Parametrised system.
-                   , moduleName  :: String      -- ^ Module name.
-                   , compileNote :: String      -- ^ Header comment note.
-                   , withIO      :: Bool        -- ^ Generate IO actions?
-                   , withLists   :: Bool        -- ^ Generate all list samplers?
-                   }
+data Conf = Conf { paramSys    :: PSystem Double   -- ^ Parametrised system.
+                 , moduleName  :: String           -- ^ Module name.
+                 , compileNote :: String           -- ^ Header comment note.
+                 , withIO      :: Bool             -- ^ Generate IO actions?
+                 , withLists   :: Bool             -- ^ Generate all list samplers?
+                 , withShow    :: Bool             -- ^ Generate deriving Show?
+                 }
 
-instance (Real a, Show a) => Configuration (Conf a) where
+instance Configuration Conf where
     compile conf = let sys        = paramSys conf
                        name'      = moduleName conf
                        note       = compileNote conf
                        withIO'    = withIO conf
                        withLists' = withLists conf
-                       module'    = compileModule sys name' withIO' withLists'
+                       withShow'  = withShow conf
+                       module'    = compileModule sys name' withIO' withLists' withShow'
                    in do
                        putStr $ moduleHeader sys note
                        putStrLn $ prettyPrint module'
 
-moduleHeader :: Show a => PSystem a -> String -> String
-moduleHeader sys compilerNote = unlines ["-- | Compiler: " ++ compilerNote,
-                                         "-- | Singularity: " ++ show (param sys)]
+moduleHeader :: PSystem Double -> String -> String
+moduleHeader sys compilerNote =
+    unlines (["-- | Compiler: " ++ compilerNote,
+              "-- | Singularity: " ++ show (param sys),
+              "-- | System type: algebraic"] ++ systemNote sys)
 
-compileModule :: Real a => PSystem a -> String -> Bool -> Bool -> Module
-compileModule sys mod' withIO' withLists' = Module noLoc (ModuleName mod') []
-                                             Nothing (Just exports) imports decls
+compileModule :: PSystem Double -> String -> Bool -> Bool -> Bool -> Module
+compileModule sys mod' withIO' withLists' withShow' =
+    Module noLoc (ModuleName mod') []
+        Nothing (Just exports) imports decls
     where
         exports = declareExports sys withIO' withLists'
         imports = declareImports withIO'
-        decls = declareADTs sys ++
+        decls = declareADTs withShow' sys ++
                     declareGenerators sys ++
                     declareListGenerators sys withLists' ++
                     declareSamplers sys ++
@@ -94,8 +100,9 @@ samplerIOName t = samplerName t ++ "IO"
 listSamplerIOName  :: ShowS
 listSamplerIOName t = listSamplerName t ++ "IO"
 
-declareExports :: PSystem a -> Bool -> Bool -> [ExportSpec]
+declareExports :: PSystem Double -> Bool -> Bool -> [ExportSpec]
 declareExports sys withIO' withLists' =
+    exportTypes sys ++
     exportGenerators sys ++
     exportListGenerators sys withLists' ++
     exportSamplers sys ++
@@ -103,31 +110,31 @@ declareExports sys withIO' withLists' =
     exportSamplersIO sys withIO' ++
     exportListSamplersIO sys withIO' withLists'
 
-exportGenerators :: PSystem a -> [ExportSpec]
+exportGenerators :: PSystem Double -> [ExportSpec]
 exportGenerators sys = map (exportFunc . genName) $ typeList sys
 
-exportListGenerators :: PSystem a -> Bool -> [ExportSpec]
+exportListGenerators :: PSystem Double -> Bool -> [ExportSpec]
 exportListGenerators sys withLists' = map (exportFunc . listGenName) $ types' sys
     where types' = if withLists' then typeList
-                                 else seqTypes
+                                 else seqTypes . system
 
-exportSamplers :: PSystem a -> [ExportSpec]
+exportSamplers :: PSystem Double -> [ExportSpec]
 exportSamplers sys = map (exportFunc . samplerName) $ typeList sys
 
-exportListSamplers :: PSystem a -> Bool -> [ExportSpec]
+exportListSamplers :: PSystem Double -> Bool -> [ExportSpec]
 exportListSamplers sys withLists' = map (exportFunc . listSamplerName) $ types' sys
     where types' = if withLists' then typeList
-                                 else seqTypes
+                                 else seqTypes . system
 
-exportSamplersIO :: PSystem a -> Bool -> [ExportSpec]
+exportSamplersIO :: PSystem Double -> Bool -> [ExportSpec]
 exportSamplersIO _ False = []
 exportSamplersIO sys True = map (exportFunc . samplerIOName) $ typeList sys
 
-exportListSamplersIO :: PSystem a -> Bool -> Bool -> [ExportSpec]
+exportListSamplersIO :: PSystem Double -> Bool -> Bool -> [ExportSpec]
 exportListSamplersIO _ False _ = []
 exportListSamplersIO sys True withLists' = map (exportFunc . listSamplerIOName) $ types' sys
     where types' = if withLists' then typeList
-                                 else seqTypes
+                                 else seqTypes . system
 
 -- Utils.
 maybeT' :: Type
@@ -180,35 +187,37 @@ guardian :: String -> Stmt
 guardian v = Qualifier $ App (varExp "guard")
                              (varExp v `greater` toLit 0)
 
-declareGenerators :: Real a => PSystem a -> [Decl]
+declareGenerators :: PSystem Double -> [Decl]
 declareGenerators sys =
     declRandomP ++
         concatMap declGenerator (paramTypesW sys)
 
-declGenerator :: Real a => (String, [(Cons a, Int)]) -> [Decl]
+declGenerator :: (String, [(Cons Double, Int)]) -> [Decl]
 declGenerator (t, g) = declTFun (genName t) type' ["ub"] body
     where type' = generatorType $ typeCons t
           body  = constrGenerator g
 
-constrGenerator :: Real a => [(Cons a, Int)] -> Exp
-constrGenerator [(constr, w)] = rec constr w
+constrGenerator :: [(Cons Double, Int)] -> Exp
+constrGenerator [(constr, w)] = rec True constr w
 constrGenerator cs = Do (initSteps ++ branching)
     where branching = [Qualifier $ constrGenerator' cs]
           initSteps = [guardian "ub",
                        randomP "p"]
 
-constrGenerator' :: Real a => [(Cons a, Int)] -> Exp
-constrGenerator' [(constr, w)] = rec constr w
+constrGenerator' :: [(Cons Double, Int)] -> Exp
+constrGenerator' [(constr, w)] = rec False constr w
 constrGenerator' ((constr, w) : cs) =
     If (lessF (varExp "p") $ weight constr)
-       (rec constr w)
+       (rec False constr w)
        (constrGenerator' cs)
 constrGenerator' _ = error "I wasn't expecting the Spanish inquisition!"
 
-rec :: Cons a -> Int -> Exp
-rec constr w = case arguments (args constr) (toLit w) variableStream weightStream of
-                 ([], _, _)          -> applyF return' [Tuple Boxed [cons, toLit w]]
-                 (stmts, totalW, xs) -> Do (stmts ++ [ret cons xs (toLit w `add` totalW)])
+rec :: Bool -> Cons Double -> Int -> Exp
+rec withGuardian constr w =
+    case arguments (args constr) (toLit w) variableStream weightStream of
+      ([], _, _)          -> applyF return' [Tuple Boxed [cons, toLit w]]
+      (stmts, totalW, xs) ->
+          Do ([guardian "ub" | withGuardian] ++ stmts ++ [ret cons xs (toLit w `add` totalW)])
 
     where cons = conExp $ func constr
 
@@ -237,23 +246,23 @@ listGeneratorType type' = TyForall Nothing
     [ClassA randomGen' [g']]
         (TyFun int' (maybeTType $ TyTuple Boxed [TyList type', int']))
 
-declareListGenerators :: Real a => PSystem a -> Bool -> [Decl]
+declareListGenerators :: PSystem Double -> Bool -> [Decl]
 declareListGenerators sys withLists' = concatMap (declListGenerator sys) $ types' sys
     where types' = if withLists' then typeList
-                                 else seqTypes
+                                 else seqTypes . system
 
-declListGenerator :: Real a => PSystem a -> String -> [Decl]
+declListGenerator :: PSystem Double -> String -> [Decl]
 declListGenerator sys t = declTFun (listGenName t) type' ["ub"] body
     where type' = listGeneratorType (typeCons t)
           body  = constrListGenerator sys t
 
-constrListGenerator :: Real a => PSystem a -> String -> Exp
+constrListGenerator :: PSystem Double -> String -> Exp
 constrListGenerator sys t = Do (initSteps ++ branching)
     where branching = [Qualifier $ constrListGenerator' sys t]
           initSteps = [guardian "ub",
                        randomP "p"]
 
-constrListGenerator' :: Real a => PSystem a -> String -> Exp
+constrListGenerator' :: PSystem Double -> String -> Exp
 constrListGenerator' sys t =
     If (lessF (varExp "p") (typeWeight sys t))
        (retHeadList t)
@@ -277,7 +286,7 @@ samplerType type' = TyForall Nothing
            (TyFun int'
                   (TyApp (TyApp rand' g') type')))
 
-declareSamplers :: PSystem a -> [Decl]
+declareSamplers :: PSystem Double -> [Decl]
 declareSamplers sys = concatMap declSampler $ typeList sys
 
 declSampler :: String -> [Decl]
@@ -299,15 +308,15 @@ constructSampler' gen sam t =
                   (UnGuardedRhs return'') Nothing]
 
           rec' = applyF (varExp $ sam t) [varExp "lb", varExp "ub"]
-          return'' = If (lessEq (varExp "lb") (varExp "s"))
+          return'' = If (lessEq (varExp "lb") (varExp "s") `and` lessEq (varExp "s") (varExp "ub"))
                         (applyF (varExp "return") [varExp "x"])
                         rec'
 
 constructSampler :: String -> Exp
 constructSampler = constructSampler' genName samplerName
 
-declareListSamplers :: PSystem a -> [Decl]
-declareListSamplers sys = concatMap declListSampler $ seqTypes sys
+declareListSamplers :: PSystem Double -> [Decl]
+declareListSamplers sys = concatMap declListSampler $ (seqTypes . system) sys
 
 declListSampler :: String -> [Decl]
 declListSampler t = declTFun (listSamplerName t) type' ["lb","ub"] body
@@ -322,7 +331,7 @@ samplerIOType :: Type -> Type
 samplerIOType type' = TyForall Nothing
     [] (TyFun int' (TyFun int' (TyApp (typeVar "IO") type')))
 
-declareSamplersIO :: PSystem a -> Bool -> [Decl]
+declareSamplersIO :: PSystem Double -> Bool -> [Decl]
 declareSamplersIO _ False = []
 declareSamplersIO sys True = concatMap declSamplerIO $ typeList sys
 
@@ -339,11 +348,11 @@ constructSamplerIO' sam t = applyF (varExp "evalRandIO")
 constructSamplerIO :: String -> Exp
 constructSamplerIO = constructSamplerIO' samplerName
 
-declareListSamplersIO :: PSystem a -> Bool -> Bool -> [Decl]
+declareListSamplersIO :: PSystem Double -> Bool -> Bool -> [Decl]
 declareListSamplersIO _ False _ = []
 declareListSamplersIO sys True withLists' = concatMap declListSamplerIO $ types' sys
     where types' = if withLists' then typeList
-                                 else seqTypes
+                                 else seqTypes . system
 
 declListSamplerIO :: String -> [Decl]
 declListSamplerIO t = declTFun (listSamplerIOName t) type' ["lb","ub"] body

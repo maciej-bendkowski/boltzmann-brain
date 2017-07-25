@@ -14,6 +14,13 @@ import Language.Haskell.Exts.SrcLoc (noLoc)
 
 import Data.Boltzmann.System
 
+systemNote :: PSystem Double -> [String]
+systemNote psys = ["-- | System size: " ++ show n,
+                   "-- | Constructors: " ++ show m]
+    where sys = system psys
+          m   = constructors sys
+          n   = size sys
+
 unname :: String -> QName
 unname = UnQual . Ident
 
@@ -52,6 +59,9 @@ importFrom module' specs = ImportDecl { importLoc = noLoc
 exportType :: String -> ExportSpec
 exportType = EThingAll . unname
 
+exportTypes :: PSystem Double -> [ExportSpec]
+exportTypes sys = map exportType $ typeList sys
+
 exportFunc :: String -> ExportSpec
 exportFunc = EVar . unname
 
@@ -70,6 +80,9 @@ greater x = InfixApp x (symbol ">")
 
 less :: Exp -> Exp -> Exp
 less x = InfixApp x (symbol "<")
+
+and :: Exp -> Exp -> Exp
+and x = InfixApp x (symbol "&&")
 
 lessEq :: Exp -> Exp -> Exp
 lessEq x = InfixApp x (symbol "<=")
@@ -98,21 +111,21 @@ applyF = foldl App
 dot :: Exp -> Exp -> Exp
 dot x = InfixApp x (symbol ".")
 
-declareADTs :: Real a => PSystem a -> [Decl]
-declareADTs sys = map declADT $ paramTypes sys
+declareADTs :: Real a => Bool -> PSystem a -> [Decl]
+declareADTs withShow sys = map (declADT withShow) $ paramTypes sys
 
-declADT :: Real a => (String, [Cons a]) -> Decl
-declADT (t,[con]) = DataDecl noLoc flag [] (Ident t) []
-                             [QualConDecl noLoc [] [] (declCon con)]
-                             [(unname "Show", [])]
+declADT :: Real a => Bool -> (String, [Cons a]) -> Decl
+declADT withShow (t,[con]) = DataDecl noLoc flag [] (Ident t) []
+                               [QualConDecl noLoc [] [] (declCon con)]
+                               [(unname "Show", []) | withShow]
 
     -- generate a newtype or data type?
    where flag = if length (args con) == 1 then NewType
                                           else DataType
 
-declADT (t,cons) = DataDecl noLoc DataType [] (Ident t) []
-                            (map (QualConDecl noLoc [] [] . declCon) cons)
-                            [(unname "Show", [])]
+declADT withShow (t,cons) = DataDecl noLoc DataType [] (Ident t) []
+                              (map (QualConDecl noLoc [] [] . declCon) cons)
+                              [(unname "Show", []) | withShow]
 
 declCon :: Real a => Cons a -> ConDecl
 declCon expr = ConDecl (Ident $ func expr) ags

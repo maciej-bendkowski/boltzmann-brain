@@ -26,18 +26,22 @@ import Data.Boltzmann.System.Jacobian
 
 -- | Semantic system errors referring to invalid
 --   input data, for instance ill-founded systems.
-data SystemError = Inconsistent String   -- type name
-                                String   -- constructor name
-                                String   -- argument name
+data SystemError = Inconsistent String                -- type name
+                                String                -- constructor name
+                                String                -- argument name
 
-                 | InvalidCons  String   -- type name
-                                String   -- constructor name
+                 | InvalidCons  String                -- type name
+                                String                -- constructor name
 
-                 | NullCons     String   -- type name
-                                String   -- constructor name
+                 | NullCons     String                -- type name
+                                String                -- constructor name
 
-                 | ClashCons    [String] -- clashing constructors
-                 | Illfounded            -- ill-founded system
+                 | ClashCons    [String]              -- clashing constructors
+                 | Illfounded                         -- ill-founded system
+                 | Infinite                           -- infinite structures.
+
+                 | Frequencies  [String]              -- incorrect frequencies
+                 | UnsupportedSystemType String       -- invalid system type.
 
 instance Show SystemError where
     show (Inconsistent t con arg) = "[Error] Invalid argument type '"
@@ -55,18 +59,38 @@ instance Show SystemError where
 
     show Illfounded = "[Error] Ill-founded system."
 
+    show Infinite = "[Error] System defines no finite structures."
+
+    show (Frequencies ts) = "[Error] Incorrect frequencies (expected real in [0.0,1.0]): "
+        ++ foldl1 (\c c' -> "'" ++ c ++ "', " ++ "'" ++ c' ++ "'") ts
+        ++ "."
+
+    show (UnsupportedSystemType s) = "[Error] Unsupported system type. " ++ s
+
 -- | Monadic error handling wrapper.
 type ErrorMonad = Either SystemError
 
--- | Checks whether the given input system is correct.
---   If not, returns an approapriate SystemError.
-errors :: System Int -> ErrorMonad ()
-errors sys = do
+-- | Checks whether the given input system is correct yielding its type.
+--   Otherwise, returns an approapriate SystemError.
+errors :: Bool -> System Int -> ErrorMonad SystemType
+errors useForce sys = do
     void $ consistent sys
     void $ validCons sys
     void $ clashCons sys
     void $ nullCons sys
-    void $ illfounded sys
+    void $ infinite sys
+    void $ incorrectFrequencies sys
+    unless useForce $ illfounded sys
+    invalidSystemType sys
+
+invalidSystemType :: System a -> ErrorMonad SystemType
+invalidSystemType sys =
+    case systemType sys of
+      (Unsupported s) -> throwError (UnsupportedSystemType s) `catchError` Left
+      sysT            -> return sysT
+
+infinite :: System a -> ErrorMonad ()
+infinite sys = unless (hasAtoms sys || not (null $ seqTypes sys)) $ throwError Infinite `catchError` Left
 
 consistent :: System a -> ErrorMonad ()
 consistent sys = mapM_ consistentType (M.toList $ defs sys) `catchError` Left
@@ -118,3 +142,14 @@ clashCons sys = let cs = duplicates sys in
 
 illfounded :: System Int -> ErrorMonad ()
 illfounded sys = unless (wellFounded sys) $ throwError Illfounded `catchError` Left
+
+incorrectFrequencies :: System Int -> ErrorMonad ()
+incorrectFrequencies sys = unless (null fs) $ throwError (Frequencies fs) `catchError` Left
+    where fs = incorrectFrequencies' sys
+
+incorrectFrequencies' :: System Int -> [String]
+incorrectFrequencies' sys = concatMap incF $ M.elems (defs sys)
+    where incF cons  = map func $ filter incF' cons
+          incF' cons = case frequency cons of
+                         Nothing -> False
+                         Just f  -> 0.0 > f || 1.0 < f

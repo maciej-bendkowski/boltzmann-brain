@@ -16,20 +16,21 @@ library
   exposed-modules:     Data.Boltzmann.System
                      , Data.Boltzmann.System.Oracle
                      , Data.Boltzmann.System.Parser
-                     , Data.Boltzmann.System.Specification
                      , Data.Boltzmann.System.Jacobian
                      , Data.Boltzmann.System.Errors
+                     , Data.Boltzmann.System.Paganini
                      , Data.Boltzmann.Compiler
                      , Data.Boltzmann.Compiler.Haskell.Helpers
-                     , Data.Boltzmann.Compiler.Haskell.MaybeT
+                     , Data.Boltzmann.Compiler.Haskell.Algebraic
+                     , Data.Boltzmann.Compiler.Haskell.Rational
   build-depends:       base >= 4.7 && < 5
                      , containers >= 0.5.6
                      , megaparsec >= 5.2.0
-                     , vector >= 0.11.0
                      , array >= 0.5.1
                      , haskell-src-exts == 1.17.1
                      , mtl >= 2.2.1
                      , multiset >= 0.3.3
+                     , hmatrix >= 0.18.0.0
   ghc-options:         -O2 -Wall
   default-language:    Haskell2010
 
@@ -38,6 +39,7 @@ executable bb
   main-is:             Main.hs
   ghc-options:         -O2 -Wall -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base
+                     , hmatrix >= 0.18.0.0
                      , boltzmann-brain
   default-language:    Haskell2010
 
