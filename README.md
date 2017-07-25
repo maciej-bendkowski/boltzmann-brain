@@ -63,7 +63,24 @@ not insignificant change in the underlying Boltzmann probaility model. In extrem
 requirng *80%* of internal nodes in plane binary trees, the constructed sampler might 
 be virtually ineffective due to the sparsity of tuned structures.
 
-#### Installation and usage
+#### Using Boltzmann Brain with Paganini
+To tune a combinatorial specification, we start with generating a *Paganini*
+representation of the system, e.g. using 
+
+```bb -g specification.in > paganini.pg```.
+
+Boltzmann Brain ensures that the input specification is sound and well-founded.
+Next, we run 
+
+```paganini paganini.pg 1e-09 > bb.param```
+
+which executes Paganini and generates required parameters for Boltzmann Brain.
+We can control, for instance, the used optimisation method or the numerical precision.
+ Finally, we need to tell Boltzmann Brain to use the parameters running, e.g.:
+
+```bb --with-io -m Sampler -t bb.param specification.in > Sampler.hs```
+
+#### Installation and detailed usage
 *Boltzmann Brain* is developed using ```stack``` on top of ```cabal```.
 For usage details please consult the *examples* directory and/or type ```bb -h```.
 *Paganini* is developed using *cvxpy*, *sympy* and *numpy* on top of *python2*.
