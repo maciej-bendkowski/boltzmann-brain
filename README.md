@@ -30,7 +30,7 @@ singular,  rejection-based Boltzmann sampler [2].
  ```
  stack solver --update-config
  ```
- This will configure the packages required for you rparticular system that are missing. Then consequently type
+ This will configure the packages required for your particular system that are missing. Then consequently type
  ```
  stack build
  stack install
