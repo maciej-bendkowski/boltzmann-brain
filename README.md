@@ -7,6 +7,48 @@ a combinatorial system of rational or algebraic structures, *Boltzmann Brain* co
 a working, self-contained Haskell module implementing a dedicated
 singular,  rejection-based Boltzmann sampler [2].
 
+#### How to install
+
+*Boltzmann brain* requires several pre-installed tools.
+ * The tuning part requires `python2`. If you don't have it, visit [this page](https://wiki.python.org/moin/BeginnersGuide/Download).
+ * Within `python2` several additional packages should be installed. Normally when you launch the code, it tells you the exact list if some package is missing. In order to install the packages, type into the command line
+ ```
+ pip2 install cvxpy numpy sympy matplotlib
+ ```
+ Note that the last three packages come by default with [Scientific Computing Tools for Python](https://www.scipy.org/about.html)
+ * The compiling and sampling part require `Haskell`. We recommend to use [haskell-stack](https://docs.haskellstack.org/en/stable/README/) as state-of-the-art package manager for Haskell. It will automatically use the preferred version of `ghc` (Glasgow Haskell Compiler) and corresponding versions of required packages. Otherwise one can use `cabal` on the top of which `stack` is developed.
+ * Once `stack` in installed, clone this repository with `git` (or download it manually)
+ ```
+ git clone https://github.com/maciej-bendkowski/boltzmann-brain.git
+ ```
+ and enter the folder containing `Setup.hs`.
+ Type
+ ```
+ stack solver
+ ```
+ If some problems are encountered, add the flag `--update-config`, i.e. type
+ ```
+ stack solver --update-config
+ ```
+ This will configure the packages required for you rparticular system that are missing. Then consequently type
+ ```
+ stack build
+ stack install
+ ```
+ This will install `boltzmann-brain` into your system. Type `bb -h` to check that it works.
+ * In order to install the tools for tuning weights of combinatorial systems, enter the folder `paganini` and type
+ ```
+ pip2 install cvxpy numpy sympy matplotlib
+ python2 setup.py install
+ ```
+ 
+##### Troubleshooting
+On `Mac OS` older versions like `10.9` package managers like `brew` can only install `stack` from source.
+This takes a long time, presubamly over one day.
+In some cases it is faster to completely update the operational system before attempting to install some of the prerequisites.
+
+The `hmatrix` package in `Haskell` requires prominent linear algebra packages `LAPACK` and `BLAS` (which are sometimes called "one of the achievements of the human species"). You can follow the instructions on the [official website](http://www.netlib.org/lapack/).
+
 #### Input
 The input format mimics that of Haskell algebraic data types where in addition each
 constructor may be annotated with an additional *weight* parameter. For instance:
@@ -64,6 +106,9 @@ requirng *80%* of internal nodes in plane binary trees, the constructed sampler 
 be virtually ineffective due to the sparsity of tuned structures.
 
 #### Using Boltzmann Brain with Paganini
+By default, the package `paganini` which tunes multiparametric combinatorial system is not called.
+This happens only when the user specifices the weights inside the square brackets.
+
 To tune a combinatorial specification, we start with generating a *Paganini*
 representation of the system, e.g. using 
 
@@ -79,12 +124,6 @@ We can control, for instance, the used optimisation method or the numerical prec
  Finally, we need to tell Boltzmann Brain to use the parameters running, e.g.:
 
 ```bb --with-io -m Sampler -t bb.param specification.in > Sampler.hs```
-
-#### Installation and detailed usage
-*Boltzmann Brain* is developed using ```stack``` on top of ```cabal```.
-For usage details please consult the *examples* directory and/or type ```bb -h```.
-*Paganini* is developed using *cvxpy*, *sympy* and *numpy* on top of *python2*.
-For usage and installation details please see the *paganini* directory.
 
 #### References
 1. [P. Flajolet, R. Sedgewick: Analytic Combinatorics](http://algo.inria.fr/flajolet/Publications/book.pdf)
