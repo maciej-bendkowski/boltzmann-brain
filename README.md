@@ -49,6 +49,14 @@ In some cases it is faster to completely update the operational system before at
 
 The `hmatrix` package in `Haskell` requires prominent linear algebra packages `LAPACK` and `BLAS` (which are sometimes called "one of the achievements of the human species"). You can follow the instructions on the [official website](http://www.netlib.org/lapack/).
 
+#### Usage
+
+After installing `boltzmann-brain` and `paganini` it is possible to obtain help about each of the applications by typing
+```
+bb -h
+paganini -h
+```
+
 #### Input
 The input format mimics that of Haskell algebraic data types where in addition each
 constructor may be annotated with an additional *weight* parameter. For instance:
@@ -117,10 +125,13 @@ representation of the system, e.g. using
 Boltzmann Brain ensures that the input specification is sound and well-founded.
 Next, we run 
 
-```paganini paganini.pg 1e-09 > bb.param```
+```paganini -i paganini.pg > bb.param```
 
 which executes Paganini and generates required parameters for Boltzmann Brain.
-We can control, for instance, the used optimisation method or the numerical precision.
+You can alter the default agruments of `paganini` scripts like tuning precision,
+optimisation problem solver, maximum number of iterations, and explicitly specify
+if the type of the grammar is rational (because the problem becomes unbounded and the user may receive an error in this case).
+
  Finally, we need to tell Boltzmann Brain to use the parameters running, e.g.:
 
 ```bb --with-io -m Sampler -t bb.param specification.in > Sampler.hs```
