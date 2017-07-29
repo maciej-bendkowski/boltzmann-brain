@@ -129,7 +129,7 @@ def main(args=None):
     precision = 1e-20
     if arguments.precision != None:
         try:
-            precision = arguments.precision[0]
+            precision = float(arguments.precision[0])
         except:
             raise Exception("Precision should be a float!")
     is_rational = False
