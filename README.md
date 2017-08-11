@@ -141,6 +141,7 @@ If you use `Boltzmann Brain` or `Paganini` for published work,
 we encourage you to cite the accompanying paper: 
 
 Maciej Bendkowski, Olivier Bodini, Sergey Dovgal
+
 [Polynomial tuning of multiparametric combinatorial
 samplers](https://arxiv.org/abs/1708.01212).
 
