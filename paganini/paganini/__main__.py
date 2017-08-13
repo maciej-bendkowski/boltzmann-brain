@@ -61,9 +61,8 @@ def main(args=None):
     """)
         sys.exit(1)
 
-    # --- technical inclusions
-    from cvxopt import matrix
-    from numpy import log, exp
+    ### PRECISION
+
     np.set_printoptions(precision=14)
 
 
