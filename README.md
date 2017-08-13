@@ -136,7 +136,20 @@ if the type of the grammar is rational (because the problem becomes unbounded an
 
 ```bb --with-io -m Sampler -t bb.param specification.in > Sampler.hs```
 
+#### Citing Boltzmann Brain
+If you use `Boltzmann Brain` or `Paganini` for published work, 
+we encourage you to cite the accompanying paper: 
+
+Maciej Bendkowski, Olivier Bodini, Sergey Dovgal
+
+[Polynomial tuning of multiparametric combinatorial
+samplers](https://arxiv.org/abs/1708.01212).
+
 #### References
-1. [P. Flajolet, R. Sedgewick: Analytic Combinatorics](http://algo.inria.fr/flajolet/Publications/book.pdf)
-2. [P. Duchon, P. Flajolet, G. Louchard. G. Schaeffer: Boltzmann Samplers for the random generation of combinatorial structures](http://algo.inria.fr/flajolet/Publications/DuFlLoSc04.pdf)
-3. [C. Pivoteau, B. Salvy, M. Soria: Algorithms for Combinatorial Systems: Well-Founded Systems and Newton Iterations](https://arxiv.org/abs/1109.2688)
+1. [P. Flajolet, R. Sedgewick: Analytic
+   Combinatorics](http://algo.inria.fr/flajolet/Publications/book.pdf)
+2. [P. Duchon, P. Flajolet, G. Louchard. G. Schaeffer: Boltzmann Samplers for
+   the random generation of combinatorial
+structures](http://algo.inria.fr/flajolet/Publications/DuFlLoSc04.pdf)
+3. [C. Pivoteau, B. Salvy, M. Soria: Algorithms for Combinatorial Systems:
+   Well-Founded Systems and Newton Iterations](https://arxiv.org/abs/1109.2688)
