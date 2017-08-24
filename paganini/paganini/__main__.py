@@ -1,9 +1,9 @@
 def main(args=None):
 
-    __author__    = "Sergey Dovgal"
-    __copyright__ = "Copyright (C) 2017 Sergey Dovgal"
+    __author__    = "Sergey Dovgal and Maciej Bendkowski"
+    __copyright__ = "Copyright (C) 2017 Sergey Dovgal and Maciej Bendkowski"
     __license__   = "Public Domain"
-    __version__   = "0.2955977424"
+    __version__   = "0.29559774252"
 
     flag_debug = False
 
@@ -99,7 +99,7 @@ def main(args=None):
     1 0 2 0
     0 0 0 1
     2
-    1 0 0 0         
+    1 0 0 0
     1 0 0 1
     """
 
@@ -108,9 +108,9 @@ def main(args=None):
             bcolors.ENDC,
             epilog = example_string,
             formatter_class=RawTextHelpFormatter)
-                                                                            
-    parser.add_argument('-i', '--input', dest='input', nargs=1, 
-            required=True, help="Name of the input file")
+
+    parser.add_argument('-i', '--input', dest='input', nargs=1,
+            required=False, help="Name of the input file")
     parser.add_argument('-s', '--solver', dest='solver', nargs=1,
             required=False, help="Solver: [CVXOPT, SCS, ECOS]. Default is ECOS.")
     parser.add_argument('-p', '--precision', dest='precision', nargs=1,
@@ -124,7 +124,7 @@ def main(args=None):
     arguments = parser.parse_args()
     sys.stderr.write("Started concerto...\n")
 
-    filename = arguments.input[0]
+    filename = arguments.input[0] if arguments.input else None
     precision = 1e-20
     if arguments.precision != None:
         try:
@@ -142,7 +142,7 @@ def main(args=None):
 
     solver = cvxpy.ECOS
     maxiters = 20
-    
+
     if arguments.solver != None:
         if (arguments.solver[0] == 'CVXOPT'):
             solver = cvxpy.CVXOPT
@@ -159,17 +159,20 @@ def main(args=None):
     if arguments.maxiters != None:
         maxiters = int(arguments.maxiters[0])
 
-    if not os.path.isfile(filename):
+    if filename and not os.path.isfile(filename):
         raise Exception("File doesn't exist!", filename)
-    
+
     #
     ##
     ### MAIN CODE
     ##
     #
 
+    # set default error file name
+    err_filename = filename if filename else "stdin"
+
     input_error_string = """
-    Input format error in '""" + filename + """'!
+    Input format error in '""" + err_filename + """'!
     Expected:
     <n_fun> <n_var>
     <freq1> <freq2> ... <freq n_var>
@@ -183,7 +186,7 @@ def main(args=None):
     Type python2 paganini.py for help and examples.
     """
 
-    FILE = open(filename,'r')
+    FILE = open(filename,'r') if filename else sys.stdin
 
     # Read the number of variables and functions
 
