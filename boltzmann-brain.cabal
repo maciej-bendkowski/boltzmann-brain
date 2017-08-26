@@ -18,7 +18,8 @@ library
                      , Data.Boltzmann.System.Parser
                      , Data.Boltzmann.System.Jacobian
                      , Data.Boltzmann.System.Errors
-                     , Data.Boltzmann.System.Paganini
+                     , Data.Boltzmann.System.Tuner
+                     , Data.Boltzmann.Internal.ParserUtils
                      , Data.Boltzmann.Compiler
                      , Data.Boltzmann.Compiler.Haskell.Helpers
                      , Data.Boltzmann.Compiler.Haskell.Algebraic
@@ -31,6 +32,7 @@ library
                      , mtl >= 2.2.1
                      , multiset >= 0.3.3
                      , hmatrix >= 0.18.0.0
+                     , process >= 1.4.3.0
   ghc-options:         -O2 -Wall
   default-language:    Haskell2010
 

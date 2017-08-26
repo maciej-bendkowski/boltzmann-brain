@@ -16,23 +16,21 @@ import System.Exit
 import System.Console.GetOpt
 import System.Environment
 
+import Data.Maybe (fromMaybe)
 import Data.List (nub)
-import Numeric.LinearAlgebra hiding (size)
-
 import Numeric
 
 import Data.Boltzmann.System
-import Data.Boltzmann.System.Oracle
 import Data.Boltzmann.System.Parser
 import Data.Boltzmann.System.Errors
+import Data.Boltzmann.Internal.ParserUtils
 
-import qualified Data.Boltzmann.System.Paganini as P
+import qualified Data.Boltzmann.System.Tuner as T
 import qualified Data.Boltzmann.Compiler.Haskell.Algebraic as A
 import qualified Data.Boltzmann.Compiler.Haskell.Rational as R
 
-data Flag = SingEpsilon String
-          | SysEpsilon String
-          | Singularity String
+data Flag = Precision String
+          | MaxIter String
           | ModuleName String
           | InputPaganini String
           | OutputPaganini
@@ -45,20 +43,17 @@ data Flag = SingEpsilon String
             deriving (Eq)
 
 options :: [OptDescr Flag]
-options = [Option "e" ["eps"] (ReqArg SingEpsilon "e")
-            "Singularity approximation precision. Defaults to 1.0e-9.",
+options = [Option "p" ["precision"] (ReqArg Precision "p")
+            "Tuning precision. Defaults to 1.0e-9.",
 
-          Option "p" ["precision"] (ReqArg SysEpsilon "p")
-            "Evaluation approximation precision. Defaults to 1.0e-9.",
+          Option "e" ["maxiter"] (ReqArg MaxIter "e")
+            "Maximum number of tuner iterations.",
 
           Option "g" ["to-paganini"] (NoArg OutputPaganini)
             "Output a suitable Paganini specification for the given system.",
 
           Option "t" ["from-paganini"] (ReqArg InputPaganini "t")
             "Input a suitable Paganini tuning vector for the given system.",
-
-           Option "r" ["rho"] (ReqArg Singularity "r")
-            "Optional singularity parameter used to evaluate the system.",
 
            Option "m" ["module"] (ReqArg ModuleName "m")
             "The resulting Haskell module name. Defaults to Sampler.",
@@ -73,7 +68,7 @@ options = [Option "e" ["eps"] (ReqArg SingEpsilon "e")
             "Whether to generate data types deriving Show.",
 
            Option "f" ["force"] (NoArg Force)
-            "Whether to skips the well-foundness check.",
+            "Whether to skip the well-foundedness check.",
 
            Option "v" ["version"] (NoArg Version)
             "Prints the program version number.",
@@ -93,25 +88,20 @@ compilerTimestamp = "Boltzmann brain v1.2"
 parseFloating :: String -> Rational
 parseFloating s = (fst $ head (readFloat s)) :: Rational
 
-getSingEpsilon :: [Flag] -> Double
-getSingEpsilon (SingEpsilon eps : _) = fromRational $ parseFloating eps
-getSingEpsilon (_:fs)                = getSingEpsilon fs
-getSingEpsilon []                    = fromRational 1.0e-9
-
-getSysEpsilon :: [Flag] -> Double
-getSysEpsilon (SysEpsilon eps : _) = fromRational $ parseFloating eps
-getSysEpsilon (_:fs)               = getSysEpsilon fs
-getSysEpsilon []                   = fromRational 1.0e-9
-
-getSingularity :: [Flag] -> Maybe Double
-getSingularity (Singularity s : _) = Just (fromRational $ parseFloating s)
-getSingularity (_:fs)              = getSingularity fs
-getSingularity []                  = Nothing
+getPrecision :: [Flag] -> Double
+getPrecision (Precision eps : _) = fromRational $ parseFloating eps
+getPrecision (_:fs)              = getPrecision fs
+getPrecision []                  = fromRational 1.0e-9
 
 getModuleName :: [Flag] -> String
 getModuleName (ModuleName name : _) = name
 getModuleName (_:fs)                = getModuleName fs
 getModuleName []                    = "Sampler"
+
+getMaxIter :: [Flag] -> Maybe Int
+getMaxIter (MaxIter iter : _) = Just $ read iter
+getMaxIter (_:fs)             = getMaxIter fs
+getMaxIter []                 = Nothing
 
 useIO :: [Flag] -> Bool
 useIO flags = WithIO `elem` flags
@@ -159,20 +149,9 @@ run flags f = do
     case sys of
       Left err   -> printError err
       Right sys' -> case errors (useForce flags) sys' of
-                      Left err' -> reportSystemError err'
-                      Right sysT   -> if toPaganini flags then P.paganiniSpecification sys'
-                                                          else runCompiler sys' sysT flags
-
-oracle :: [Flag] -> System Int -> PSystem Double
-oracle flags sys = case getSingularity flags of
-                           Nothing -> let singEps = getSingEpsilon flags
-                                          sysEps  = getSysEpsilon flags
-                                          rho     = singularity sys singEps
-                                       in
-                                          parametrise sys rho sysEps
-
-                           Just rho -> let sysEps = getSysEpsilon flags in
-                                         parametrise sys rho sysEps
+                      Left err'  -> reportSystemError err'
+                      Right sysT -> if toPaganini flags then T.writeSpecification sys' stdout
+                                                        else runCompiler sys' sysT flags
 
 confCompiler :: PSystem Double -> SystemType -> [Flag] -> IO ()
 confCompiler sys Rational flags = do
@@ -200,17 +179,18 @@ runCompiler :: System Int -> SystemType -> [Flag] -> IO ()
 runCompiler sys sysT flags =
     case fromPaganini flags of
       Nothing -> do
-          let sys' = oracle flags sys
-          confCompiler sys' sysT flags
-      Just s  -> do
-          let spec = P.toPSpec sys
-          pag <- parsePaganini spec s
+          let arg = T.defaultArgs sys
+          pag <- T.runPaganini sys (Just $ arg { T.precision = getPrecision flags
+                                               , T.maxiters  = fromMaybe (T.maxiters arg)
+                                                                         (getMaxIter flags) })
           case pag of
-            Left err     -> printError err
-            Right (rho,us, ts) -> do
-                let ts'  = fromList ts
-                let sys' = P.parametrise sys rho ts' us
-                confCompiler sys' sysT flags
+            Left err   -> printError err
+            Right sys' -> confCompiler sys' sysT flags
+      Just s  -> do
+          pag <- T.readPaganini sys s
+          case pag of
+            Left err   -> printError err
+            Right sys' -> confCompiler sys' sysT flags
 
 reportSystemError :: SystemError -> IO ()
 reportSystemError err = do

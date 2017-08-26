@@ -9,8 +9,6 @@
  -}
 module Data.Boltzmann.System.Parser
     ( parseSystem
-    , parsePaganini
-    , printError
     ) where
 
 import Control.Monad (void)
@@ -18,44 +16,10 @@ import Control.Monad (void)
 import Text.Megaparsec
 import Text.Megaparsec.String
 
-import qualified Text.Megaparsec.Lexer as L
-
 import qualified Data.Map.Strict as M
 
+import Data.Boltzmann.Internal.ParserUtils
 import qualified Data.Boltzmann.System as S
-import qualified Data.Boltzmann.System.Paganini as P
-
-sc :: Parser ()
-sc = L.space (void spaceChar) lineCmnt blockCmnt
-    where lineCmnt  = L.skipLineComment "--"
-          blockCmnt = L.skipBlockComment "{-" "-}"
-
-lexeme :: Parser a -> Parser a
-lexeme = L.lexeme sc
-
-symbol :: String -> Parser String
-symbol = L.symbol sc
-
-parens :: Parser a -> Parser a
-parens = between (symbol "(") (symbol ")")
-
-brackets :: Parser a -> Parser a
-brackets = between (symbol "[") (symbol "]")
-
-integer :: Parser Int
-integer = lexeme $ do
-    n <- L.integer
-    return $ fromIntegral n
-
-double :: Parser Double
-double = lexeme L.float
-
-sepBy2 :: Parser a -> Parser b -> Parser [a]
-sepBy2 p q = do
-    x <- p
-    void q
-    xs <- p `sepBy1` q
-    return (x : xs)
 
 identifier :: Parser String
 identifier = lexeme $ (:) <$> upperChar <*> many (alphaNumChar <|> char '_')
@@ -134,38 +98,8 @@ typeStmt = do
     t <- identifier
     return $ S.Type t
 
-parseFromFile :: Parsec e String a
-              -> String
-              -> IO (Either (ParseError Char e) a)
-
-parseFromFile p file = runParser p file <$> readFile file
-
 -- | Parses the given system specification.
 parseSystem :: String
             -> IO (Either (ParseError Char Dec) (S.System Int))
 
 parseSystem = parseFromFile systemStmt
-
--- | Prints the given parsing errors.
-printError :: ParseError Char Dec -> IO ()
-printError err = putStr $ parseErrorPretty err
-
-parseN :: Parser a -> Int -> Parser [a]
-parseN _ 0 = return []
-parseN p n = do
-    x <- p
-    xs <- parseN p (n-1)
-    return $ x : xs
-
-paganiniStmt :: P.PSpec -> Parser (Double, [Double], [Double])
-paganiniStmt spec = do
-    z <- double
-    us <- parseN double $ P.numFreqs spec
-    ts <- parseN double $ P.numTypes spec
-    return (z,us,ts)
-
--- | Parses the given Paganini specification.
-parsePaganini :: P.PSpec -> String
-              -> IO (Either (ParseError Char Dec) (Double, [Double], [Double]))
-
-parsePaganini spec = parseFromFile (paganiniStmt spec)
