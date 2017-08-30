@@ -20,6 +20,7 @@ library
                      , Data.Boltzmann.System.Errors
                      , Data.Boltzmann.System.Tuner
                      , Data.Boltzmann.Internal.ParserUtils
+                     , Data.Boltzmann.Internal.Annotations
                      , Data.Boltzmann.Compiler
                      , Data.Boltzmann.Compiler.Haskell.Helpers
                      , Data.Boltzmann.Compiler.Haskell.Algebraic
@@ -42,6 +43,7 @@ executable bb
   ghc-options:         -O2 -Wall -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base
                      , hmatrix >= 0.18.0.0
+                     , containers >= 0.5.6
                      , boltzmann-brain
   default-language:    Haskell2010
 

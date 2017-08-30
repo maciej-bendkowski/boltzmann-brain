@@ -11,6 +11,14 @@ module Data.Boltzmann.Compiler
     ( Configuration(..)
     ) where
 
+import Data.Boltzmann.System
+
 -- | Compiler configurations.
 class Configuration a where
-    compile :: a -> IO ()
+    config  :: PSystem Double -- ^ parametrised system.
+            -> String         -- ^ module name.
+            -> String         -- ^ compile note.
+            -> a              -- ^ configuration.
+
+    compile :: a              -- ^ configuration.
+            -> IO ()          -- ^ compiler action.

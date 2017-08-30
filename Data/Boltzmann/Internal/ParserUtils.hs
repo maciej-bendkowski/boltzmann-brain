@@ -9,6 +9,7 @@
  -}
 module Data.Boltzmann.Internal.ParserUtils
     ( sc
+
     , lexeme
     , symbol
     , parens
@@ -61,7 +62,7 @@ sepBy2 p q = do
     xs <- p `sepBy1` q
     return (x : xs)
 
--- | N-fold parser application.
+-- | n-fold parser application.
 parseN :: Parser a -> Int -> Parser [a]
 parseN _ 0 = return []
 parseN p n = do

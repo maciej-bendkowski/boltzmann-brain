@@ -10,6 +10,7 @@
 module Data.Boltzmann.Compiler.Haskell.Rational
     ( Conf(..)
     , compile
+    , config
     ) where
 
 import Prelude hiding (and)
@@ -17,6 +18,7 @@ import Language.Haskell.Exts hiding (List)
 import Language.Haskell.Exts.SrcLoc (noLoc)
 
 import Data.Boltzmann.System
+import Data.Boltzmann.Internal.Annotations
 
 import Data.Boltzmann.Compiler
 import Data.Boltzmann.Compiler.Haskell.Helpers
@@ -30,12 +32,23 @@ data Conf = Conf { paramSys    :: PSystem Double   -- ^ Parametrised system.
                  }
 
 instance Configuration Conf where
+
+    config sys module' compilerNote' =
+        let with = withBool (annotations $ system sys)
+         in Conf { paramSys    = sys
+                 , moduleName  = module'
+                 , compileNote = compilerNote'
+                 , withIO      = "withIO"    `with` False
+                 , withShow    = "withShow"  `with` False
+                 }
+
     compile conf = let sys        = paramSys conf
                        name'      = moduleName conf
                        note       = compileNote conf
                        withIO'    = withIO conf
                        withShow'  = withShow conf
-                       module'    = compileModule sys name' withIO' withShow'
+                       module'    = compileModule sys name'
+                                        withIO' withShow'
                    in do
                        putStr $ moduleHeader sys note
                        putStrLn $ prettyPrint module'

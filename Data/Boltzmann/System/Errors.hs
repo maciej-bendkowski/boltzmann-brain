@@ -14,12 +14,17 @@ module Data.Boltzmann.System.Errors
     ) where
 
 import Control.Monad.Except
+
+import Data.Map (Map)
 import qualified Data.Map.Strict as M
 
 import qualified Data.Set as S
 
 import Data.MultiSet (MultiSet)
 import qualified Data.MultiSet as MultiSet
+
+import Data.Char (isUpper)
+import Text.Read (readMaybe)
 
 import Data.Boltzmann.System
 import Data.Boltzmann.System.Jacobian
@@ -38,10 +43,15 @@ data SystemError = Inconsistent String                -- type name
 
                  | ClashCons    [String]              -- clashing constructors
                  | Illfounded                         -- ill-founded system
-                 | Infinite                           -- infinite structures.
+                 | Infinite                           -- infinite structures
 
                  | Frequencies  [String]              -- incorrect frequencies
-                 | UnsupportedSystemType String       -- invalid system type.
+
+                 | InvalidPrecision                   -- invalid precision
+                 | InvalidMaxIter                     -- invalid maxiter
+                 | InvalidModule                      -- invalid module
+
+                 | UnsupportedSystemType String       -- invalid system type
 
 instance Show SystemError where
     show (Inconsistent t con arg) = "[Error] Invalid argument type '"
@@ -65,13 +75,22 @@ instance Show SystemError where
         ++ foldl1 (\c c' -> "'" ++ c ++ "', " ++ "'" ++ c' ++ "'") ts
         ++ "."
 
+    show InvalidPrecision = "[Error] Invalid precision annotation. "
+            ++ "Expected a positive floating point number."
+
+    show InvalidMaxIter = "[Error] Invalid maxiter annotation. "
+            ++ "Expected a positive integer."
+
+    show InvalidModule = "[Error] Invalid module annotation. "
+            ++ "Expected a name starting with an upper case letter."
+
     show (UnsupportedSystemType s) = "[Error] Unsupported system type. " ++ s
 
 -- | Monadic error handling wrapper.
 type ErrorMonad = Either SystemError
 
 -- | Checks whether the given input system is correct yielding its type.
---   Otherwise, returns an approapriate SystemError.
+--   Otherwise, returns an appropriate SystemError.
 errors :: Bool -> System Int -> ErrorMonad SystemType
 errors useForce sys = do
     void $ consistent sys
@@ -80,6 +99,7 @@ errors useForce sys = do
     void $ nullCons sys
     void $ infinite sys
     void $ incorrectFrequencies sys
+    void $ invalidAnnotations sys
     unless useForce $ illfounded sys
     invalidSystemType sys
 
@@ -153,3 +173,33 @@ incorrectFrequencies' sys = concatMap incF $ M.elems (defs sys)
           incF' cons = case frequency cons of
                          Nothing -> False
                          Just f  -> 0.0 > f || 1.0 < f
+
+-- | General, compiler-independent admissible annotations.
+invalidAnnotations :: System Int -> ErrorMonad ()
+invalidAnnotations sys = do
+    let ann = annotations sys
+    void $ precisionAnnotation ann
+    void $ maxiterAnnotation ann
+    moduleAnnotation ann
+
+precisionAnnotation :: Map String String -> ErrorMonad ()
+precisionAnnotation ann =
+    case "precision" `M.lookup` ann of
+      Nothing -> return ()
+      Just x -> case readMaybe x :: Maybe Double of
+                  Nothing -> throwError InvalidPrecision
+                  Just x' -> unless (x' > 0) $ throwError InvalidPrecision `catchError` Left
+
+maxiterAnnotation :: Map String String -> ErrorMonad ()
+maxiterAnnotation ann =
+    case "maxiter" `M.lookup` ann of
+      Nothing -> return ()
+      Just x -> case readMaybe x :: Maybe Int of
+                  Nothing -> throwError InvalidMaxIter
+                  Just x' -> unless (x' > 0) $ throwError InvalidMaxIter `catchError` Left
+
+moduleAnnotation :: Map String String -> ErrorMonad ()
+moduleAnnotation ann =
+    case "module" `M.lookup` ann of
+      Nothing -> return ()
+      Just x -> unless (isUpper $ head x) $ throwError InvalidModule `catchError` Left
