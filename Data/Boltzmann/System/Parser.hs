@@ -18,7 +18,7 @@ import Text.Megaparsec.String
 
 import qualified Data.Map.Strict as M
 
-import Data.Boltzmann.Internal.ParserUtils
+import Data.Boltzmann.Internal.Parser
 import qualified Data.Boltzmann.System as S
 
 -- | Identifier producer.

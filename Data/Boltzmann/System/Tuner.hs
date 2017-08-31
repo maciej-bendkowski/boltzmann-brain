@@ -35,8 +35,8 @@ import qualified Data.Set as S
 
 import Data.Maybe
 
-import Data.Boltzmann.Internal.ParserUtils
 import Data.Boltzmann.System
+import Data.Boltzmann.Internal.Parser
 
 -- | Paganini convex program solvers
 data PSolver = SCS

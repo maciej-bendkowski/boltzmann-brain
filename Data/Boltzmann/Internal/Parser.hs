@@ -1,5 +1,5 @@
 {-|
- Module      : Data.Boltzmann.Internal.ParserUtils
+ Module      : Data.Boltzmann.Internal.Parser
  Description : Parser utilities for combinatorial systems.
  Copyright   : (c) Maciej Bendkowski, 2017
 
@@ -7,7 +7,7 @@
  Maintainer  : maciej.bendkowski@tcs.uj.edu.pl
  Stability   : experimental
  -}
-module Data.Boltzmann.Internal.ParserUtils
+module Data.Boltzmann.Internal.Parser
     ( sc
 
     , lexeme

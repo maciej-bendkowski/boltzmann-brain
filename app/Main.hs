@@ -24,7 +24,7 @@ import qualified Data.Map as M
 import Data.Boltzmann.System
 import Data.Boltzmann.System.Parser
 import Data.Boltzmann.System.Errors
-import Data.Boltzmann.Internal.ParserUtils
+import Data.Boltzmann.Internal.Parser
 
 import qualified Data.Boltzmann.System.Tuner as T
 
