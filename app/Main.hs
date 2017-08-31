@@ -40,11 +40,11 @@ data Flag = InputPaganini String
             deriving (Eq)
 
 options :: [OptDescr Flag]
-options = [Option "g" ["to-paganini"] (NoArg OutputPaganini)
+options = [Option "s" ["paganini-out"] (NoArg OutputPaganini)
             "Output a suitable Paganini specification for the given system.",
 
-           Option "t" ["from-paganini"] (ReqArg InputPaganini "t")
-            "Input a suitable Paganini tuning vector for the given system.",
+           Option "p" ["paganini-in"] (ReqArg InputPaganini "p")
+            "Paganini tuning vector for the given system.",
 
            Option "f" ["force"] (NoArg Force)
             "Whether to skip the well-foundedness check.",
