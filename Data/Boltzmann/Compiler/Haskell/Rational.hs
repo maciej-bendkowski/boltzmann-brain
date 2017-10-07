@@ -38,8 +38,8 @@ instance Configuration Conf where
          in Conf { paramSys    = sys
                  , moduleName  = module'
                  , compileNote = compilerNote'
-                 , withIO      = "withIO"    `with` False
-                 , withShow    = "withShow"  `with` False
+                 , withIO      = "withIO"    `with` True
+                 , withShow    = "withShow"  `with` True
                  }
 
     compile conf = let sys        = paramSys conf
