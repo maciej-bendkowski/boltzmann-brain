@@ -32,7 +32,8 @@ import Data.Boltzmann.Compiler
 import qualified Data.Boltzmann.Compiler.Haskell.Algebraic as A
 import qualified Data.Boltzmann.Compiler.Haskell.Rational as R
 
-data Flag = InputPaganini String
+data Flag = OutputFile String
+          | InputPaganini String
           | OutputPaganini
           | Force
           | Version
@@ -40,11 +41,14 @@ data Flag = InputPaganini String
             deriving (Eq)
 
 options :: [OptDescr Flag]
-options = [Option "s" ["paganini-out"] (NoArg OutputPaganini)
-            "Output a suitable Paganini specification for the given system.",
+options = [Option "o" ["output"] (ReqArg OutputFile "FILE")
+            "Optional output file.",
 
-           Option "p" ["paganini-in"] (ReqArg InputPaganini "p")
+           Option "p" ["paganini-in"] (ReqArg InputPaganini "FILE")
             "Paganini tuning vector for the given system.",
+
+           Option "s" ["paganini-out"] (NoArg OutputPaganini)
+            "Output a suitable Paganini specification for the given system.",
 
            Option "f" ["force"] (NoArg Force)
             "Whether to skip the well-foundedness check.",
@@ -78,6 +82,11 @@ getMaxIter sys =
 
 getModuleName :: System a -> String
 getModuleName sys = fromMaybe "Sampler" ("module" `M.lookup` annotations sys)
+
+output :: [Flag] -> Maybe String
+output (OutputFile f : _) = Just f
+output (_:fs)             = output fs
+output []                 = Nothing
 
 toPaganini :: [Flag] -> Bool
 toPaganini flags = OutputPaganini `elem` flags
@@ -117,21 +126,27 @@ run flags f = do
       Left err   -> printError err
       Right sys' -> case errors (useForce flags) sys' of
                       Left err'  -> reportSystemError err'
-                      Right sysT -> if toPaganini flags then T.writeSpecification sys' stdout
+                      Right sysT -> if toPaganini flags then writeSpec sys' (output flags)
                                                         else runCompiler sys' sysT flags
 
-confCompiler :: PSystem Double -> SystemType -> IO ()
-confCompiler sys Rational = do
-    let conf = config sys (getModuleName $ system sys)
-                    compilerTimestamp :: R.Conf
+writeSpec :: System Int -> Maybe FilePath -> IO ()
+writeSpec sys' (Just f) = withFile f WriteMode (T.writeSpecification sys')
+writeSpec sys' Nothing  = T.writeSpecification sys' stdout
+
+confCompiler :: PSystem Double -> Maybe String -> SystemType -> IO ()
+confCompiler sys outputFile Rational = do
+    let conf = config sys outputFile
+            (getModuleName $ system sys)
+            compilerTimestamp :: R.Conf
     R.compile conf
 
-confCompiler sys Algebraic = do
-    let conf = config sys (getModuleName $ system sys)
-                    compilerTimestamp :: A.Conf
+confCompiler sys outputFile Algebraic = do
+    let conf = config sys outputFile
+            (getModuleName $ system sys)
+            compilerTimestamp :: A.Conf
     A.compile conf
 
-confCompiler _ _ = error "I wasn't expecting the Spanish inquisition!"
+confCompiler _ _ _ = error "I wasn't expecting the Spanish inquisition!"
 
 runCompiler :: System Int -> SystemType -> [Flag] -> IO ()
 runCompiler sys sysT flags =
@@ -143,12 +158,12 @@ runCompiler sys sysT flags =
                                                                          (getMaxIter sys) })
           case pag of
             Left err   -> printError err
-            Right sys' -> confCompiler sys' sysT
+            Right sys' -> confCompiler sys' (output flags) sysT
       Just s  -> do
           pag <- T.readPaganini sys s
           case pag of
             Left err   -> printError err
-            Right sys' -> confCompiler sys' sysT
+            Right sys' -> confCompiler sys' (output flags) sysT
 
 reportSystemError :: SystemError -> IO ()
 reportSystemError err = do

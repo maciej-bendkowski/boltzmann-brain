@@ -16,6 +16,7 @@ import Data.Boltzmann.System
 -- | Compiler configurations.
 class Configuration a where
     config  :: PSystem Double -- ^ parametrised system.
+            -> Maybe String   -- ^ output file location.
             -> String         -- ^ module name.
             -> String         -- ^ compile note.
             -> a              -- ^ configuration.
