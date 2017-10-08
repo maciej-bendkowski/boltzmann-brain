@@ -1,5 +1,5 @@
 # Changelog
-Notable major changes since version *1.3* are listed below.
+Notable major changes since version *1.2* are listed below.
 
 ## [1.3.0] - 08-10-2017
 - *Paganini* is now fully integrated with *Boltzmann brain*. By default, *bb*
