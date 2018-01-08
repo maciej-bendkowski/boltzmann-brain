@@ -85,7 +85,7 @@ compileModule sys mod' withIO' withLists' withShow' =
                     declareGenerators sys ++
                     declareListGenerators sys withLists' ++
                     declareSamplers sys ++
-                    declareListSamplers sys ++
+                    declareListSamplers sys withLists' ++
                     declareSamplersIO sys withIO' ++
                     declareListSamplersIO sys withIO' withLists'
 
@@ -339,8 +339,10 @@ constructSampler' gen sam t =
 constructSampler :: String -> Exp
 constructSampler = constructSampler' genName samplerName
 
-declareListSamplers :: PSystem Double -> [Decl]
-declareListSamplers sys = concatMap declListSampler $ (seqTypes . system) sys
+declareListSamplers :: PSystem Double -> Bool -> [Decl]
+declareListSamplers sys withLists' = concatMap declListSampler $ types' sys
+    where types' = if withLists' then typeList
+                                 else seqTypes . system
 
 declListSampler :: String -> [Decl]
 declListSampler t = declTFun (listSamplerName t) type' ["lb","ub"] body
