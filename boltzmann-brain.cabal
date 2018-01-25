@@ -18,6 +18,7 @@ library
                      , Data.Boltzmann.System.Parser
                      , Data.Boltzmann.System.Jacobian
                      , Data.Boltzmann.System.Errors
+                     , Data.Boltzmann.System.Warnings
                      , Data.Boltzmann.System.Tuner
                      , Data.Boltzmann.Internal.Annotations
                      , Data.Boltzmann.Internal.Parser

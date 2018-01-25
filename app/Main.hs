@@ -1,7 +1,7 @@
 {-|
  Module      : Main
  Description : Boltzmann brain executable.
- Copyright   : (c) Maciej Bendkowski, 2017
+ Copyright   : (c) Maciej Bendkowski, 2018
 
  License     : BSD3
  Maintainer  : maciej.bendkowski@tcs.uj.edu.pl
@@ -16,6 +16,8 @@ import System.Exit
 import System.Console.GetOpt
 import System.Environment
 
+import Control.Monad (when)
+import Data.Either (isLeft)
 import Data.Maybe (fromMaybe)
 import Data.List (nub)
 
@@ -24,6 +26,7 @@ import qualified Data.Map as M
 import Data.Boltzmann.System
 import Data.Boltzmann.System.Parser
 import Data.Boltzmann.System.Errors
+import Data.Boltzmann.System.Warnings
 import Data.Boltzmann.Internal.Parser
 
 import qualified Data.Boltzmann.System.Tuner as T
@@ -36,6 +39,7 @@ data Flag = OutputFile String
           | InputPaganini String
           | OutputPaganini
           | Force
+          | Werror
           | Version
           | Help
             deriving (Eq)
@@ -52,6 +56,9 @@ options = [Option "o" ["output"] (ReqArg OutputFile "FILE")
 
            Option "f" ["force"] (NoArg Force)
             "Whether to skip the well-foundedness check.",
+
+           Option "w" ["werror"] (NoArg Werror)
+            "Whether to treat warnings as errors.",
 
            Option "v" ["version"] (NoArg Version)
             "Prints the program version number.",
@@ -124,10 +131,18 @@ run flags f = do
     sys <- parseSystem f
     case sys of
       Left err   -> printError err
-      Right sys' -> case errors (useForce flags) sys' of
-                      Left err'  -> reportSystemError err'
-                      Right sysT -> if toPaganini flags then writeSpec sys' (output flags)
-                                                        else runCompiler sys' sysT flags
+      Right sys' -> do
+          let ws = warnings sys'
+          reportSystemWarnings ws
+          case errors (useForce flags) sys' of
+              Left err'  -> reportSystemError err'
+              Right sysT -> do
+                  when (exitWerror flags ws) $ exitWith (ExitFailure 1)
+                  if toPaganini flags then writeSpec sys' (output flags)
+                                      else runCompiler sys' sysT flags
+
+exitWerror :: [Flag] -> WarningMonad () -> Bool
+exitWerror flags ws = isLeft ws && Werror `elem` flags
 
 writeSpec :: System Int -> Maybe FilePath -> IO ()
 writeSpec sys' (Just f) = withFile f WriteMode (T.writeSpecification sys')
@@ -169,6 +184,10 @@ reportSystemError :: SystemError -> IO ()
 reportSystemError err = do
     hPrint stderr err
     exitWith (ExitFailure 1)
+
+reportSystemWarnings :: WarningMonad () -> IO ()
+reportSystemWarnings (Left ws) = hPrint stderr ws
+reportSystemWarnings _         = return ()
 
 main :: IO ()
 main = do
