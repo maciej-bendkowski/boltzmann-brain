@@ -164,7 +164,9 @@ we encourage you to cite the accompanying paper:
 Maciej Bendkowski, Olivier Bodini, Sergey Dovgal
 
 [Polynomial tuning of multiparametric combinatorial
-samplers](https://arxiv.org/abs/1708.01212).
+samplers](https://epubs.siam.org/doi/10.1137/1.9781611975062.9)
+
+available also on [Arxiv](https://arxiv.org/abs/1708.01212).
 
 #### References
 1. [P. Flajolet, R. Sedgewick: Analytic
