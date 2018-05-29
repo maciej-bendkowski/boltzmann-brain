@@ -1,5 +1,5 @@
 name:                boltzmann-brain
-version:             1.3.1.1
+version:             1.3.1.2
 synopsis:            Boltzmann sampler compiler for combinatorial systems.
 homepage:            https://github.com/maciej-bendkowski/boltzmann-brain
 license:             BSD3
