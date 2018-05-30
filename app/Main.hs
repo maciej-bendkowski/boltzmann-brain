@@ -193,6 +193,7 @@ main :: IO ()
 main = do
     (ops, fs) <- getArgs >>= parse
     case fs of
-      []     -> exitSuccess
+      []     -> do hPutStr stderr (usageInfo usageHeader options)
+                   exitWith (ExitFailure 1)
       (f:_)  -> do run ops f
                    exitSuccess
