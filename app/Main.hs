@@ -1,7 +1,7 @@
 {-|
  Module      : Main
  Description : Boltzmann brain executable.
- Copyright   : (c) Maciej Bendkowski, 2017
+ Copyright   : (c) Maciej Bendkowski, 2018
 
  License     : BSD3
  Maintainer  : maciej.bendkowski@tcs.uj.edu.pl
@@ -16,64 +16,49 @@ import System.Exit
 import System.Console.GetOpt
 import System.Environment
 
+import Control.Monad (when)
+import Data.Either (isLeft)
+import Data.Maybe (fromMaybe)
 import Data.List (nub)
-import Numeric.LinearAlgebra hiding (size)
 
-import Numeric
+import qualified Data.Map as M
 
 import Data.Boltzmann.System
-import Data.Boltzmann.System.Oracle
 import Data.Boltzmann.System.Parser
 import Data.Boltzmann.System.Errors
+import Data.Boltzmann.System.Warnings
+import Data.Boltzmann.Internal.Parser
 
-import qualified Data.Boltzmann.System.Paganini as P
+import qualified Data.Boltzmann.System.Tuner as T
+
+import Data.Boltzmann.Compiler
 import qualified Data.Boltzmann.Compiler.Haskell.Algebraic as A
 import qualified Data.Boltzmann.Compiler.Haskell.Rational as R
 
-data Flag = SingEpsilon String
-          | SysEpsilon String
-          | Singularity String
-          | ModuleName String
+data Flag = OutputFile String
           | InputPaganini String
           | OutputPaganini
-          | WithLists
-          | WithShow
-          | WithIO
           | Force
+          | Werror
           | Version
           | Help
             deriving (Eq)
 
 options :: [OptDescr Flag]
-options = [Option "e" ["eps"] (ReqArg SingEpsilon "e")
-            "Singularity approximation precision. Defaults to 1.0e-9.",
+options = [Option "o" ["output"] (ReqArg OutputFile "FILE")
+            "Optional output file.",
 
-          Option "p" ["precision"] (ReqArg SysEpsilon "p")
-            "Evaluation approximation precision. Defaults to 1.0e-9.",
+           Option "p" ["paganini-in"] (ReqArg InputPaganini "FILE")
+            "Paganini tuning vector for the given system.",
 
-          Option "g" ["to-paganini"] (NoArg OutputPaganini)
+           Option "s" ["paganini-out"] (NoArg OutputPaganini)
             "Output a suitable Paganini specification for the given system.",
 
-          Option "t" ["from-paganini"] (ReqArg InputPaganini "t")
-            "Input a suitable Paganini tuning vector for the given system.",
-
-           Option "r" ["rho"] (ReqArg Singularity "r")
-            "Optional singularity parameter used to evaluate the system.",
-
-           Option "m" ["module"] (ReqArg ModuleName "m")
-            "The resulting Haskell module name. Defaults to Sampler.",
-
-           Option "i" ["with-io"] (NoArg WithIO)
-            "Whether to generate IO actions for the samplers.",
-
-           Option "l" ["with-lists"] (NoArg WithLists)
-            "Whether to generate lists samplers for all types.",
-
-           Option "d" ["with-show"] (NoArg WithShow)
-            "Whether to generate data types deriving Show.",
-
            Option "f" ["force"] (NoArg Force)
-            "Whether to skips the well-foundness check.",
+            "Whether to skip the well-foundedness check.",
+
+           Option "w" ["werror"] (NoArg Werror)
+            "Whether to treat warnings as errors.",
 
            Option "v" ["version"] (NoArg Version)
             "Prints the program version number.",
@@ -85,42 +70,30 @@ usageHeader :: String
 usageHeader = "Usage: bb [OPTIONS...]"
 
 versionHeader :: String
-versionHeader = "Boltzmann brain v1.2 (c) Maciej Bendkowski 2017"
+versionHeader = "Boltzmann Brain v1.3.1.3 (c) Maciej Bendkowski and Sergey Dovgal 2018"
 
 compilerTimestamp :: String
-compilerTimestamp = "Boltzmann brain v1.2"
+compilerTimestamp = "Boltzmann Brain v1.3.1.3"
 
-parseFloating :: String -> Rational
-parseFloating s = (fst $ head (readFloat s)) :: Rational
+getPrecision :: System a -> Double
+getPrecision sys =
+    case "precision" `M.lookup` annotations sys of
+      Just x  -> read x :: Double
+      Nothing -> 1.0e-9
 
-getSingEpsilon :: [Flag] -> Double
-getSingEpsilon (SingEpsilon eps : _) = fromRational $ parseFloating eps
-getSingEpsilon (_:fs)                = getSingEpsilon fs
-getSingEpsilon []                    = fromRational 1.0e-9
+getMaxIter :: System a -> Maybe Int
+getMaxIter sys =
+    case "maxiter" `M.lookup` annotations sys of
+      Just x  -> return (read x :: Int)
+      Nothing -> Nothing
 
-getSysEpsilon :: [Flag] -> Double
-getSysEpsilon (SysEpsilon eps : _) = fromRational $ parseFloating eps
-getSysEpsilon (_:fs)               = getSysEpsilon fs
-getSysEpsilon []                   = fromRational 1.0e-9
+getModuleName :: System a -> String
+getModuleName sys = fromMaybe "Sampler" ("module" `M.lookup` annotations sys)
 
-getSingularity :: [Flag] -> Maybe Double
-getSingularity (Singularity s : _) = Just (fromRational $ parseFloating s)
-getSingularity (_:fs)              = getSingularity fs
-getSingularity []                  = Nothing
-
-getModuleName :: [Flag] -> String
-getModuleName (ModuleName name : _) = name
-getModuleName (_:fs)                = getModuleName fs
-getModuleName []                    = "Sampler"
-
-useIO :: [Flag] -> Bool
-useIO flags = WithIO `elem` flags
-
-genLists :: [Flag] -> Bool
-genLists flags = WithLists `elem` flags
-
-genShow :: [Flag] -> Bool
-genShow flags = WithShow `elem` flags
+output :: [Flag] -> Maybe String
+output (OutputFile f : _) = Just f
+output (_:fs)             = output fs
+output []                 = Nothing
 
 toPaganini :: [Flag] -> Bool
 toPaganini flags = OutputPaganini `elem` flags
@@ -158,40 +131,34 @@ run flags f = do
     sys <- parseSystem f
     case sys of
       Left err   -> printError err
-      Right sys' -> case errors (useForce flags) sys' of
-                      Left err' -> reportSystemError err'
-                      Right sysT   -> if toPaganini flags then P.paganiniSpecification sys'
-                                                          else runCompiler sys' sysT flags
+      Right sys' -> do
+          let ws = warnings sys'
+          reportSystemWarnings ws
+          case errors (useForce flags) sys' of
+              Left err'  -> reportSystemError err'
+              Right sysT -> do
+                  when (exitWerror flags ws) $ exitWith (ExitFailure 1)
+                  if toPaganini flags then writeSpec sys' (output flags)
+                                      else runCompiler sys' sysT flags
 
-oracle :: [Flag] -> System Int -> PSystem Double
-oracle flags sys = case getSingularity flags of
-                           Nothing -> let singEps = getSingEpsilon flags
-                                          sysEps  = getSysEpsilon flags
-                                          rho     = singularity sys singEps
-                                       in
-                                          parametrise sys rho sysEps
+exitWerror :: [Flag] -> WarningMonad () -> Bool
+exitWerror flags ws = isLeft ws && Werror `elem` flags
 
-                           Just rho -> let sysEps = getSysEpsilon flags in
-                                         parametrise sys rho sysEps
+writeSpec :: System Int -> Maybe FilePath -> IO ()
+writeSpec sys' (Just f) = withFile f WriteMode (T.writeSpecification sys')
+writeSpec sys' Nothing  = T.writeSpecification sys' stdout
 
-confCompiler :: PSystem Double -> SystemType -> [Flag] -> IO ()
-confCompiler sys Rational flags = do
-    let conf = R.Conf { R.paramSys    = sys
-                      , R.moduleName  = getModuleName flags
-                      , R.compileNote = compilerTimestamp
-                      , R.withIO      = useIO flags
-                      , R.withShow    = genShow flags
-                      }
+confCompiler :: PSystem Double -> Maybe String -> SystemType -> IO ()
+confCompiler sys outputFile Rational = do
+    let conf = config sys outputFile
+            (getModuleName $ system sys)
+            compilerTimestamp :: R.Conf
     R.compile conf
 
-confCompiler sys Algebraic flags = do
-    let conf = A.Conf { A.paramSys    = sys
-                      , A.moduleName  = getModuleName flags
-                      , A.compileNote = compilerTimestamp
-                      , A.withIO      = useIO flags
-                      , A.withLists   = genLists flags
-                      , A.withShow    = genShow flags
-                      }
+confCompiler sys outputFile Algebraic = do
+    let conf = config sys outputFile
+            (getModuleName $ system sys)
+            compilerTimestamp :: A.Conf
     A.compile conf
 
 confCompiler _ _ _ = error "I wasn't expecting the Spanish inquisition!"
@@ -200,27 +167,33 @@ runCompiler :: System Int -> SystemType -> [Flag] -> IO ()
 runCompiler sys sysT flags =
     case fromPaganini flags of
       Nothing -> do
-          let sys' = oracle flags sys
-          confCompiler sys' sysT flags
-      Just s  -> do
-          let spec = P.toPSpec sys
-          pag <- parsePaganini spec s
+          let arg = T.defaultArgs sys
+          pag <- T.runPaganini sys (Just $ arg { T.precision = getPrecision sys
+                                               , T.maxiters  = fromMaybe (T.maxiters arg)
+                                                                         (getMaxIter sys) })
           case pag of
-            Left err     -> printError err
-            Right (rho,us, ts) -> do
-                let ts'  = fromList ts
-                let sys' = P.parametrise sys rho ts' us
-                confCompiler sys' sysT flags
+            Left err   -> printError err
+            Right sys' -> confCompiler sys' (output flags) sysT
+      Just s  -> do
+          pag <- T.readPaganini sys s
+          case pag of
+            Left err   -> printError err
+            Right sys' -> confCompiler sys' (output flags) sysT
 
 reportSystemError :: SystemError -> IO ()
 reportSystemError err = do
     hPrint stderr err
     exitWith (ExitFailure 1)
 
+reportSystemWarnings :: WarningMonad () -> IO ()
+reportSystemWarnings (Left ws) = hPrint stderr ws
+reportSystemWarnings _         = return ()
+
 main :: IO ()
 main = do
     (ops, fs) <- getArgs >>= parse
     case fs of
-      []     -> exitSuccess
+      []     -> do hPutStr stderr (usageInfo usageHeader options)
+                   exitWith (ExitFailure 1)
       (f:_)  -> do run ops f
                    exitSuccess

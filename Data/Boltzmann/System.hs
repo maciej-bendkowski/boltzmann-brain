@@ -49,8 +49,9 @@ import Data.List (nub)
 import Data.Graph
 
 -- | System of combinatorial structures.
-newtype System a = System { defs    :: Map String [Cons a]   -- ^ Type definitions.
-                          } deriving (Show)
+data System a = System { defs        :: Map String [Cons a]   -- ^ Type definitions.
+                       , annotations :: Map String String     -- ^ System annotations.
+                       } deriving (Show)
 
 size :: System a -> Int
 size = M.size . defs
@@ -89,11 +90,11 @@ data PSystem a = PSystem { system  :: System a      -- ^ System with probability
 typeList :: PSystem a -> [String]
 typeList = S.toList . M.keysSet . defs . system
 
--- | List of types with coresponding constructors.
+-- | List of types with corresponding constructors.
 paramTypes :: PSystem a -> [(String, [Cons a])]
 paramTypes = M.toList . defs . system
 
--- | List of types with coresponding constructors and input weights.
+-- | List of types with corresponding constructors and input weights.
 paramTypesW :: PSystem a -> [(String, [(Cons a, Int)])]
 paramTypesW sys = map (addW $ weights sys) xs
     where xs = paramTypes sys

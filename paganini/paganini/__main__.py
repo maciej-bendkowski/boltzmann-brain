@@ -1,9 +1,9 @@
 def main(args=None):
 
-    __author__    = "Sergey Dovgal"
-    __copyright__ = "Copyright (C) 2017 Sergey Dovgal"
+    __author__    = "Sergey Dovgal and Maciej Bendkowski"
+    __copyright__ = "Copyright (C) 2017 Sergey Dovgal and Maciej Bendkowski"
     __license__   = "Public Domain"
-    __version__   = "0.2955977424"
+    __version__   = "0.29559774252"
 
     flag_debug = False
 
@@ -17,13 +17,14 @@ def main(args=None):
     try:
         import sys
         import os
+        import os.path
+        import argparse
+        from argparse import RawTextHelpFormatter
+
     except:
-        print ("Something went wrong, cannot import package 'sys' or 'os'")
+        print ("Something went wrong, cannot import package 'sys' or 'os' or 'argparse'")
         exit(1)
 
-    """The main routine."""
-    if args is None:
-        args = sys.argv[1:]
     if sys.version_info.major > 2:
         sys.stderr.write('You are using Python 3. Please use Python 2.\n')
         exit(1)
@@ -60,16 +61,17 @@ def main(args=None):
     """)
         sys.exit(1)
 
-    # --- technical inclusions
-    from cvxopt import matrix
-    from numpy import log, exp
+    ### PRECISION
+
     np.set_printoptions(precision=14)
 
-    sys.stderr.write("Started concerto...\n")
 
     #
-    ## ERROR MESSAGES
+    ##
+    ###  PARSING COMMAND LINE ARGUMENTS
+    ##
     #
+
 
     class bcolors:
         HEADER = '\033[95m'
@@ -81,24 +83,7 @@ def main(args=None):
         BOLD = '\033[1m'
         UNDERLINE = '\033[4m'
 
-    welcome_message = bcolors.BOLD + """Welcome to paganini.py!
-    """ + bcolors.ENDC
-
-    usage_message = bcolors.UNDERLINE + """
-    usage:""" + bcolors.ENDC + """ python2 paganini.py input.txt 1e-6
-    """ + bcolors.UNDERLINE + """usage:""" + bcolors.ENDC + """ python2 paganini.py input.txt CVXOPT
-    """ + bcolors.UNDERLINE + """usage:""" + bcolors.ENDC + """ python2 paganini.py input.txt SCS
-    """ + bcolors.UNDERLINE + """usage:""" + bcolors.ENDC + """ python2 paganini.py input.txt ECOS
-
-    [*] input.txt is the name of the input file
-    with coefficients of algebraic
-    specifications
-    [*] 1e-6 is a float number corresponding to precision
-    [*] [CVXOPT, SCS, ECOS] stand for different convex optimization solvers.
-    ECOS is more preferrable for algebraic systems, SCS for rational.
-
-    =======
-    Example
+    example_string = bcolors.BOLD + """Example """ + bcolors.ENDC + """
 
     Consider a system for marking abstractions in lambda-terms:
 
@@ -118,46 +103,64 @@ def main(args=None):
     1 0 0 1
     """
 
-    #
-    ##
-    ###  PARSING COMMAND LINE ARGUMENTS
-    ##
-    #
+    parser = argparse.ArgumentParser(
+            description= bcolors.BOLD + """Welcome to paganini.py! """ +
+            bcolors.ENDC,
+            epilog = example_string,
+            formatter_class=RawTextHelpFormatter)
 
-    if not flag_debug:
-        if len(sys.argv) < 3:
-            print (welcome_message + usage_message)
-            quit()
+    parser.add_argument('-i', '--input', dest='input', nargs=1,
+            required=False, help="Name of the input file")
+    parser.add_argument('-s', '--solver', dest='solver', nargs=1,
+            required=False, help="Solver: [CVXOPT, SCS, ECOS]. Default is ECOS.")
+    parser.add_argument('-p', '--precision', dest='precision', nargs=1,
+            type=float,
+            required=False, help="Precision. Defaults to 1e-20.")
+    parser.add_argument('-m', '--max-iters', dest='maxiters', nargs=1, type=int,
+            required=False, help="Maximum number of iterations.")
+    parser.add_argument('-t', '--type', dest='type',
+            required=False, help="Type of the grammar: [rational, algebraic]")
 
-        filename = sys.argv[1]
+    arguments = parser.parse_args()
+    sys.stderr.write("Started concerto...\n")
 
+    filename = arguments.input[0] if arguments.input else None
+    precision = 1e-20
+    if arguments.precision != None:
         try:
-            precision = float(sys.argv[2])
+            precision = float(arguments.precision[0])
         except:
             raise Exception("Precision should be a float!")
+    is_rational = False
+    if arguments.type == 'rational':
+        sys.stderr.write("System is of rational type\n")
+        is_rational = True
+    elif arguments.type == 'algebraic':
+        is_rational = False
+    elif arguments.type != None:
+        sys.stderr.write("Type of the grammar not recognized, using algebraic.\n")
 
-        import os.path
-        if not os.path.isfile(filename):
-            raise Exception("File doesn't exist!", filename)
+    solver = cvxpy.ECOS
+    maxiters = 20
 
-        solver = cvxpy.ECOS
-        second_solver = cvxpy.SCS
-        iters = 5000
+    if arguments.solver != None:
+        if (arguments.solver[0] == 'CVXOPT'):
+            solver = cvxpy.CVXOPT
+            maxiters = 20
+        elif (arguments.solver[0] == 'SCS'):
+            solver = cvxpy.SCS
+            maxiters = 2500
+        elif (arguments.solver[0] == 'ECOS'):
+            solver = cvxpy.ECOS
+            maxiters = 20
+        else:
+            sys.stderr.write("Solver not recognized. Using ECOS by default.\n")
 
-        if len(sys.argv) >= 4:
-            if (sys.argv[3] == 'CVXOPT'):
-                solver = cvxpy.CVXOPT
-            elif (sys.argv[3] == 'SCS'):
-                solver = cvxpy.SCS
-                second_solver = cvxpy.ECOS
-            elif (sys.argv[3] == 'ECOS'):
-                solver = cvxpy.ECOS
-            else:
-                sys.stderr.write("Solver not recognized. Using ECOS by default.\n")
-    else:
-        # I specify filename by hand in debug regime
-        filename = 'input.txt'
-        precision = 1e-10
+    if arguments.maxiters != None:
+        maxiters = int(arguments.maxiters[0])
+
+    if filename and not os.path.isfile(filename):
+        raise Exception("File doesn't exist!", filename)
 
     #
     ##
@@ -165,8 +168,11 @@ def main(args=None):
     ##
     #
 
+    # set default error file name
+    err_filename = filename if filename else "stdin"
+
     input_error_string = """
-    Input format error in '""" + filename + """'!
+    Input format error in '""" + err_filename + """'!
     Expected:
     <n_fun> <n_var>
     <freq1> <freq2> ... <freq n_var>
@@ -180,7 +186,7 @@ def main(args=None):
     Type python2 paganini.py for help and examples.
     """
 
-    FILE = open(filename,'r')
+    FILE = open(filename,'r') if filename else sys.stdin
 
     # Read the number of variables and functions
 
@@ -232,9 +238,11 @@ def main(args=None):
                 z[idx + number_of_variables + 1] >=
                 cvxpy.log_sum_exp(np.array(coeff_array[idx]) * z)
                 for idx in range(number_of_functions)
-            ] + [
-                cvxpy.norm(z, 2) <= 60
             ]
+    if is_rational:
+        constraints += [
+            cvxpy.norm(z, 2) <= 40
+        ]
 
     objective = cvxpy.Maximize( obj * z)
 
@@ -247,16 +255,24 @@ def main(args=None):
     old_stdout = sys.stdout
     sys.stdout = sys.stderr
 
-    if solver == cvxpy.SCS:
+    if solver != cvxpy.SCS:
         try:
-            result = prob.solve(solver=solver, verbose=True, eps=precision, max_iters = iters)
+            result = prob.solve(solver=solver, verbose=True, feastol=precision,
+                    max_iters=maxiters)
+        except prob.status == cvxpy.UNBOUNDED:
+            sys.stderr.write("Problem is unbounded\n")
+            sys.stderr.write("Probably the set of weights is incorrect")
+            exit(1)
         except:
-            result = prob.solve(solver=second_solver, verbose=True, feastol=precision)
+            sys.stderr.write("Solver " + str(solver) + " failed :(")
+            exit(1)
     else:
         try:
-            result = prob.solve(solver=solver, verbose=True, feastol=precision)
+            result = prob.solve(solver=solver, verbose=True, eps=precision,
+                    max_iters=maxiters)
         except:
-            result = prob.solve(solver=solver, verbose=True, eps=precision)
+            sys.stderr.write("Solver " + str(solver) + " failed :(")
+            exit(1)
 
     sys.stderr.write("Solved.\n")
 
