@@ -11,7 +11,7 @@ setup(
     author = "Sergey Dovgal",
     author_email = "vic.north@gmail.com",
     description = ("Boltzmann sampler tuner using convex optimisation."),
-    license = "BSD",
+    license = "BSD3",
     url = "https://github.com/maciej-bendkowski/boltzmann-brain",
     packages=['paganini'],
     long_description=read('README.md'),
@@ -20,4 +20,9 @@ setup(
             'paganini = paganini.__main__:main'
         ]
     },
+    classifiers=(
+        "Programming Language :: Python :: 2.7",
+        "License :: OSI Approved :: BSD License",
+        "Operating System :: OS Independent",
+    ),
 )
