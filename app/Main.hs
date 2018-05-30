@@ -70,10 +70,10 @@ usageHeader :: String
 usageHeader = "Usage: bb [OPTIONS...]"
 
 versionHeader :: String
-versionHeader = "Boltzmann Brain v1.3.1.2 (c) Maciej Bendkowski and Sergey Dovgal 2018"
+versionHeader = "Boltzmann Brain v1.3.1.3 (c) Maciej Bendkowski and Sergey Dovgal 2018"
 
 compilerTimestamp :: String
-compilerTimestamp = "Boltzmann Brain v1.3.1.2"
+compilerTimestamp = "Boltzmann Brain v1.3.1.3"
 
 getPrecision :: System a -> Double
 getPrecision sys =
