@@ -7,7 +7,7 @@ def read(fname):
 
 setup(
     name = "paganini",
-    version = "0.2955977424",
+    version = "0.29559774252",
     author = "Sergey Dovgal",
     author_email = "vic.north@gmail.com",
     description = ("Boltzmann sampler tuner using convex optimisation."),
@@ -24,7 +24,7 @@ setup(
         ]
     },
     classifiers=(
-        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3",
         "License :: OSI Approved :: BSD License",
         "Operating System :: OS Independent",
     ),
