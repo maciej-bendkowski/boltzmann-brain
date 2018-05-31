@@ -1,3 +1,4 @@
+from __future__ import print_function
 def main(args=None):
 
     __author__    = "Sergey Dovgal and Maciej Bendkowski"
@@ -25,9 +26,8 @@ def main(args=None):
         print ("Something went wrong, cannot import package 'sys' or 'os' or 'argparse'")
         exit(1)
 
-    if sys.version_info.major > 2:
-        sys.stderr.write('You are using Python 3. Please use Python 2.\n')
-        exit(1)
+    if sys.version_info.major != 3:
+        sys.stderr.write('You are using Python 2, consider using Python 3.\n')
 
     #-- Better hints at non-installed packages
     list_of_noninstalled_packages = []
@@ -50,6 +50,11 @@ def main(args=None):
         import numpy as np
     except:
         list_of_noninstalled_packages += ['numpy']
+
+    try:
+        from six.moves import range
+    except:
+        list_of_noninstalled_packages += ['six']
 
     if len(list_of_noninstalled_packages) > 0:
         sys.stderr.write("""It seems that you need to install some packages.
@@ -190,7 +195,7 @@ def main(args=None):
 
     # Read the number of variables and functions
 
-    vec = FILE.next().split()
+    vec = FILE.readline().split()
     assert np.size(vec) >= 2, input_error_string
     try:
         number_of_functions = int(vec[0])
@@ -202,7 +207,7 @@ def main(args=None):
     assert number_of_variables >= 0, '\nThe number of functions should be nonnegative integer.\n'
 
     # Read the frequences
-    vec = FILE.next().split()
+    vec = FILE.readline().split()
     assert np.size(vec) >= number_of_variables,\
                 '\nThe number of frequences should be equal to number of variables.\n'
     if number_of_variables > 0:
@@ -216,15 +221,15 @@ def main(args=None):
     sys.stderr.write("Reading the coefficients... ")
     # Read the coefficients of equations
     coeff_array = []
-    for n_equation in xrange(number_of_functions):
+    for n_equation in range(number_of_functions):
         coeff_array += [[]]
-        vec = FILE.next().split()
+        vec = FILE.readline().split()
         assert np.size(vec) >= 1,\
                 'What is the number of monomials in equation '+ n_equation + '?\n'
         n_monomials = int(vec[0])
-        for monomial in xrange(n_monomials):
-            vec = FILE.next().split()
-            coeff_array[-1] += [map(int, vec)]
+        for monomial in range(n_monomials):
+            vec = FILE.readline().split()
+            coeff_array[-1] += [[int(elem) for elem in vec]]
 
     sys.stderr.write("done!\n")
 
