@@ -65,7 +65,8 @@ data PArg = PArg { solver    :: PSolver
                  } deriving (Show)
 
 toArgs :: PArg -> [String]
-toArgs arg = ["-s", show (solver arg)
+toArgs arg = ["--from-stdin"
+             ,"-s", show (solver arg)
              ,"-p", show (precision arg)
              ,"-m", show (maxiters arg)
              ,"-t", show (sysType arg)]
