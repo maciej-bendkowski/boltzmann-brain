@@ -98,25 +98,32 @@ defaultArgs sys =
 logger :: String -> IO ()
 logger s = hPutStrLn stderr ("[LOG] " ++ s)
 
-writeListLn :: Show a => Handle -> [a] -> IO ()
-writeListLn h xs = hPutStrLn h (showsList xs)
+writeSparseListLn :: Handle -> [Int] -> IO ()
+writeSparseListLn h xs =  hPutStrLn h $ showsList (sparsify xs)
 
-printer :: Show a => (a -> String -> String) -> [a] -> String
+writeListLn :: Show a => Handle -> [a] -> IO ()
+writeListLn h xs = hPutStrLn h $ showsList xs
+
+printer :: Show a => (a -> ShowS) -> [a] -> String
 printer _ [] = ""
 printer f xs = foldl1 (\a b -> (a . (" " ++) . b))
                         (map f xs) ""
 
-showsList :: Show a => [a]
-          -> String
-
+showsList :: Show a => [a] -> String
 showsList = printer shows
+
+-- | Sparsify the given vector omitting zero values.
+sparsify :: [Int] -> [(Int, Int)]
+sparsify xs = filter del $ zip xs [0..]
+    where del (v,_) = v /= 0
 
 -- | Writes the system specification into the given
 --   file handle. In paricular, to Paganini's standard
 --   input handle.
 writeSpecification :: System Int -> Handle -> IO ()
 writeSpecification sys hout = do
-    logger "Writing specification"
+
+    logger "Writing specification..."
     let freqs   = frequencies sys
     let seqs    = seqTypes sys
     let spec    = toPSpec sys
@@ -233,7 +240,7 @@ consSpecification :: Handle -> (String -> Int) -> PSpec
 
 consSpecification hout find' spec idx cons = do
     let (vec, idx') = consVec find' spec idx cons
-    writeListLn hout vec -- constructor specification
+    writeSparseListLn hout vec -- constructor specification
     return idx'
 
 indicator :: Int -> Int -> [Int]
