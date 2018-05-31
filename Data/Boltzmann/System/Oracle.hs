@@ -6,6 +6,10 @@
  License     : BSD3
  Maintainer  : maciej.bendkowski@tcs.uj.edu.pl
  Stability   : experimental
+
+ Numerical Newton oracles meant for combinatorial systems
+ without additional tuning parameters. Note that, alternatively,
+ convex optimisation methods are also available.
  -}
 module Data.Boltzmann.System.Oracle
     ( singularity

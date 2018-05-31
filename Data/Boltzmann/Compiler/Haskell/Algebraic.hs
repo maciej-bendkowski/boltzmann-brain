@@ -6,6 +6,10 @@
  License     : BSD3
  Maintainer  : maciej.bendkowski@tcs.uj.edu.pl
  Stability   : experimental
+
+ Algebraic system compiler using Haskell's built-in algebraic data types
+ to handle to given system types. The outcome sampler is a rejection-based
+ sampler implementing the anticipated-rejection sampling scheme.
  -}
 module Data.Boltzmann.Compiler.Haskell.Algebraic
     ( Conf(..)

@@ -6,6 +6,8 @@
  License     : BSD3
  Maintainer  : maciej.bendkowski@tcs.uj.edu.pl
  Stability   : experimental
+
+ Common parser utilities and helper functions.
  -}
 module Data.Boltzmann.Internal.Parser
     ( sc
@@ -30,31 +32,40 @@ import Text.Megaparsec
 import Text.Megaparsec.String
 import qualified Text.Megaparsec.Lexer as L
 
+-- | Cut-out block and line comments parser.
 sc :: Parser ()
 sc = L.space (void spaceChar) lineCmnt blockCmnt
     where lineCmnt  = L.skipLineComment "--"
           blockCmnt = L.skipBlockComment "{-" "-}"
 
+-- | Lexeme parser.
+-- | Lexeme parser.
 lexeme :: Parser a -> Parser a
 lexeme = L.lexeme sc
 
+-- | Symbol parser.
 symbol :: String -> Parser String
 symbol = L.symbol sc
 
+-- | Parenthesis parser.
 parens :: Parser a -> Parser a
 parens = between (symbol "(") (symbol ")")
 
+-- | Brackets parser.
 brackets :: Parser a -> Parser a
 brackets = between (symbol "[") (symbol "]")
 
+-- | Integer parser.
 integer :: Parser Int
 integer = lexeme $ do
     n <- L.integer
     return $ fromIntegral n
 
+-- | Double parser.
 double :: Parser Double
 double = lexeme L.float
 
+-- | Separate by two parser.
 sepBy2 :: Parser a -> Parser b -> Parser [a]
 sepBy2 p q = do
     x <- p

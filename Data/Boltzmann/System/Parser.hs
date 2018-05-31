@@ -6,6 +6,8 @@
  License     : BSD3
  Maintainer  : maciej.bendkowski@tcs.uj.edu.pl
  Stability   : experimental
+
+ Parser utilities meant to deal with input system specifications.
  -}
 module Data.Boltzmann.System.Parser
     ( parseSystem

@@ -6,6 +6,10 @@
  License     : BSD3
  Maintainer  : maciej.bendkowski@tcs.uj.edu.pl
  Stability   : experimental
+
+ General utilities related to the Jacobian associated
+ with the combinatorial system. In particular, for
+ well-foundness checks.
  -}
 module Data.Boltzmann.System.Jacobian
     ( jacobian
@@ -118,7 +122,8 @@ power m n
   | otherwise = square (power m $ n `div` 2)
 
 -- | Determines whether the given system well-founded.
---   Note: The system is assumed to define no empty structures.
+--   Note: The system is assumed to define no empty structures,
+--   i.e. structures of size zero.
 wellFounded :: System Int -> Bool
 wellFounded sys = empty $ m `power` n
     where m = jacobian sys 0.0 $ n |> [0.0..]

@@ -6,6 +6,9 @@
  License     : BSD3
  Maintainer  : maciej.bendkowski@tcs.uj.edu.pl
  Stability   : experimental
+
+ General utilities meant for handing system annotations
+ guiding the tuning and compilation process.
  -}
 module Data.Boltzmann.Internal.Annotations
     ( withDefault
@@ -22,6 +25,7 @@ import qualified Data.Map as M
 
 import Text.Read (readMaybe)
 
+-- | Read a given key value of a map with a default fallback.
 withDefault :: Read a
             => Map String String
             -> String -> a -> a
@@ -30,16 +34,19 @@ withDefault f x d = case x `M.lookup` f of
                       Nothing -> d
                       Just x' -> fromMaybe d (readMaybe x')
 
+-- | `withDefault` specialised to doubles.
 withDouble :: Map String String
            -> String -> Int -> Int
 
 withDouble = withDefault
 
+-- | `withDefault` specialised to ints.
 withInt :: Map String String
         -> String -> Int -> Int
 
 withInt = withDefault
 
+-- | `withDefault` specialised to bools.
 withBool :: Map String String
          -> String -> Bool -> Bool
 

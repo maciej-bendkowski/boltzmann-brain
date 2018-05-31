@@ -6,6 +6,11 @@
  License     : BSD3
  Maintainer  : maciej.bendkowski@tcs.uj.edu.pl
  Stability   : experimental
+
+ Rational system compiler using Haskell's built-in algebraic data types
+ to handle to given system types. The outcome sampler is a rejection-based
+ sampler implementing the interruptible sampling scheme for strongly connected
+ specifications.
  -}
 module Data.Boltzmann.Compiler.Haskell.Rational
     ( Conf(..)

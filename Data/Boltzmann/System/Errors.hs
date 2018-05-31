@@ -6,6 +6,8 @@
  License     : BSD3
  Maintainer  : maciej.bendkowski@tcs.uj.edu.pl
  Stability   : experimental
+
+ Common error utilities for combinatorial systems.
  -}
 module Data.Boltzmann.System.Errors
     ( SystemError
@@ -31,24 +33,24 @@ import Data.Boltzmann.System.Jacobian
 
 -- | Semantic system errors referring to invalid
 --   input data, for instance ill-founded systems.
-data SystemError = Inconsistent String                -- type name
-                                String                -- constructor name
-                                String                -- argument name
+data SystemError = Inconsistent String                -- Type name
+                                String                -- Constructor name
+                                String                -- Argument name
 
-                 | InvalidCons  String                -- type name
-                                String                -- constructor name
+                 | InvalidCons  String                -- Type name
+                                String                -- Constructor name
 
-                 | ClashCons    [String]              -- clashing constructors
-                 | Illfounded                         -- ill-founded system
-                 | Infinite                           -- infinite structures
+                 | ClashCons    [String]              -- Clashing constructors
+                 | Illfounded                         -- Ill-founded system
+                 | Infinite                           -- Infinite structures
 
-                 | Frequencies  [String]              -- incorrect frequencies
+                 | Frequencies  [String]              -- Incorrect frequencies
 
-                 | InvalidPrecision                   -- invalid precision
-                 | InvalidMaxIter                     -- invalid maxiter
-                 | InvalidModule                      -- invalid module
+                 | InvalidPrecision                   -- Invalid precision
+                 | InvalidMaxIter                     -- Invalid maxiter
+                 | InvalidModule                      -- Invalid module
 
-                 | UnsupportedSystemType String       -- invalid system type
+                 | UnsupportedSystemType String       -- Invalid system type
 
 instance Show SystemError where
     show (Inconsistent t con arg) = "[Error] Invalid argument type '"
@@ -83,7 +85,7 @@ instance Show SystemError where
 -- | Monadic error handling wrapper.
 type ErrorMonad = Either SystemError
 
--- | Checks whether the given input system is correct yielding its type.
+-- | Checks whether the given input system is correct, yielding its type.
 --   Otherwise, returns an appropriate SystemError.
 errors :: Bool -> System Int -> ErrorMonad SystemType
 errors useForce sys = do

@@ -6,6 +6,9 @@
  License     : BSD3
  Maintainer  : maciej.bendkowski@tcs.uj.edu.pl
  Stability   : experimental
+
+ General utilities managing the IO interface between Boltzmann Brain
+ and the Paganini tuner script.
  -}
 module Data.Boltzmann.System.Tuner
     ( PSolver(..)
@@ -44,7 +47,7 @@ import Data.Boltzmann.Internal.Parser
 try' :: IO a ->  IO (Either IOException a)
 try' =  Control.Exception.try
 
--- | Paganini convex program solvers
+-- | Paganini convex program solvers.
 data PSolver = SCS
              | ECOS
              | CVXOPT
@@ -54,7 +57,7 @@ instance Show PSolver where
     show ECOS   = "ECOS"
     show CVXOPT = "CVXOPT"
 
--- | Paganini arguments
+-- | Paganini arguments.
 data PArg = PArg { solver    :: PSolver
                  , precision :: Double
                  , maxiters  :: Int
@@ -81,7 +84,9 @@ algebraicArgs = PArg { solver    = ECOS
                      , sysType   = Algebraic
                      }
 
--- | Determines default Paganini arguments
+-- | Determines default Paganini arguments.
+--   Note: It is assumed that the given system is either
+--   rational or algebraic. Otherwise, and error is raised.
 defaultArgs :: System a -> PArg
 defaultArgs sys =
     case systemType sys of
@@ -105,6 +110,9 @@ showsList :: Show a => [a]
 
 showsList = printer shows
 
+-- | Writes the system specification into the given
+--   file handle. In paricular, to Paganini's standard
+--   input handle.
 writeSpecification :: System Int -> Handle -> IO ()
 writeSpecification sys hout = do
     logger "Writing specification"
@@ -136,6 +144,10 @@ handleIOEx ex =  do
     hPutStrLn stderr $ "[ERROR] " ++ ex
     exitWith (ExitFailure 1)
 
+-- | Communicates with Paganini and collects the respective
+--   tuning vector for the given system. If communication is not possible,
+--   for instance due to the missing Paganini script, the current process
+--   is terminated with an error message on the standard error output.
 runPaganini :: System Int -> Maybe PArg
             -> IO (Either (ParseError Char Dec)
                     (PSystem Double))
@@ -173,6 +185,7 @@ runPaganini sys arg = do
 
         _ -> handleIOEx "Could not establish inter-process communication with paganini."
 
+-- | Parses the given input string as a Paganini tuning vector.
 readPaganini :: System Int -> String
              -> IO (Either (ParseError Char Dec)
                    (PSystem Double))
