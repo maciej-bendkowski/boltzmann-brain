@@ -13,6 +13,9 @@ setup(
     description = ("Boltzmann sampler tuner using convex optimisation."),
     license = "BSD3",
     url = "https://github.com/maciej-bendkowski/boltzmann-brain",
+    install_requires=[
+        'numpy','sympy','cvxpy', 'six'
+    ],
     packages=['paganini'],
     long_description=read('README.md'),
     entry_points = {
