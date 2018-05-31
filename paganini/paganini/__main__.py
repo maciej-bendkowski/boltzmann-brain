@@ -212,7 +212,7 @@ def main(args=None):
                 '\nThe number of frequences should be equal to number of variables.\n'
     if number_of_variables > 0:
         try:
-            freq = map(float, vec)
+            freq = [float(elem) for elem in vec]
         except:
             raise Exception(input_error_string)
     else:
