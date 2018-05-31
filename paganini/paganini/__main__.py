@@ -29,48 +29,6 @@ def main(args=None):
     if sys.version_info.major != 3:
         sys.stderr.write('You are using Python 2, consider using Python 3.\n')
 
-    #-- Better hints at non-installed packages
-    list_of_noninstalled_packages = []
-
-    # --- cvxopt is truly necessary
-    try:
-        import cvxpy
-    except:
-        list_of_noninstalled_packages += ['cvxpy']
-
-    # --- sympy is an insurance from exponent overflow
-    # -- It will be removed for practical purposes and replaced by bounded region
-    # feasible subset.
-    try:
-        import sympy
-    except:
-        list_of_noninstalled_packages += ['sympy']
-
-    try:
-        import numpy as np
-    except:
-        list_of_noninstalled_packages += ['numpy']
-
-    try:
-        from six.moves import range
-    except:
-        list_of_noninstalled_packages += ['six']
-
-    if len(list_of_noninstalled_packages) > 0:
-        sys.stderr.write("""It seems that you need to install some packages.
-    Please be patient and type into your command line
-        pip2 install """ + ' '.join(list_of_noninstalled_packages) + """
-    If you have only Python2 installed, you can also try
-        pip install """ + ' '.join(list_of_noninstalled_packages) + """
-    Good luck!
-    """)
-        sys.exit(1)
-
-    ### PRECISION
-
-    np.set_printoptions(precision=14)
-
-
     #
     ##
     ###  PARSING COMMAND LINE ARGUMENTS
@@ -116,6 +74,8 @@ def main(args=None):
 
     parser.add_argument('-i', '--input', dest='input', nargs=1,
             required=False, help="Name of the input file")
+    parser.add_argument('--from-stdin', dest='from_stdin', action='store_true',
+            required=False, help="Take the input from stdin")
     parser.add_argument('-s', '--solver', dest='solver', nargs=1,
             required=False, help="Solver: [CVXOPT, SCS, ECOS]. Default is ECOS.")
     parser.add_argument('-p', '--precision', dest='precision', nargs=1,
@@ -127,6 +87,66 @@ def main(args=None):
             required=False, help="Type of the grammar: [rational, algebraic]")
 
     arguments = parser.parse_args()
+
+    if arguments.from_stdin==False and arguments.input==None:
+        parser.print_help(sys.stderr)
+        exit(1)
+
+    if arguments.from_stdin!=False and arguments.input!=None:
+        sys.stderr.write('Choose either stdin or filename for input\n')
+        parser.print_help(sys.stderr)
+        exit(1)
+
+    sys.stderr.write("Importing packages...\n")
+
+    #
+    ##
+    ### IMPORT HEAVY PACKAGES
+    ##
+    #
+
+    #-- Better hints at non-installed packages
+    list_of_noninstalled_packages = []
+
+    # --- cvxopt is truly necessary
+    try:
+        import cvxpy
+    except:
+        list_of_noninstalled_packages += ['cvxpy']
+
+    # --- sympy is an insurance from exponent overflow
+    # -- It will be removed for practical purposes and replaced by bounded region
+    # feasible subset.
+    try:
+        import sympy
+    except:
+        list_of_noninstalled_packages += ['sympy']
+
+    try:
+        import numpy as np
+    except:
+        list_of_noninstalled_packages += ['numpy']
+
+    try:
+        from six.moves import range
+    except:
+        list_of_noninstalled_packages += ['six']
+
+    if len(list_of_noninstalled_packages) > 0:
+        sys.stderr.write("""It seems that you need to install some packages.
+    Please be patient and type into your command line
+        pip2 install """ + ' '.join(list_of_noninstalled_packages) + """
+    If you have only Python2 installed, you can also try
+        pip install """ + ' '.join(list_of_noninstalled_packages) + """
+    Good luck!
+    """)
+        sys.exit(1)
+
+    ### PRECISION
+
+    np.set_printoptions(precision=14)
+
+
     sys.stderr.write("Started concerto...\n")
 
     filename = arguments.input[0] if arguments.input else None
