@@ -6,6 +6,8 @@
  License     : BSD3
  Maintainer  : maciej.bendkowski@tcs.uj.edu.pl
  Stability   : experimental
+
+ General utilities for combinatorial system of algebraic and rational systems.
  -}
 module Data.Boltzmann.System
     ( System(..)
@@ -53,9 +55,11 @@ data System a = System { defs        :: Map String [Cons a]   -- ^ Type definiti
                        , annotations :: Map String String     -- ^ System annotations.
                        } deriving (Show)
 
+-- | Size of a combinatorial system.
 size :: System a -> Int
 size = M.size . defs
 
+-- | Constructors of a combinatorial system.
 constructors :: System a -> Int
 constructors = length . concat . M.elems . defs
 
@@ -71,6 +75,7 @@ data Arg = Type String                       -- ^ Regular type reference.
          | List String                       -- ^ Type list reference.
            deriving (Eq,Show)
 
+-- | The name of an argument.
 argName :: Arg -> String
 argName (Type s) = s
 argName (List s) = s
@@ -125,10 +130,13 @@ seqTypesCons = mapMaybe listN . args
     where listN (List s) = Just s
           listN _        = Nothing
 
+-- | Checks it the argument is a list.
 isListArg :: Arg -> Bool
 isListArg (List _) = True
 isListArg  _       = False
 
+-- | Type of a combinatorial system.
+--   Note: System other than rational or algebraic are not yet supported.
 data SystemType = Rational
                 | Algebraic
                 | Unsupported String   -- ^ error message
@@ -225,7 +233,7 @@ getIdx sys x = x `M.findIndex` defs sys
 value :: String -> System b -> Vector Double -> Double
 value t sys vec = vec ! M.findIndex t (defs sys)
 
--- | Evaluates the system in the given coordinates.
+-- | Evaluates the system at the given coordinates.
 eval :: System Int -> Vector Double -> Double -> Vector Double
 eval sys ys z = n |> map update [0..n]
     where n = size sys

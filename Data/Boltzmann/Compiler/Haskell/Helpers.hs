@@ -6,6 +6,8 @@
  License     : BSD3
  Maintainer  : maciej.bendkowski@tcs.uj.edu.pl
  Stability   : experimental
+
+ General utilities used across system compilers.
  -}
 module Data.Boltzmann.Compiler.Haskell.Helpers where
 
@@ -14,6 +16,7 @@ import Language.Haskell.Exts.SrcLoc (noLoc)
 
 import Data.Boltzmann.System
 
+-- | Prepares a system/module note.
 systemNote :: PSystem Double -> [String]
 systemNote psys = ["-- | System size: " ++ show n,
                    "-- | Constructors: " ++ show m]
@@ -45,6 +48,7 @@ importType = IThingAll . Ident
 importFunc :: String -> ImportSpec
 importFunc = IVar . Ident
 
+-- | Simple import declaration.
 importFrom :: String -> [ImportSpec] -> ImportDecl
 importFrom module' specs = ImportDecl { importLoc = noLoc
                                       , importModule = ModuleName module'
@@ -65,6 +69,7 @@ exportTypes sys = map exportType $ typeList sys
 exportFunc :: String -> ExportSpec
 exportFunc = EVar . unname
 
+-- | Simple function declaration.
 declTFun :: String -> Type -> [String] -> Exp -> [Decl]
 declTFun f type' args' body = [decl, FunBind [main]]
     where decl   = TypeSig noLoc [Ident f] type'

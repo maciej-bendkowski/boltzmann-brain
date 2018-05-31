@@ -6,6 +6,8 @@
  License     : BSD3
  Maintainer  : maciej.bendkowski@tcs.uj.edu.pl
  Stability   : experimental
+
+ General framework of system compilers.
  -}
 module Data.Boltzmann.Compiler
     ( Configuration(..)
@@ -15,11 +17,11 @@ import Data.Boltzmann.System
 
 -- | Compiler configurations.
 class Configuration a where
-    config  :: PSystem Double -- ^ parametrised system.
-            -> Maybe String   -- ^ output file location.
-            -> String         -- ^ module name.
-            -> String         -- ^ compile note.
-            -> a              -- ^ configuration.
+    config  :: PSystem Double -- ^ Parametrised system.
+            -> Maybe String   -- ^ Output file location.
+            -> String         -- ^ Module name.
+            -> String         -- ^ Compile note.
+            -> a              -- ^ Configuration.
 
-    compile :: a              -- ^ configuration.
-            -> IO ()          -- ^ compiler action.
+    compile :: a              -- ^ Configuration.
+            -> IO ()          -- ^ Compiler IO action.

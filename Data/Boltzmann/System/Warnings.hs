@@ -6,6 +6,9 @@
  License     : BSD3
  Maintainer  : maciej.bendkowski@tcs.uj.edu.pl
  Stability   : experimental
+
+ Warning utilities meant to deal with, skippable, well-foundness checks
+ or other redundant sanity checks of the considered combinatorial system.
  -}
 module Data.Boltzmann.System.Warnings
     ( SystemWarning
@@ -20,8 +23,8 @@ import qualified Data.Map.Strict as M
 import Data.Boltzmann.System
 
 -- | Semantic system warnings.
-data SystemWarning = NullCons String                -- type name
-                              String                -- constructor name
+data SystemWarning = NullCons String                -- Type name
+                              String                -- Constructor name
 
 instance Show SystemWarning where
     show (NullCons t con) = "[Warning] Invalid constructor '" ++ con
