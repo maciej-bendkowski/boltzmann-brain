@@ -7,72 +7,134 @@ a combinatorial system of rational or algebraic structures, *Boltzmann Brain* co
 a working, self-contained Haskell module implementing a dedicated
 singular,  rejection-based Boltzmann sampler [2].
 
-#### How to install
+### How to install
 
-*Boltzmann brain* requires several pre-installed tools.
- * The tuning part requires `python2`. If you don't have it, visit [this
-   page](https://wiki.python.org/moin/BeginnersGuide/Download).
- * Within `python2` several additional packages should be installed. Normally
-   when you launch the code, it tells you the exact list if some package is
-missing. In order to install the packages, type into the command line
- ```
- pip2 install cvxpy numpy sympy matplotlib
- ```
- Note that the last three packages come by default with [Scientific Computing
-Tools for Python](https://www.scipy.org/about.html)
- * The compiling and sampling part require `Haskell`. We recommend to use
-   [haskell-stack](https://docs.haskellstack.org/en/stable/README/) as
-state-of-the-art package manager for Haskell. It will automatically use the
-preferred version of `ghc` (Glasgow Haskell Compiler) and corresponding versions
-of required packages. Otherwise one can use `cabal` on the top of which `stack`
-is developed.
- * Once `stack` in installed, clone this repository with `git` (or download it
-   manually)
- ```
- git clone https://github.com/maciej-bendkowski/boltzmann-brain.git
- ```
- and enter the folder containing `Setup.hs`.
- Type
- ```
- stack solver
- ```
- If some problems are encountered, add the flag `--update-config`, i.e. type
- ```
- stack solver --update-config
- ```
- This will configure the packages required for your particular system that are
-missing. Then consequently type
- ```
- stack build
- stack install
- ```
- This will install `boltzmann-brain` into your system. Type `bb -h` to check
+#### macOS >= 10.12
+
+* First, you need `python` to be installed (both versions 2 or 3 are fine).
+If you don't have `python` installed, you can find it at
+[https://wiki.python.org/moin/BeginnersGuide/Download](https://wiki.python.org/moin/BeginnersGuide/Download).
+
+* Using the dedicated `python` package manager `pip` you can install the paganini framework
+```
+  pip install paganini
+```
+Normally this works, but if some packages are outdated, consider upgrading them.
+
+* The *Boltzmann Brain* package `bb` can be installed with package manager `homebrew`
+```
+  brew tap electric-tric/bb
+  brew install boltzmann-brain
+```
+If you don't have `homebrew`, you can download the binary file
+from our [releases webpage](https://github.com/maciej-bendkowski/boltzmann-brain/releases).
+
+#### Debian/Ubuntu
+
+* If you don't have `python` consider installing it either from the
+[official website](https://wiki.python.org/moin/BeginnersGuide/Download)
+or using the package manager
+```
+  sudo apt-get install python
+```
+Note that `python3` is preferable over `python2` but our tool works with both of
+them.
+
+* Install the `python` package `paganini` using
+```
+  pip install paganini
+``` 
+
+* If you choose to download the `bb` binaries, then visit 
+(https://github.com/maciej-bendkowski/boltzmann-brain/releases)[https://github.com/maciej-bendkowski/boltzmann-brain/releases].
+
+* Alternatively, you can build `bb` from source, which requires `ghc` (Glasgow Haskell Compiler)
+and `stack`, which is a state-of-the-art package manager for Haskell and can be
+installed with
+```
+  sudo apt-get install stack
+```
+Then, Boltzmann Brain is installed by executing
+```
+  stack install boltzmann-brain
+```
+
+#### Building from source
+
+If your operation system is not supported, consider building *Boltzmann Brain*
+from source.
+                                        
+* You need `python` and `ghc` in order to build *Boltzmann Brain*. We
+  recommend to use [haskell-stack](https://docs.haskellstack.org/en/stable/README/)
+  as state-of-the-art package manager for Haskell.
+
+* Once `stack` in installed, clone this repository with `git` (or download it
+manually)
+```
+    git clone https://github.com/maciej-bendkowski/boltzmann-brain.git
+```
+
+* Then, build and install the package using `stack`:
+```
+  stack solver
+  stack solver --update-config
+  stack build
+  stack install
+```
+This will install `boltzmann-brain` into your system. Type `bb -h` to check
 that it works.
- * In order to install the tools for tuning weights of combinatorial systems,
-   type
- ```
- pip2 install cvxpy numpy sympy matplotlib
- pip2 install --user paganini
- ```
 
-You can also install `paganini` from sources. Open the paganini folder with the
-`setup.py` file and type
+* Next, enter the `paganini` folder, and install the `paganini` script
 ```
- python2 setup.py install
+  cd paganini
+  python setup.py install
 ```
- 
-##### Troubleshooting
+
+#### Troubleshooting
 On `Mac OS` older versions like `10.9` package managers like `brew` can only
-install `stack` from source.  This takes a long time. In some cases it is faster
-to completely update the operational system before attempting to install some of
+install `stack` from source because the binaries are not maintained.
+This takes a long time. In some cases it is faster
+to completely update the operating system before attempting to install some of
 the prerequisites.
 
-The `hmatrix` package in `Haskell` requires prominent linear algebra packages
+* For some versions of `python`, the package manager `pip` doesn't come by
+  default. `pip` is already installed if you use `python2 >= 2.7.9`
+or `python3 >= 3.4`. Otherwise see
+[instructions](https://pip.pypa.io/en/stable/installing/).
+
+* If some of your packages, for example `numpy` are installed but outdated, the
+  installation process sometimes gives an error. For such packages try
+```
+   pip install --upgrade numpy sympy cvxpy
+```
+
+* The package manager `pip` should not be used with `sudo`. If you don't have
+  the right to write to some specific directory, try adding `--user` flag, for
+example
+```
+    pip install --user paganini
+```
+
+* Within `python`, several additional packages should be installed. Normally
+   pip handles the dependencies, so you just need to execute
+```
+  pip install paganini
+```
+When you launch `paganini`, the program tells you the list of packages that are
+missing. In order to install the packages, type into the command line
+ ```
+ pip install six cvxpy numpy sympy
+ ```
+ Note that the last two packages come by default with [Scientific Computing
+Tools for Python](https://www.scipy.org/about.html)
+
+* The `hmatrix` package in `Haskell` requires prominent linear algebra packages
 `LAPACK` and `BLAS` (which are sometimes called "one of the achievements of the
-human species"). You can follow the instructions on the [official
+human species"). For some systems these packages are already included, but if
+they are not, you can follow the instructions on the [official
 website](http://www.netlib.org/lapack/).
 
-#### Usage
+### Usage
 
 After installing `boltzmann-brain` and `paganini` it is possible to obtain help
 about each of the applications by typing
@@ -81,7 +143,7 @@ bb -h
 paganini -h
 ```
 
-#### Input
+### Input
 The input format mimics that of Haskell algebraic data types where in addition each
 constructor may be annotated with an additional *weight* parameter. For instance:
 
@@ -108,7 +170,7 @@ allows to control the desired lower and upper bounds.
 See the *examples* directory for more examples of supported inputs and
 corresponding sampler modules.
 
-#### Features
+### Features
 - easy and intuitive text-based input format;
 - automated well-foudness check for the given combinatorial specification (see [3]);
 - working, self-contained Haskell module generation utilising ```Control.Monad.Random```
@@ -124,7 +186,7 @@ TreeTuple = (Tree, Tree, Tree).
 TreeTupleList = [TreeTuple].
 ```
 
-#### Frequency tuning
+### Frequency tuning
 *Boltzmann Brain* supports a target frequency calibration using convex
 optimisation techniques included in the suplementary *Paganini* script (see the
 *paganini* subdirectory). Consider the following example of a specification
@@ -146,8 +208,8 @@ probaility model. In extremal cases, such as for instance requirng *80%* of
 internal nodes in plane binary trees, the constructed sampler might be virtually
 ineffective due to the sparsity of tuned structures.
 
-#### Annotations
-Since v1.3, *Boltzmann brain* provides its own annotation system (see example below):
+### Annotations
+Since v1.3, *Boltzmann Brain* provides its own annotation system (see example below):
 ```hs
 -- Motzkin trees
 
@@ -173,7 +235,7 @@ list samplers for each type in the system, and finally whether to include
 `@withShow` are enabled (to disable them, set them to `n` or `no`); `@withLists`
 is by default disabled if not stated otherwise in the input specification.
 
-#### Using Boltzmann Brain with Paganini
+### Using Boltzmann Brain with Paganini
 Since v1.3, *Boltzmann Brain* automatically calls *Paganini* in order to tune
 the sampler corresponding to the given input system. If no special handling is
 required, it suffices therefore to have `paganini` available in the system; `bb`
@@ -201,7 +263,7 @@ becomes unbounded and the user may receive an error in this case).
 
 ```bb -o Sampler.hs -p bb.param examples/motzkin.in ```
 
-#### Citing Boltzmann Brain
+### Citing Boltzmann Brain
 If you use `Boltzmann Brain` or `Paganini` for published work, 
 we encourage you to cite the accompanying paper: 
 
@@ -212,7 +274,7 @@ samplers](https://epubs.siam.org/doi/10.1137/1.9781611975062.9)
 
 available also on [arxiv](https://arxiv.org/abs/1708.01212).
 
-#### References
+### References
 1. [P. Flajolet, R. Sedgewick: Analytic
    Combinatorics](http://algo.inria.fr/flajolet/Publications/book.pdf)
 2. [P. Duchon, P. Flajolet, G. Louchard. G. Schaeffer: Boltzmann Samplers for
