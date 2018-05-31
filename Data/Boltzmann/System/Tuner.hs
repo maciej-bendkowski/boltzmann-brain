@@ -17,8 +17,10 @@ module Data.Boltzmann.System.Tuner
     ) where
 
 import Control.Monad
+import Control.Exception
 
 import System.IO
+import System.Exit
 import System.Process hiding (system)
 
 import Text.Megaparsec
@@ -37,6 +39,10 @@ import Data.Maybe
 
 import Data.Boltzmann.System
 import Data.Boltzmann.Internal.Parser
+
+-- | Catch IO exceptions.
+try' :: IO a ->  IO (Either IOException a)
+try' =  Control.Exception.try
 
 -- | Paganini convex program solvers
 data PSolver = SCS
@@ -125,6 +131,11 @@ writeSpecification sys hout = do
 getArgs :: System Int -> Maybe PArg -> PArg
 getArgs sys = fromMaybe (defaultArgs sys)
 
+handleIOEx :: String -> IO a
+handleIOEx ex =  do
+    hPutStrLn stderr $ "[ERROR] " ++ ex
+    exitWith (ExitFailure 1)
+
 runPaganini :: System Int -> Maybe PArg
             -> IO (Either (ParseError Char Dec)
                     (PSystem Double))
@@ -135,26 +146,32 @@ runPaganini sys arg = do
     let arg' = getArgs sys arg
     logger (printer (++) $ "Arguments: " : toArgs arg')
 
-    (Just hin, Just hout, _, _) <-
-        createProcess (proc "paganini" (toArgs arg')){ std_out = CreatePipe
-                                                     , std_in  = CreatePipe }
+    -- Execute the paganini tuning script.
+    pp <- try' $ createProcess (proc "paganini" (toArgs arg')){ std_out = CreatePipe
+                                                              , std_in  = CreatePipe }
 
-    -- write to paganini's stdout
-    writeSpecification sys hin
+    case pp of
+        Left _ -> handleIOEx "Could not locate the paganini tuner. Is is available in the PATH?"
+        Right (Just hin, Just hout, _, _) -> do
 
-    -- read output parameters
-    s <- hGetContents hout
-    let spec = toPSpec sys
-    let pag  = parse (paganiniStmt spec) "" s
+            -- write to paganini's stdout
+            writeSpecification sys hin
 
-    case pag of
-      Left err -> return $ Left err
-      Right (rho, us, ts) -> do
-          logger "Parsed paganini output"
-          let ts'  = fromList ts
-          let sys' = parametrise sys rho ts' us
-          logger "Finished"
-          return $ Right sys'
+            -- read output parameters
+            s <- hGetContents hout
+            let spec = toPSpec sys
+            let pag  = parse (paganiniStmt spec) "" s
+
+            case pag of
+              Left err -> return $ Left err
+              Right (rho, us, ts) -> do
+                  logger "Parsed paganini output"
+                  let ts'  = fromList ts
+                  let sys' = parametrise sys rho ts' us
+                  logger "Finished"
+                  return $ Right sys'
+
+        _ -> handleIOEx "Could not establish inter-process communication with paganini."
 
 readPaganini :: System Int -> String
              -> IO (Either (ParseError Char Dec)
