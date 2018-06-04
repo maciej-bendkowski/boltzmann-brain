@@ -40,6 +40,7 @@ data Flag = OutputFile String
           | OutputPaganini
           | Force
           | Werror
+          | Tune
           | Version
           | Help
             deriving (Eq)
@@ -54,11 +55,14 @@ options = [Option "o" ["output"] (ReqArg OutputFile "FILE")
            Option "s" ["paganini-out"] (NoArg OutputPaganini)
             "Output a suitable Paganini specification for the given system.",
 
+           Option "w" ["werror"] (NoArg Werror)
+            "Whether to treat warnings as errors.",
+
            Option "f" ["force"] (NoArg Force)
             "Whether to skip the well-foundedness check.",
 
-           Option "w" ["werror"] (NoArg Werror)
-            "Whether to treat warnings as errors.",
+           Option "t" ["tune"] (NoArg Tune)
+            "Whether to output a textual representation of the tuned system instead.",
 
            Option "v" ["version"] (NoArg Version)
             "Prints the program version number.",
@@ -139,7 +143,8 @@ run flags f = do
               Right sysT -> do
                   when (exitWerror flags ws) $ exitWith (ExitFailure 1)
                   if toPaganini flags then writeSpec sys' (output flags)
-                                      else runCompiler sys' sysT flags
+                                      else if Tune `elem` flags then runTuner sys' flags
+                                                                else runCompiler sys' sysT flags
 
 exitWerror :: [Flag] -> WarningMonad () -> Bool
 exitWerror flags ws = isLeft ws && Werror `elem` flags
@@ -163,19 +168,40 @@ confCompiler sys outputFile Algebraic = do
 
 confCompiler _ _ _ = error "I wasn't expecting the Spanish inquisition!"
 
+outputSpec :: Show a => Maybe FilePath -> a -> IO ()
+outputSpec Nothing sys'  = putStr $ show sys'
+outputSpec (Just f) sys' = writeFile f (show sys')
+
+runTuner :: System Int -> [Flag] -> IO ()
+runTuner sys flags =
+    case fromPaganini flags of
+        Nothing -> do
+            let arg = T.defaultArgs sys
+            pag <- T.runPaganini sys T.Regular (Just $ arg { T.precision = getPrecision sys
+                                                           , T.maxiters  = fromMaybe (T.maxiters arg)
+                                                                                     (getMaxIter sys) })
+            case pag of
+                Left err -> printError err
+                Right sys' -> outputSpec (output flags) sys'
+        Just s  -> do
+            pag <- T.readPaganini sys T.Regular s
+            case pag of
+                Left err   -> printError err
+                Right sys' -> outputSpec (output flags) sys'
+
 runCompiler :: System Int -> SystemType -> [Flag] -> IO ()
 runCompiler sys sysT flags =
     case fromPaganini flags of
       Nothing -> do
           let arg = T.defaultArgs sys
-          pag <- T.runPaganini sys (Just $ arg { T.precision = getPrecision sys
-                                               , T.maxiters  = fromMaybe (T.maxiters arg)
-                                                                         (getMaxIter sys) })
+          pag <- T.runPaganini sys T.Cummulative (Just $ arg { T.precision = getPrecision sys
+                                                             , T.maxiters  = fromMaybe (T.maxiters arg)
+                                                                                       (getMaxIter sys) })
           case pag of
             Left err   -> printError err
             Right sys' -> confCompiler sys' (output flags) sysT
       Just s  -> do
-          pag <- T.readPaganini sys s
+          pag <- T.readPaganini sys T.Cummulative s
           case pag of
             Left err   -> printError err
             Right sys' -> confCompiler sys' (output flags) sysT

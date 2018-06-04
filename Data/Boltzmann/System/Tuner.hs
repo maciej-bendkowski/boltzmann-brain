@@ -17,6 +17,7 @@ module Data.Boltzmann.System.Tuner
     , writeSpecification
     , readPaganini
     , runPaganini
+    , Parametrisation(..)
     ) where
 
 import Control.Monad
@@ -116,7 +117,7 @@ showsList = printer shows
 --   input handle.
 writeSpecification :: System Int -> Handle -> IO ()
 writeSpecification sys hout = do
-    logger "Writing specification"
+    logger "Writing system specification..."
     let freqs   = frequencies sys
     let seqs    = seqTypes sys
     let spec    = toPSpec sys
@@ -135,7 +136,7 @@ writeSpecification sys hout = do
     -- sequence specifications
     mapM_ (seqSpecification hout find' spec) seqs
 
-    logger "Finished writing specification"
+    logger "... done."
 
 getArgs :: System Int -> Maybe PArg -> PArg
 getArgs sys = fromMaybe (defaultArgs sys)
@@ -149,13 +150,13 @@ handleIOEx ex =  do
 --   tuning vector for the given system. If communication is not possible,
 --   for instance due to the missing Paganini script, the current process
 --   is terminated with an error message on the standard error output.
-runPaganini :: System Int -> Maybe PArg
+runPaganini :: System Int -> Parametrisation -> Maybe PArg
             -> IO (Either (ParseError Char Dec)
                     (PSystem Double))
 
-runPaganini sys arg = do
+runPaganini sys paramT arg = do
 
-    logger "Running paganini"
+    logger "Running paganini..."
     let arg' = getArgs sys arg
     logger (printer (++) $ "Arguments: " : toArgs arg')
 
@@ -178,27 +179,27 @@ runPaganini sys arg = do
             case pag of
               Left err -> return $ Left err
               Right (rho, us, ts) -> do
-                  logger "Parsed paganini output"
+                  logger "Parsing paganini output..."
                   let ts'  = fromList ts
-                  let sys' = parametrise sys rho ts' us
-                  logger "Finished"
+                  let sys' = parametrise sys paramT rho ts' us
+                  logger "... done."
                   return $ Right sys'
 
         _ -> handleIOEx "Could not establish inter-process communication with paganini."
 
 -- | Parses the given input string as a Paganini tuning vector.
-readPaganini :: System Int -> String
+readPaganini :: System Int -> Parametrisation -> String
              -> IO (Either (ParseError Char Dec)
                    (PSystem Double))
 
-readPaganini sys f = do
+readPaganini sys paramT f = do
     let spec = toPSpec sys
     pag <- parsePaganini spec f
     case pag of
         Left err -> return $ Left err
         Right (rho, us, ts) -> do
             let ts'  = fromList ts
-            return (Right $ parametrise sys rho ts' us)
+            return (Right $ parametrise sys paramT rho ts' us)
 
 frequencies :: System Int -> [Double]
 frequencies sys = concatMap (mapMaybe frequency)
@@ -302,13 +303,21 @@ parsePaganini :: PSpec -> String
 
 parsePaganini spec = parseFromFile (paganiniStmt spec)
 
--- | Compute the numerical Boltzmann probabilities for the given system.
-parametrise :: System Int -> Double -> Vector Double -> [Double] -> PSystem Double
-parametrise sys rho ts us = PSystem { system  = computeProb sys rho ts us
-                                    , values  = ts
-                                    , param   = rho
-                                    , weights = sys
-                                    }
+-- | Parametrisation type.
+data Parametrisation = Cummulative -- ^ Cummulative branching probabilities.
+                     | Regular     -- ^ Independent probability masses.
+
+-- | Compute the numerical branching probabilities for the given system.
+parametrise :: System Int
+            -> Parametrisation
+            -> Double -> Vector Double
+            -> [Double] -> PSystem Double
+
+parametrise sys paramT rho ts us = PSystem { system  = computeProb sys paramT rho ts us
+                                           , values  = ts
+                                           , param   = rho
+                                           , weights = sys
+                                           }
 
 evalExp :: System Int -> Double -> Vector Double
         -> [Double] -> Cons Int -> (Double, [Double])
@@ -321,25 +330,37 @@ evalExp sys rho ts us exp' =
           Nothing -> (exp'', us)
           Just _  -> (head us ^^ w * exp'', tail us)
 
-computeExp :: System Int -> Double -> Vector Double
+computeExp :: System Int
+           -> Parametrisation
+           -> Double -> Vector Double
            -> [Double] -> Double -> Double -> [Cons Int]
            -> ([Cons Double], [Double])
 
-computeExp _ _ _ us _ _ [] = ([], us)
-computeExp sys rho ts us tw w (e:es) = (e { weight = x / tw } : es', us'')
-    where (es', us'') = computeExp sys rho ts us' tw x es
+computeExp _ _ _ _ us _ _ [] = ([], us)
+computeExp sys Cummulative rho ts us tw w (e:es) = (e { weight = x / tw } : es', us'')
+    where (es', us'') = computeExp sys Cummulative rho ts us' tw x es
           (w', us') = evalExp sys rho ts us e
           x = w + w'
 
-computeProb' :: System Int -> Double -> Vector Double
+computeExp sys Regular rho ts us tw _ (e:es) = (e { weight = w' / tw } : es', us'')
+    where (es', us'') = computeExp sys Regular rho ts us' tw 0 es
+          (w', us') = evalExp sys rho ts us e
+
+computeProb' :: System Int
+             -> Parametrisation
+             -> Double -> Vector Double
              -> [Double] -> [(String, [Cons Int])]
              -> [(String, [Cons Double])]
 
-computeProb' _ _ _ _ [] = []
-computeProb' sys rho ts us ((t,cons):tys) = (t,cons') : tys'
-    where (cons', us') = computeExp sys rho ts us (value t sys ts) 0.0 cons
-          tys' = computeProb' sys rho ts us' tys
+computeProb' _ _ _ _ _ [] = []
+computeProb' sys paramT rho ts us ((t,cons):tys) = (t,cons') : tys'
+    where (cons', us') = computeExp sys paramT rho ts us (value t sys ts) 0.0 cons
+          tys' = computeProb' sys paramT rho ts us' tys
 
-computeProb :: System Int -> Double -> Vector Double -> [Double] -> System Double
-computeProb sys rho ts us = sys { defs = M.fromList tys }
-    where tys = computeProb' sys rho ts us (M.toList $ defs sys)
+computeProb :: System Int
+            -> Parametrisation
+            -> Double -> Vector Double
+            -> [Double] -> System Double
+
+computeProb sys paramT rho ts us = sys { defs = M.fromList tys }
+    where tys = computeProb' sys paramT rho ts us (M.toList $ defs sys)
