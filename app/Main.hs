@@ -220,6 +220,6 @@ main = do
     (ops, fs) <- getArgs >>= parse
     case fs of
       []     -> do hPutStr stderr (usageInfo usageHeader options)
-                   exitWith (ExitFailure 1)
+                   exitSuccess
       (f:_)  -> do run ops f
                    exitSuccess
