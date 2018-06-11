@@ -21,6 +21,8 @@ import Data.Either (isLeft)
 import Data.Maybe (fromMaybe)
 import Data.List (nub)
 
+import Text.Megaparsec hiding (parse)
+
 import qualified Data.Map as M
 
 import Data.Boltzmann.System
@@ -41,6 +43,7 @@ data Flag = OutputFile String
           | Force
           | Werror
           | Tune
+          | Stdin
           | Version
           | Help
             deriving (Eq)
@@ -63,6 +66,9 @@ options = [Option "o" ["output"] (ReqArg OutputFile "FILE")
 
            Option "t" ["tune"] (NoArg Tune)
             "Whether to output a textual representation of the tuned system instead.",
+
+           Option "i" ["stdin"] (NoArg Stdin)
+            "Reads the input specification from the stdin instead of given input file.",
 
            Option "v" ["version"] (NoArg Version)
             "Prints the program version number.",
@@ -128,11 +134,23 @@ parse argv = case getOpt Permute options argv of
                     exitWith (ExitFailure 1)
 
 run :: [Flag]
-    -> String
+    -> Maybe String
     -> IO ()
 
-run flags f = do
-    sys <- parseSystem f
+run flags (Just f) = do
+       sys <- parseFileSpec f
+       run' flags sys
+
+run flags Nothing = do
+        input <- getContents
+        sys <- parseSpec input
+        run' flags sys
+
+run' :: [Flag]
+     -> Either (ParseError Char Dec) (System Int)
+     -> IO ()
+
+run' flags sys =
     case sys of
       Left err   -> printError err
       Right sys' -> do
@@ -219,7 +237,8 @@ main :: IO ()
 main = do
     (ops, fs) <- getArgs >>= parse
     case fs of
-      []     -> do hPutStr stderr (usageInfo usageHeader options)
-                   exitSuccess
-      (f:_)  -> do run ops f
+      []     -> if Stdin `elem` ops then run ops Nothing
+                else do hPutStr stderr (usageInfo usageHeader options)
+                        exitSuccess
+      (f:_)  -> do run ops (Just f)
                    exitSuccess

@@ -10,7 +10,8 @@
  Parser utilities meant to deal with input system specifications.
  -}
 module Data.Boltzmann.System.Parser
-    ( parseSystem
+    ( parseSpec
+    , parseFileSpec
     ) where
 
 import Control.Monad (void)
@@ -123,8 +124,14 @@ annotationStmt = do
     rhs <- annotationValue
     return (tail lhs, rhs)
 
--- | Parses the given system specification.
-parseSystem :: String
-            -> IO (Either (ParseError Char Dec) (S.System Int))
+-- | Parses the given system specification from the given input file.
+parseFileSpec :: String
+              -> IO (Either (ParseError Char Dec) (S.System Int))
 
-parseSystem = parseFromFile systemStmt
+parseFileSpec = parseFromFile systemStmt
+
+-- | Parses the given system specification.
+parseSpec :: String
+          -> IO (Either (ParseError Char Dec) (S.System Int))
+
+parseSpec s = return $ parse systemStmt "" s
