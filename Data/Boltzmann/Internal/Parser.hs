@@ -26,6 +26,8 @@ module Data.Boltzmann.Internal.Parser
     , printError
     ) where
 
+import System.IO
+import System.Exit
 import Control.Monad (void)
 
 import Text.Megaparsec
@@ -89,5 +91,9 @@ parseFromFile :: Parsec e String a
 parseFromFile p file = runParser p file <$> readFile file
 
 -- | Prints the given parsing errors.
-printError :: ParseError Char Dec -> IO ()
-printError err = putStr $ parseErrorPretty err
+printError :: (ShowToken t, Ord t, ShowErrorComponent e)
+           => ParseError t e -> IO ()
+
+printError err = do
+        hPutStr stderr $ parseErrorPretty err
+        exitWith (ExitFailure 1)
