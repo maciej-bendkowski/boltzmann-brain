@@ -1,11 +1,14 @@
 Boltzmann Brain
 ---------------
 
-*Boltzmann Brain* is a Haskell-based library and combinatorial system
-sampler compiler [1]. Using an easy and intuitive context-free text input representing 
-a combinatorial system of rational or algebraic structures, *Boltzmann Brain* constructs 
-a working, self-contained Haskell module implementing a dedicated
-singular,  rejection-based Boltzmann sampler [2].
+*Boltzmann Brain* is a Haskell-based library and standalone combinatorial system
+sampler compiler and generator [1]. Using an easy and intuitive context-free
+text input representing a combinatorial system of rational or algebraic
+structures, *Boltzmann Brain* constructs a working, self-contained Haskell
+module implementing a dedicated singular,  rejection-based Boltzmann sampler
+[2]. Using *Boltzmann Brain* is also able to generate random objects from the
+given specification or even compute the Boltzmann branching probabilities for
+further usage.
 
 ### How to install
 
@@ -188,7 +191,7 @@ TreeTupleList = [TreeTuple].
 
 ### Frequency tuning
 *Boltzmann Brain* supports a target frequency calibration using convex
-optimisation techniques included in the suplementary *Paganini* script (see the
+optimisation techniques included in the supplementary *Paganini* script (see the
 *paganini* subdirectory). Consider the following example of a specification
 defining Motzkin trees with some arbitrary size notion:
 
@@ -234,6 +237,30 @@ list samplers for each type in the system, and finally whether to include
 `deriving Show` clauses for each type in the system. By default, `@withIO` and
 `@withShow` are enabled (to disable them, set them to `n` or `no`); `@withLists`
 is by default disabled if not stated otherwise in the input specification.
+
+Using annotations it is also possible to control the sampling parameters of
+`bb`. Consider the following example:
+```hs
+-- Random sampling of Motzkin trees
+
+-- Parameters for "tuning"
+@precision 1.0e-12
+@maxiter   30
+
+-- Sampling parameters
+@lowerBound 100
+@upperBound 10000
+@generate   M
+
+M = Leaf
+  | Unary M [0.3]
+  | Binary M M.
+ ```
+In the above example, three more annotations are used. The first two dictate the
+admissible size window of the generated object whereas the third one specifies
+the type from which we want to generate. If no bounds are provided, `bb` uses
+some (small) default ones. If no `@generate` annotation is provided, `bb`
+assumes some default type.
 
 ### Using Boltzmann Brain with Paganini
 Since v1.3, *Boltzmann Brain* automatically calls *Paganini* in order to tune
