@@ -107,13 +107,13 @@ getMaxIter sys =
 
 getStrLowerBound :: System a -> Int
 getStrLowerBound sys =
-    case "lower-bound" `M.lookup` annotations sys of
+    case "lowerBound" `M.lookup` annotations sys of
       Just x  -> read x :: Int
       Nothing -> 10
 
 getStrUpperBound :: System a -> Int
 getStrUpperBound sys =
-    case "upper-bound" `M.lookup` annotations sys of
+    case "upperBound" `M.lookup` annotations sys of
       Just x  -> read x :: Int
       Nothing -> 200
 
