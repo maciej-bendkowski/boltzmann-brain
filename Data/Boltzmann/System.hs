@@ -9,6 +9,7 @@
 
  General utilities for combinatorial system of algebraic and rational systems.
  -}
+{-# LANGUAGE OverloadedStrings #-}
 module Data.Boltzmann.System
     ( System(..)
     , size
@@ -36,6 +37,9 @@ module Data.Boltzmann.System
     , getIdx
     , value
     , eval
+
+    , SystemT
+    , toSystemT
     ) where
 
 import Data.Set (Set)
@@ -51,22 +55,69 @@ import Data.Maybe (mapMaybe)
 import Data.List (nub)
 import Data.Graph
 
+import Data.Aeson
+
 -- | System of combinatorial structures.
 data System a = System { defs        :: Map String [Cons a]   -- ^ Type definitions.
                        , annotations :: Map String String     -- ^ System annotations.
                        } deriving (Show)
 
--- | Prints a weighted system with branching probabilities.
-printSys :: Show a => System a -> String
-printSys sys = unlines $ map showT (M.toList $ defs sys)
+newtype SystemT a = SystemT { systemTypes :: [TypeT a] }
+                     deriving (Show)
 
-showT :: Show a => (String, [Cons a]) -> String
-showT (t, cs) = t ++ " = " ++ showT' cs ++ "."
+instance ToJSON a => ToJSON (SystemT a) where
+        toJSON sys = object ["types" .= systemTypes sys]
 
-showT' :: Show a => [Cons a] -> String
-showT' []                 = ""
-showT' (x : xs @ (_ : _)) = printCons x ++ " | " ++ showT' xs
-showT' (x : _)            = printCons x
+data TypeT a = TypeT { typeName :: String
+                     , constrs  :: [ConsT a]
+                     } deriving (Show)
+
+instance ToJSON a => ToJSON (TypeT a) where
+        toJSON t = object ["name" .= typeName t
+                          ,"constructors" .= constrs t
+                          ]
+
+data ConsT a = ConsT { constrName   :: String
+                     , arguments    :: [ArgT]
+                     , constrWeight :: a
+                     , constrFreq   :: Maybe Double
+                     } deriving (Show)
+
+instance ToJSON a => ToJSON (ConsT a) where
+        toJSON t = object ["name"   .= constrName t
+                          ,"args"   .= arguments t
+                          ,"weight" .= constrWeight t
+                          ,"freq"   .= constrFreq t
+                          ]
+
+data ArgT = ArgT { argumentName :: String
+                 , argumentType :: String
+                 } deriving (Show)
+
+instance ToJSON ArgT where
+        toJSON t = object ["name"   .= argumentName t
+                          ,"type"   .= argumentType t
+                          ]
+
+-- | Converts a given system to an output format.
+toSystemT :: Num a => System a -> SystemT a
+toSystemT sys = SystemT { systemTypes = map toTypeT (M.toList $ defs sys) }
+
+toTypeT :: Num a => (String, [Cons a]) -> TypeT a
+toTypeT (t, cons) = TypeT { typeName = t
+                          , constrs  = map toConsT cons
+                          }
+
+toConsT :: Num a => Cons a -> ConsT a
+toConsT con = ConsT { constrName   = func con
+                    , arguments    = map toArgT (args con)
+                    , constrWeight = weight con
+                    , constrFreq   = frequency con
+                    }
+
+toArgT :: Arg -> ArgT
+toArgT (Type arg) = ArgT { argumentName = arg, argumentType = "type" }
+toArgT (List arg) = ArgT { argumentName = arg, argumentType = "list" }
 
 -- | Size of a combinatorial system.
 size :: System a -> Int
@@ -87,35 +138,15 @@ data Cons a = Cons { func      :: String        -- ^ Constructor name.
                    , frequency :: Maybe Double  -- ^ Marking parameter.
                    } deriving (Eq,Show)
 
-printCons :: Show a => Cons a -> String
-printCons con = func con ++ printArgs (args con) ++ printW ++ printF
-    where printW = " (" ++ show (weight con) ++ ")"
-          printF = case frequency con of
-                       Nothing -> ""
-                       Just f  -> " [" ++ show f ++ "]"
-
 -- | Type constructor arguments.
 data Arg = Type String                       -- ^ Regular type reference.
          | List String                       -- ^ Type list reference.
            deriving (Eq,Show)
 
-printArgs :: [Arg] -> String
-printArgs [] = ""
-printArgs xs = " " ++ printArgs' xs
-
-printArgs' :: [Arg] -> String
-printArgs' []               = ""
-printArgs' (x : xs @ (_:_)) = printArg x ++ " " ++ printArgs' xs
-printArgs' (x : _)          = printArg x
-
 -- | The name of an argument.
 argName :: Arg -> String
 argName (Type s) = s
 argName (List s) = s
-
-printArg :: Arg -> String
-printArg (Type s) = s
-printArg (List s) = "[" ++ s ++ "]"
 
 -- | Type set of the given system.
 types :: System a -> Set String
@@ -127,9 +158,6 @@ data PSystem a = PSystem { system  :: System a      -- ^ System with probability
                          , param   :: a             -- ^ Evaluation parameter.
                          , weights :: System Int    -- ^ System with input weights.
                          }
-
-instance Show a => Show (PSystem a) where
-    show = printSys . system
 
 -- | Type list of the given parametrised system.
 typeList :: PSystem a -> [String]

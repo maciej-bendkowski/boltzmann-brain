@@ -211,9 +211,9 @@ confCompiler sys outputFile Algebraic = do
 
 confCompiler _ _ _ = error "I wasn't expecting the Spanish inquisition!"
 
-outputSpec :: Show a => Maybe FilePath -> a -> IO ()
-outputSpec Nothing sys'  = putStr $ show sys'
-outputSpec (Just f) sys' = writeFile f (show sys')
+outputSpec :: Maybe FilePath -> PSystem Double -> IO ()
+outputSpec Nothing sys'  = B.putStr $ encode (toSystemT $ system sys')
+outputSpec (Just f) sys' = B.writeFile f $ encode (toSystemT $ system sys')
 
 runTuner :: System Int -> [Flag] -> IO ()
 runTuner sys flags =
