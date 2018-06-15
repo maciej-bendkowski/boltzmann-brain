@@ -73,7 +73,7 @@ options = [Option "o" ["output"] (ReqArg OutputFile "FILE")
             "Whether to output a textual representation of the tuned system instead.",
 
            Option "g" ["generate"] (NoArg Generate)
-            "Generates a random structures instead of compiling a sampler.",
+            "Generates a random structure instead of compiling a sampler.",
 
            Option "i" ["stdin"] (NoArg Stdin)
             "Reads the input specification from the stdin instead of given input file.",
