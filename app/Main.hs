@@ -255,13 +255,24 @@ invalidGenType str = do
     hPutStr stderr $ "[Error] Type \'" ++ str ++ "\' does not name a valid type."
     exitWith (ExitFailure 1)
 
+invalidBounds :: Int -> Int -> IO ()
+invalidBounds lb ub = do
+    hPutStr stderr $ "[Error] Lower bound " ++ show lb ++ " is greater"
+        ++ " than the upper bound " ++ show ub ++ "."
+    exitWith (ExitFailure 1)
+
 runSampler :: System Int -> [Flag] -> IO ()
 runSampler sys flags = do
     let lb  = getStrLowerBound sys
     let ub  = getStrUpperBound sys
     let str = getGenType sys
+
     -- Check if the given type is valid
     when (str `S.notMember` types sys) $ invalidGenType str
+
+    -- Check if the given lower and upper bounds is sensible
+    when (lb > ub) $ invalidBounds lb ub
+
     case fromPaganini flags of
         Nothing -> do
             let arg = T.defaultArgs sys
