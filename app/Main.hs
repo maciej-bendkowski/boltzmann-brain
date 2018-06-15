@@ -26,6 +26,7 @@ import qualified Data.ByteString.Lazy.Char8 as B
 
 import Text.Megaparsec hiding (parse)
 
+import qualified Data.Set as S
 import qualified Data.Map as M
 
 import Data.Boltzmann.System
@@ -249,11 +250,18 @@ runCompiler sys sysT flags =
             Left err   -> printError err
             Right sys' -> confCompiler sys' (output flags) sysT
 
+invalidGenType :: String -> IO ()
+invalidGenType str = do
+    hPutStr stderr $ "[Error] Type \'" ++ str ++ "\' does not name a valid type."
+    exitWith (ExitFailure 1)
+
 runSampler :: System Int -> [Flag] -> IO ()
 runSampler sys flags = do
     let lb  = getStrLowerBound sys
     let ub  = getStrUpperBound sys
     let str = getGenType sys
+    -- Check if the given type is valid
+    when (str `S.notMember` types sys) $ invalidGenType str
     case fromPaganini flags of
         Nothing -> do
             let arg = T.defaultArgs sys
