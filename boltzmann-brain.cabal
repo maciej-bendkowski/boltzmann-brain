@@ -26,6 +26,7 @@ library
                      , Data.Boltzmann.System.Errors
                      , Data.Boltzmann.System.Warnings
                      , Data.Boltzmann.System.Tuner
+                     , Data.Boltzmann.System.Sampler
                      , Data.Boltzmann.Internal.Annotations
                      , Data.Boltzmann.Internal.Parser
                      , Data.Boltzmann.Compiler
@@ -41,6 +42,9 @@ library
                      , multiset >= 0.3.3
                      , hmatrix >= 0.18.0.0
                      , process >= 1.4.3.0
+                     , aeson >= 1.1.2.0
+                     , transformers >= 0.5.4.0
+                     , MonadRandom >= 0.5.1
   ghc-options:         -O2 -Wall
   default-language:    Haskell2010
 
@@ -52,6 +56,8 @@ executable bb
                      , hmatrix >= 0.18.0.0
                      , containers >= 0.5.6
                      , megaparsec >= 5.2.0
+                     , bytestring >= 0.10.8.1
+                     , aeson >= 1.1.2.0
                      , boltzmann-brain
   default-language:    Haskell2010
 

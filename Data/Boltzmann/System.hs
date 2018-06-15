@@ -19,6 +19,7 @@ module Data.Boltzmann.System
 
     , PSystem(..)
     , typeList
+    , initType
     , paramTypes
     , paramTypesW
     , typeWeight
@@ -70,6 +71,10 @@ showT' (x : _)            = printCons x
 -- | Size of a combinatorial system.
 size :: System a -> Int
 size = M.size . defs
+
+-- | First (in alphabetical order) type in system.
+initType :: System a -> String
+initType = head . M.keys . defs
 
 -- | Constructors of a combinatorial system.
 constructors :: System a -> Int

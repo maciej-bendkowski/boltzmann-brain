@@ -21,6 +21,9 @@ import Data.Either (isLeft)
 import Data.Maybe (fromMaybe)
 import Data.List (nub)
 
+import Data.Aeson
+import qualified Data.ByteString.Lazy.Char8 as B
+
 import Text.Megaparsec hiding (parse)
 
 import qualified Data.Map as M
@@ -29,6 +32,7 @@ import Data.Boltzmann.System
 import Data.Boltzmann.System.Parser
 import Data.Boltzmann.System.Errors
 import Data.Boltzmann.System.Warnings
+import Data.Boltzmann.System.Sampler
 import Data.Boltzmann.Internal.Parser
 
 import qualified Data.Boltzmann.System.Tuner as T
@@ -40,6 +44,7 @@ import qualified Data.Boltzmann.Compiler.Haskell.Rational as R
 data Flag = OutputFile String
           | InputPaganini String
           | OutputPaganini
+          | Generate
           | Force
           | Werror
           | Tune
@@ -66,6 +71,9 @@ options = [Option "o" ["output"] (ReqArg OutputFile "FILE")
 
            Option "t" ["tune"] (NoArg Tune)
             "Whether to output a textual representation of the tuned system instead.",
+
+           Option "g" ["generate"] (NoArg Generate)
+            "Generates a random structures instead of compiling a sampler.",
 
            Option "i" ["stdin"] (NoArg Stdin)
             "Reads the input specification from the stdin instead of given input file.",
@@ -96,6 +104,22 @@ getMaxIter sys =
     case "maxiter" `M.lookup` annotations sys of
       Just x  -> return (read x :: Int)
       Nothing -> Nothing
+
+getStrLowerBound :: System a -> Int
+getStrLowerBound sys =
+    case "lower-bound" `M.lookup` annotations sys of
+      Just x  -> read x :: Int
+      Nothing -> 10
+
+getStrUpperBound :: System a -> Int
+getStrUpperBound sys =
+    case "upper-bound" `M.lookup` annotations sys of
+      Just x  -> read x :: Int
+      Nothing -> 200
+
+getGenType :: System a -> String
+getGenType sys =
+        fromMaybe (initType sys) ("generate" `M.lookup` annotations sys)
 
 getModuleName :: System a -> String
 getModuleName sys = fromMaybe "Sampler" ("module" `M.lookup` annotations sys)
@@ -162,7 +186,8 @@ run' flags sys =
                   when (exitWerror flags ws) $ exitWith (ExitFailure 1)
                   if toPaganini flags then writeSpec sys' (output flags)
                                       else if Tune `elem` flags then runTuner sys' flags
-                                                                else runCompiler sys' sysT flags
+                                                                else if Generate `elem` flags then runSampler sys' flags
+                                                                                              else runCompiler sys' sysT flags
 
 exitWerror :: [Flag] -> WarningMonad () -> Bool
 exitWerror flags ws = isLeft ws && Werror `elem` flags
@@ -223,6 +248,32 @@ runCompiler sys sysT flags =
           case pag of
             Left err   -> printError err
             Right sys' -> confCompiler sys' (output flags) sysT
+
+runSampler :: System Int -> [Flag] -> IO ()
+runSampler sys flags = do
+    let lb  = getStrLowerBound sys
+    let ub  = getStrUpperBound sys
+    let str = getGenType sys
+    case fromPaganini flags of
+        Nothing -> do
+            let arg = T.defaultArgs sys
+            pag <- T.runPaganini sys T.Cummulative (Just $ arg { T.precision = getPrecision sys
+                                                               , T.maxiters  = fromMaybe (T.maxiters arg)
+                                                                                         (getMaxIter sys) })
+            case pag of
+                Left err -> printError err
+                Right sys' -> do
+                    sample <- sampleStrIO sys' str lb ub
+                    B.putStrLn $ encode sample
+                    exitSuccess
+        Just s  -> do
+            pag <- T.readPaganini sys T.Cummulative s
+            case pag of
+                Left err   -> printError err
+                Right sys' -> do
+                    sample <- sampleStrIO sys' str lb ub
+                    B.putStrLn $ encode sample
+                    exitSuccess
 
 reportSystemError :: SystemError -> IO ()
 reportSystemError err = do
