@@ -80,10 +80,22 @@ signature = "Boltzmann Brain " ++ version
 versionHeader :: String
 versionHeader = signature ++ " (c) Maciej Bendkowski and Sergey Dovgal 2018"
 
+cmdUsage :: String
+cmdUsage =
+        unlines [ "Commands:"
+                , ""
+                , "compile   Generates a Boltzmann sampler corresponding to the given specification."
+                , "sample    Generates a random structure corresponding to the given specification."
+                , "tune      Decorates the given specification with appropriate Boltzmann branching probabilities."
+                , "spec      Generates a paganini input tuning problem corresponding to the given specification."
+                ]
+
 usageHeader :: String
 usageHeader =
     unlines [ versionHeader
-            , "Usage: bb {compile|sample|tune|spec} [OPTIONS...]"
+            , ""
+            , cmdUsage
+            , "Usage: bb [COMMAND] [OPTIONS...]"
             ]
 
 compilerTimestamp :: String
