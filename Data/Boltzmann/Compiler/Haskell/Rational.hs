@@ -30,7 +30,6 @@ import Data.Boltzmann.Compiler.Haskell.Helpers
 
 -- | Default configuration type.
 data Conf = Conf { paramSys    :: PSystem Double   -- ^ Parametrised system.
-                 , outputFile  :: Maybe String     -- ^ Output file.
                  , moduleName  :: String           -- ^ Module name.
                  , compileNote :: String           -- ^ Header comment note.
                  , withIO      :: Bool             -- ^ Generate IO actions?
@@ -39,10 +38,9 @@ data Conf = Conf { paramSys    :: PSystem Double   -- ^ Parametrised system.
 
 instance Configuration Conf where
 
-    config sys file' module' compilerNote' =
+    config sys module' compilerNote' =
         let with = withBool (annotations $ system sys)
          in Conf { paramSys    = sys
-                 , outputFile  = file'
                  , moduleName  = module'
                  , compileNote = compilerNote'
                  , withIO      = "withIO"    `with` True
@@ -50,23 +48,15 @@ instance Configuration Conf where
                  }
 
     compile conf = let sys        = paramSys conf
-                       file'      = outputFile conf
                        name'      = moduleName conf
                        note       = compileNote conf
                        withIO'    = withIO conf
                        withShow'  = withShow conf
                        module'    = compileModule sys name'
                                         withIO' withShow'
-                   in case file' of
-                        Nothing -> do
-                            -- write to stdout
-                            putStr $ moduleHeader sys note
-                            putStrLn $ prettyPrint module'
-                        Just f -> do
-                            -- write to given file
-                            let header  = moduleHeader sys note
-                            let sampler = prettyPrint module'
-                            writeFile f $ header ++ sampler
+                   in do
+                       putStr $ moduleHeader sys note
+                       putStrLn $ prettyPrint module'
 
 moduleHeader :: PSystem Double -> String -> String
 moduleHeader sys compilerNote =

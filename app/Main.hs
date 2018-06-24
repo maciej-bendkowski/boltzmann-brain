@@ -11,23 +11,21 @@ module Main
     ( main
     ) where
 
+import Prelude hiding (fail)
+
 import System.IO
 import System.Exit
 import System.Console.GetOpt
 import System.Environment
 
+import GHC.IO.Handle
 import Control.Monad (when)
-import Data.Either (isLeft)
-import Data.Maybe (fromMaybe)
-import Data.List (nub)
 
 import Data.Aeson
 import qualified Data.ByteString.Lazy.Char8 as B
 
 import Text.Megaparsec hiding (parse)
-
 import qualified Data.Set as S
-import qualified Data.Map as M
 
 import Data.Boltzmann.System
 import Data.Boltzmann.System.Parser
@@ -35,6 +33,7 @@ import Data.Boltzmann.System.Errors
 import Data.Boltzmann.System.Warnings
 import Data.Boltzmann.System.Sampler
 import Data.Boltzmann.Internal.Parser
+import Data.Boltzmann.Internal.Annotations
 
 import qualified Data.Boltzmann.System.Tuner as T
 
@@ -42,273 +41,238 @@ import Data.Boltzmann.Compiler
 import qualified Data.Boltzmann.Compiler.Haskell.Algebraic as A
 import qualified Data.Boltzmann.Compiler.Haskell.Rational as R
 
-data Flag = OutputFile String
-          | InputPaganini String
-          | OutputPaganini
-          | Generate
-          | Force
-          | Werror
-          | Tune
-          | Stdin
-          | Version
-          | Help
-            deriving (Eq)
+data Flag = InputFile  String  -- ^ input file location
+          | OutputFile String  -- ^ output file location
+          | TuningFile String  -- ^ paganini tuning data file location
+          | Force              -- ^ whether to skip some sanity check
+          | Werror             -- ^ whether to treat warnings as errors
+          | Help               -- ^ whether to print usage help text
+            deriving (Show,Eq)
 
 options :: [OptDescr Flag]
-options = [Option "o" ["output"] (ReqArg OutputFile "FILE")
-            "Optional output file.",
+options = [Option "i" ["input"] (ReqArg InputFile "FILE")
+            "Optional input file. If not given, stdin is used instead.",
 
-           Option "p" ["paganini-in"] (ReqArg InputPaganini "FILE")
-            "Paganini tuning vector for the given system.",
+           Option "o" ["output"] (ReqArg OutputFile "FILE")
+            "Optional output file. If not given, stdout is used instead.",
 
-           Option "s" ["paganini-out"] (NoArg OutputPaganini)
-            "Output a suitable Paganini specification for the given system.",
+           Option "t" ["tuning-data"] (ReqArg TuningFile "FILE")
+            "Optional paganini tuning data file corresponding to the input specification.",
 
            Option "w" ["werror"] (NoArg Werror)
             "Whether to treat warnings as errors.",
 
            Option "f" ["force"] (NoArg Force)
-            "Whether to skip the well-foundedness check.",
-
-           Option "t" ["tune"] (NoArg Tune)
-            "Whether to output a textual representation of the tuned system instead.",
-
-           Option "g" ["generate"] (NoArg Generate)
-            "Generates a random structure instead of compiling a sampler.",
-
-           Option "i" ["stdin"] (NoArg Stdin)
-            "Reads the input specification from the stdin instead of given input file.",
-
-           Option "v" ["version"] (NoArg Version)
-            "Prints the program version number.",
+            "Whether skip some sanity checks such as the well-foundedness check.",
 
            Option "h?" ["help"] (NoArg Help)
             "Prints this help message."]
 
-usageHeader :: String
-usageHeader = "Usage: bb [OPTIONS...]"
+quote :: String -> String
+quote msg = "'" ++ msg ++ "'"
+
+version :: String
+version = "v1.3.1.3"
+
+signature :: String
+signature = "Boltzmann Brain " ++ version
 
 versionHeader :: String
-versionHeader = "Boltzmann Brain v1.3.1.3 (c) Maciej Bendkowski and Sergey Dovgal 2018"
+versionHeader = signature ++ " (c) Maciej Bendkowski and Sergey Dovgal 2018"
+
+usageHeader :: String
+usageHeader =
+    unlines [ versionHeader
+            , "Usage: bb {compile|sample|tune|spec} [OPTIONS...]"
+            ]
 
 compilerTimestamp :: String
-compilerTimestamp = "Boltzmann Brain v1.3.1.3"
+compilerTimestamp = signature
 
-getPrecision :: System a -> Double
-getPrecision sys =
-    case "precision" `M.lookup` annotations sys of
-      Just x  -> read x :: Double
-      Nothing -> 1.0e-9
+inputF :: [Flag] -> Maybe String
+inputF (InputFile f : _) = Just f
+inputF (_:fs)            = inputF fs
+inputF []                = Nothing
 
-getMaxIter :: System a -> Maybe Int
-getMaxIter sys =
-    case "maxiter" `M.lookup` annotations sys of
-      Just x  -> return (read x :: Int)
-      Nothing -> Nothing
+outputF :: [Flag] -> Maybe String
+outputF (OutputFile f : _) = Just f
+outputF (_:fs)             = outputF fs
+outputF []                 = Nothing
 
-getStrLowerBound :: System a -> Int
-getStrLowerBound sys =
-    case "lowerBound" `M.lookup` annotations sys of
-      Just x  -> read x :: Int
-      Nothing -> 10
+tuningF :: [Flag] -> Maybe String
+tuningF (TuningFile f : _) = Just f
+tuningF (_:fs)             = tuningF fs
+tuningF []                 = Nothing
 
-getStrUpperBound :: System a -> Int
-getStrUpperBound sys =
-    case "upperBound" `M.lookup` annotations sys of
-      Just x  -> read x :: Int
-      Nothing -> 200
-
-getGenType :: System a -> String
-getGenType sys =
-        fromMaybe (initType sys) ("generate" `M.lookup` annotations sys)
-
-getModuleName :: System a -> String
-getModuleName sys = fromMaybe "Sampler" ("module" `M.lookup` annotations sys)
-
-output :: [Flag] -> Maybe String
-output (OutputFile f : _) = Just f
-output (_:fs)             = output fs
-output []                 = Nothing
-
-toPaganini :: [Flag] -> Bool
-toPaganini flags = OutputPaganini `elem` flags
-
-useForce :: [Flag] -> Bool
-useForce flags = Force `elem` flags
-
-fromPaganini :: [Flag] -> Maybe String
-fromPaganini (InputPaganini s : _) = Just s
-fromPaganini (_:fs)                = fromPaganini fs
-fromPaganini []                    = Nothing
-
-parse :: [String] -> IO ([Flag], [String])
-parse argv = case getOpt Permute options argv of
-               (ops, nonops, [])
-                    | Help `elem` ops -> do
-                        putStr $ usageInfo usageHeader options
-                        exitSuccess
-                    | Version `elem` ops -> do
-                        putStrLn versionHeader
-                        exitSuccess
-                    | otherwise -> return (nub (concatMap mkset ops), fs)
-                        where
-                            fs = if null nonops then [] else nonops
-                            mkset x = [x]
-               (_, _, errs) -> do
-                    hPutStr stderr (concat errs ++ usageInfo usageHeader options)
-                    exitWith (ExitFailure 1)
-
-run :: [Flag]
-    -> Maybe String
-    -> IO ()
-
-run flags (Just f) = do
-       sys <- parseFileSpec f
-       run' flags sys
-
-run flags Nothing = do
-        input <- getContents
-        sys <- parseSpec input
-        run' flags sys
-
-run' :: [Flag]
-     -> Either (ParseError Char Dec) (System Int)
-     -> IO ()
-
-run' flags sys =
-    case sys of
-      Left err   -> printError err
-      Right sys' -> do
-          let ws = warnings sys'
-          reportSystemWarnings ws
-          case errors (useForce flags) sys' of
-              Left err'  -> reportSystemError err'
-              Right sysT -> do
-                  when (exitWerror flags ws) $ exitWith (ExitFailure 1)
-                  if toPaganini flags then writeSpec sys' (output flags)
-                                      else if Tune `elem` flags then runTuner sys' flags
-                                                                else if Generate `elem` flags then runSampler sys' flags
-                                                                                              else runCompiler sys' sysT flags
-
-exitWerror :: [Flag] -> WarningMonad () -> Bool
-exitWerror flags ws = isLeft ws && Werror `elem` flags
-
-writeSpec :: System Int -> Maybe FilePath -> IO ()
-writeSpec sys' (Just f) = withFile f WriteMode (T.writeSpecification sys')
-writeSpec sys' Nothing  = T.writeSpecification sys' stdout
-
-confCompiler :: PSystem Double -> Maybe String -> SystemType -> IO ()
-confCompiler sys outputFile Rational = do
-    let conf = config sys outputFile
-            (getModuleName $ system sys)
-            compilerTimestamp :: R.Conf
-    R.compile conf
-
-confCompiler sys outputFile Algebraic = do
-    let conf = config sys outputFile
-            (getModuleName $ system sys)
-            compilerTimestamp :: A.Conf
-    A.compile conf
-
-confCompiler _ _ _ = error "I wasn't expecting the Spanish inquisition!"
-
-outputSpec :: Maybe FilePath -> PSystem Double -> IO ()
-outputSpec Nothing sys'  = B.putStr $ encode (toSystemT $ system sys')
-outputSpec (Just f) sys' = B.writeFile f $ encode (toSystemT $ system sys')
-
-runTuner :: System Int -> [Flag] -> IO ()
-runTuner sys flags =
-    case fromPaganini flags of
-        Nothing -> do
-            let arg = T.defaultArgs sys
-            pag <- T.runPaganini sys T.Regular (Just $ arg { T.precision = getPrecision sys
-                                                           , T.maxiters  = fromMaybe (T.maxiters arg)
-                                                                                     (getMaxIter sys) })
-            case pag of
-                Left err -> printError err
-                Right sys' -> outputSpec (output flags) sys'
-        Just s  -> do
-            pag <- T.readPaganini sys T.Regular s
-            case pag of
-                Left err   -> printError err
-                Right sys' -> outputSpec (output flags) sys'
-
-runCompiler :: System Int -> SystemType -> [Flag] -> IO ()
-runCompiler sys sysT flags =
-    case fromPaganini flags of
-      Nothing -> do
-          let arg = T.defaultArgs sys
-          pag <- T.runPaganini sys T.Cummulative (Just $ arg { T.precision = getPrecision sys
-                                                             , T.maxiters  = fromMaybe (T.maxiters arg)
-                                                                                       (getMaxIter sys) })
-          case pag of
-            Left err   -> printError err
-            Right sys' -> confCompiler sys' (output flags) sysT
-      Just s  -> do
-          pag <- T.readPaganini sys T.Cummulative s
-          case pag of
-            Left err   -> printError err
-            Right sys' -> confCompiler sys' (output flags) sysT
-
-invalidGenType :: String -> IO ()
-invalidGenType str = do
-    hPutStr stderr $ "[Error] Type \'" ++ str ++ "\' does not name a valid type."
+-- | Prints a message to stderr and exits.
+fail :: String -> IO a
+fail msg = do
+    hPutStr stderr msg
     exitWith (ExitFailure 1)
 
-invalidBounds :: Int -> Int -> IO ()
-invalidBounds lb ub = do
-    hPutStr stderr $ "[Error] Lower bound " ++ show lb ++ " is greater"
-        ++ " than the upper bound " ++ show ub ++ "."
-    exitWith (ExitFailure 1)
+-- | Prints a message to stderr along with
+--   the usage header message and exits.
+fail' :: String -> IO a
+fail' msg = fail $ unlines [msg] ++ usageInfo usageHeader options
 
-runSampler :: System Int -> [Flag] -> IO ()
-runSampler sys flags = do
-    let lb  = getStrLowerBound sys
-    let ub  = getStrUpperBound sys
-    let str = getGenType sys
+-- | Prints the usage text and exists.
+usage :: IO a
+usage = do
+    putStr $ usageInfo usageHeader options
+    exitSuccess
 
-    -- Check if the given type is valid
-    when (str `S.notMember` types sys) $ invalidGenType str
+-- | Parses the cli arguments into the command string
+--   and some additional (optional) flags.
+parse :: [String] -> IO (String, [Flag])
+parse argv =
+    case getOpt Permute options argv of
+        (opts, cmds, [])
+            | null cmds        -> usage
+            | length cmds /= 1 -> fail' "[Error] Expected a single command."
+            | Help `elem` opts -> usage
+            | otherwise        -> return (head cmds, opts)
 
-    -- Check if the given lower and upper bounds is sensible
-    when (lb > ub) $ invalidBounds lb ub
+        (_, _, errs) -> fail' $ concat errs
 
-    case fromPaganini flags of
-        Nothing -> do
-            let arg = T.defaultArgs sys
-            pag <- T.runPaganini sys T.Cummulative (Just $ arg { T.precision = getPrecision sys
-                                                               , T.maxiters  = fromMaybe (T.maxiters arg)
-                                                                                         (getMaxIter sys) })
-            case pag of
-                Left err -> printError err
-                Right sys' -> do
-                    sample <- sampleStrIO sys' str lb ub
-                    B.putStrLn $ encode sample
-                    exitSuccess
-        Just s  -> do
-            pag <- T.readPaganini sys T.Cummulative s
-            case pag of
-                Left err   -> printError err
-                Right sys' -> do
-                    sample <- sampleStrIO sys' str lb ub
-                    B.putStrLn $ encode sample
-                    exitSuccess
+-- | Sets up stdout and stdin IO handles.
+handleIO :: [Flag] -> IO ()
+handleIO opts = do
+    case inputF opts of
+        Just file -> do
+            h <- openFile file ReadMode
+            hDuplicateTo h stdin   -- h becomes the new stdin
+        Nothing   -> return ()
 
-reportSystemError :: SystemError -> IO ()
-reportSystemError err = do
-    hPrint stderr err
-    exitWith (ExitFailure 1)
-
-reportSystemWarnings :: WarningMonad () -> IO ()
-reportSystemWarnings (Left ws) = hPrint stderr ws
-reportSystemWarnings _         = return ()
+    case outputF opts of
+        Just file -> do
+            h <- openFile file WriteMode
+            hDuplicateTo h stdout  -- h becomes the new stdout
+        Nothing   -> return ()
 
 main :: IO ()
 main = do
-    (ops, fs) <- getArgs >>= parse
-    case fs of
-      []     -> if Stdin `elem` ops then run ops Nothing
-                else do hPutStr stderr (usageInfo usageHeader options)
-                        exitSuccess
-      (f:_)  -> do run ops (Just f)
-                   exitSuccess
+    (cmd, opts) <- getArgs >>= parse
+    handleIO opts -- set up IO handles.
+    case cmd of
+        "compile"  -> runCompiler opts
+        "sample"   -> runSampler opts
+        "tune"     -> runTuner opts
+        "spec"     -> runSpec opts
+        _          -> fail' $ "[Error] Unrecognised command " ++ quote cmd ++ "."
+
+-- | Reports system warnings.
+sysWarnings :: System Int -> [Flag] -> IO ()
+sysWarnings sys opts =
+    case warnings sys of
+        Left warn -> do
+            hPrint stderr warn -- report the warnings
+            when (Werror `elem` opts) $ exitWith (ExitFailure 1)
+
+        _         -> return ()
+
+-- | Performs semantic validity checks
+--   returning the detected system type.
+sysErrors :: System Int -> [Flag] -> IO SystemType
+sysErrors sys opts =
+    case errors (Force `elem` opts) sys of
+        Left err   -> fail $ show err
+        Right typ  -> return typ
+
+-- | Prints parsing errors or returns the parsed system.
+getSystem :: (ShowToken t, Ord t, ShowErrorComponent e)
+          => Either (ParseError t e) a -> IO a
+
+getSystem (Left err)  = printError err
+getSystem (Right sys) = return sys
+
+-- | Parses the system performing the necessary error
+--   and warnings checks. Returns the parsed system and its type.
+parseSystem :: [Flag] -> IO (System Int, SystemType)
+parseSystem opts = do
+    text <- getContents
+    dat  <- parseSpec text
+    sys  <- getSystem dat
+
+    sysWarnings sys opts          -- check for warnings
+    sysType <- sysErrors sys opts -- check for errors
+    return (sys, sysType)
+
+tuningConf :: System a -> (Double, Int)
+tuningConf sys = (precision, maxiter)
+    where arg       = T.defaultArgs sys
+          ann       = annotations sys
+          precision = withDouble ann "precision" 1.0e-9
+          maxiter   = withInt ann "maxiter" (T.maxiters arg)
+
+-- | Tunes the given system by either parsing the given paganini
+--   data file corresponding to the given system, or by executing
+--   the paganini tuner.
+tuneSystem :: System Int
+           -> [Flag] -> T.Parametrisation
+           -> IO (PSystem Double)
+
+tuneSystem sys opts prob =
+    case tuningF opts of
+        Nothing -> do
+           let arg                  = T.defaultArgs sys
+           let (precision, maxiter) = tuningConf sys
+           dat <- T.runPaganini sys prob (Just $ arg { T.precision = precision
+                                                     , T.maxiters  = maxiter
+                                                     })
+           getSystem dat
+        Just file -> do
+            dat  <- T.readPaganini sys prob file
+            getSystem dat
+
+compilerConf :: System a -> String
+compilerConf sys = moduleName
+    where ann        = annotations sys
+          moduleName = withDefault ann "module" "Sampler"
+
+-- | Runs the specification compiler.
+runCompiler :: [Flag] -> IO ()
+runCompiler opts = do
+    (sys, sysType) <- parseSystem opts
+    let moduleName = compilerConf sys
+
+    tunedSystem    <- tuneSystem sys opts T.Cummulative
+    case sysType of
+        Rational  -> R.compile (config tunedSystem moduleName compilerTimestamp :: R.Conf)
+        Algebraic -> A.compile (config tunedSystem moduleName compilerTimestamp :: A.Conf)
+        _         -> fail "[Error] Unsupported system type."
+
+samplerConf :: System a -> (Int, Int, String)
+samplerConf sys = (lb, ub, gen)
+    where ann = annotations sys
+          lb  = withInt ann "lowerBound" 10
+          ub  = withInt ann "upperBound" 200
+          gen = withDefault ann "generate" (initType sys)
+
+samplerErrors :: System a -> (Int, Int, String) -> IO ()
+samplerErrors sys (lb, ub, genT) = do
+    when (genT `S.notMember` types sys) (
+        fail $ "[Error] " ++ genT ++ " does not name a type.")
+
+    when (lb > ub) (fail "[Error] Lower bounds greater than the upper bound.")
+
+-- | Runs the specification sampler.
+runSampler :: [Flag] -> IO ()
+runSampler opts = do
+    (sys, _)           <- parseSystem opts
+    let (lb, ub, genT) = samplerConf sys
+    samplerErrors sys (lb, ub, genT)
+
+    tunedSystem  <- tuneSystem sys opts T.Cummulative
+    sample       <- sampleStrIO tunedSystem genT lb ub
+    B.putStrLn   (encode sample)
+
+runTuner :: [Flag] -> IO ()
+runTuner opts = do
+    (sys, _)    <- parseSystem opts
+    tunedSystem <- tuneSystem sys opts T.Regular
+    B.putStr $ encode (toSystemT $ system tunedSystem)
+
+runSpec :: [Flag] -> IO ()
+runSpec opts = do
+    (sys, _) <- parseSystem opts
+    T.writeSpecification sys stdout -- write specification to output

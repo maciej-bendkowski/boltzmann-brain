@@ -36,7 +36,7 @@ withDefault f x d = case x `M.lookup` f of
 
 -- | `withDefault` specialised to doubles.
 withDouble :: Map String String
-           -> String -> Int -> Int
+           -> String -> Double -> Double
 
 withDouble = withDefault
 

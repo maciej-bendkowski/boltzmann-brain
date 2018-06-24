@@ -92,7 +92,7 @@ parseFromFile p file = runParser p file <$> readFile file
 
 -- | Prints the given parsing errors.
 printError :: (ShowToken t, Ord t, ShowErrorComponent e)
-           => ParseError t e -> IO ()
+           => ParseError t e -> IO a
 
 printError err = do
         hPutStr stderr $ parseErrorPretty err
