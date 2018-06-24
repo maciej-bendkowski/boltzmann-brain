@@ -1,7 +1,7 @@
 {-|
  Module      : Data.Boltzmann.Internal.Annotations
  Description : System annotation utilities.
- Copyright   : (c) Maciej Bendkowski, 2017
+ Copyright   : (c) Maciej Bendkowski, 2017-2018
 
  License     : BSD3
  Maintainer  : maciej.bendkowski@tcs.uj.edu.pl

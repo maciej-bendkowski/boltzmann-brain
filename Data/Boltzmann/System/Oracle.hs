@@ -1,7 +1,7 @@
 {-|
  Module      : Data.Boltzmann.System.Oracle
  Description : Numeric Newton oracle utilities.
- Copyright   : (c) Maciej Bendkowski, 2017
+ Copyright   : (c) Maciej Bendkowski, 2017-2018
 
  License     : BSD3
  Maintainer  : maciej.bendkowski@tcs.uj.edu.pl

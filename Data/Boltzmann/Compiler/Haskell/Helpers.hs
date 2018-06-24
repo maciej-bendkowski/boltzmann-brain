@@ -1,7 +1,7 @@
 {-|
  Module      : Data.Boltzmann.Compiler.Haskell.Helpers
  Description : Helper methods for ghc-7.10.3 compiler syntax.
- Copyright   : (c) Maciej Bendkowski, 2017
+ Copyright   : (c) Maciej Bendkowski, 2017-2018
 
  License     : BSD3
  Maintainer  : maciej.bendkowski@tcs.uj.edu.pl

@@ -1,7 +1,7 @@
 {-|
  Module      : Main
  Description : Boltzmann brain executable.
- Copyright   : (c) Maciej Bendkowski, 2018
+ Copyright   : (c) Maciej Bendkowski, 2017-2018
 
  License     : BSD3
  Maintainer  : maciej.bendkowski@tcs.uj.edu.pl
@@ -78,7 +78,7 @@ signature :: String
 signature = "Boltzmann Brain " ++ version
 
 versionHeader :: String
-versionHeader = signature ++ " (c) Maciej Bendkowski and Sergey Dovgal 2018"
+versionHeader = signature ++ " (c) Maciej Bendkowski and Sergey Dovgal 2017-2018"
 
 cmdUsage :: String
 cmdUsage =
