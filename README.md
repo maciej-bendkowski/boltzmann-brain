@@ -10,6 +10,18 @@ module implementing a dedicated singular,  rejection-based Boltzmann sampler
 given specification or even compute the Boltzmann branching probabilities for
 further usage.
 
+### Citing Boltzmann Brain
+If you use `Boltzmann Brain` or `Paganini` for published work, 
+we encourage you to cite the accompanying paper: 
+
+Maciej Bendkowski, Olivier Bodini, Sergey Dovgal
+
+[Polynomial tuning of multiparametric combinatorial
+samplers](https://epubs.siam.org/doi/10.1137/1.9781611975062.9)
+
+available also on [arxiv](https://arxiv.org/abs/1708.01212).
+
+
 ### How to install
 
 #### macOS >= 10.12
@@ -289,17 +301,6 @@ becomes unbounded and the user may receive an error in this case).
  Finally, we need to tell `bb` to use the parameters running, e.g.:
 
 ```bb -o Sampler.hs -p bb.param examples/motzkin.in ```
-
-### Citing Boltzmann Brain
-If you use `Boltzmann Brain` or `Paganini` for published work, 
-we encourage you to cite the accompanying paper: 
-
-Maciej Bendkowski, Olivier Bodini, Sergey Dovgal
-
-[Polynomial tuning of multiparametric combinatorial
-samplers](https://epubs.siam.org/doi/10.1137/1.9781611975062.9)
-
-available also on [arxiv](https://arxiv.org/abs/1708.01212).
 
 ### References
 1. [P. Flajolet, R. Sedgewick: Analytic
