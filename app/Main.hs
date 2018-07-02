@@ -23,6 +23,7 @@ import Control.Monad (when)
 
 import Data.Aeson
 import qualified Data.ByteString.Lazy.Char8 as B
+import qualified Data.Text.Lazy.IO as T
 
 import Text.Megaparsec hiding (parse)
 import qualified Data.Set as S
@@ -32,6 +33,8 @@ import Data.Boltzmann.System.Parser
 import Data.Boltzmann.System.Errors
 import Data.Boltzmann.System.Warnings
 import Data.Boltzmann.System.Sampler
+import Data.Boltzmann.System.Renderer
+
 import Data.Boltzmann.Internal.Parser
 import Data.Boltzmann.Internal.Annotations
 
@@ -86,6 +89,7 @@ cmdUsage =
                 , ""
                 , "compile   Generates a Boltzmann sampler corresponding to the given specification."
                 , "sample    Generates a random structure corresponding to the given specification."
+                , "render    Generates a random structure and outputs its dotfile representation."
                 , "tune      Decorates the given specification with appropriate Boltzmann branching probabilities."
                 , "spec      Generates a paganini input tuning problem corresponding to the given specification."
                 ]
@@ -168,6 +172,7 @@ main = do
     case cmd of
         "compile"  -> runCompiler opts
         "sample"   -> runSampler opts
+        "render"   -> runRenderer opts
         "tune"     -> runTuner opts
         "spec"     -> runSpec opts
         _          -> fail' $ "[Error] Unrecognised command " ++ quote cmd ++ "."
@@ -267,16 +272,27 @@ samplerErrors sys (lb, ub, genT) = do
 
     when (lb > ub) (fail "[Error] Lower bounds greater than the upper bound.")
 
--- | Runs the specification sampler.
-runSampler :: [Flag] -> IO ()
-runSampler opts = do
+getSample :: [Flag] -> IO Structure
+getSample opts = do
     (sys, _)           <- parseSystem opts
     let (lb, ub, genT) = samplerConf sys
     samplerErrors sys (lb, ub, genT)
 
     tunedSystem  <- tuneSystem sys opts T.Cummulative
-    sample       <- sampleStrIO tunedSystem genT lb ub
-    B.putStrLn   (encode sample)
+    sampleStrIO tunedSystem genT lb ub
+
+-- | Runs the specification sampler.
+runSampler :: [Flag] -> IO ()
+runSampler opts = do
+    sample <- getSample opts
+    B.putStrLn $ encode sample
+
+-- | Runs the structure renderer.
+runRenderer :: [Flag] -> IO ()
+runRenderer opts = do
+    sample  <- getSample opts
+    dotfile <- toDotFile sample
+    T.putStrLn dotfile
 
 runTuner :: [Flag] -> IO ()
 runTuner opts = do

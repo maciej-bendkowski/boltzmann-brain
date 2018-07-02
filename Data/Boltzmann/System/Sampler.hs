@@ -1,5 +1,5 @@
 {-|
- Module      : Data.Boltzmann.PSystem.Sampler
+ Module      : Data.Boltzmann.System.Sampler
  Description : Sampler utilities for combinatorial systems.
  Copyright   : (c) Maciej Bendkowski, 2017-2018
 
