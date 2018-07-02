@@ -38,6 +38,8 @@ import Data.Boltzmann.System.Renderer
 import Data.Boltzmann.Internal.Parser
 import Data.Boltzmann.Internal.Annotations
 
+import Debug.Trace (trace)
+
 import qualified Data.Boltzmann.System.Tuner as T
 
 import Data.Boltzmann.Compiler
@@ -119,6 +121,12 @@ tuningF :: [Flag] -> Maybe String
 tuningF (TuningFile f : _) = Just f
 tuningF (_:fs)             = tuningF fs
 tuningF []                 = Nothing
+
+
+-- | Report the warning.
+warning :: String -> IO ()
+warning msg = hPutStrLn stderr msg'
+    where msg' = "[Warning] " ++ msg
 
 -- | Prints a message to stderr and exits.
 fail :: String -> IO a
@@ -272,9 +280,8 @@ samplerErrors sys (lb, ub, genT) = do
 
     when (lb > ub) (fail "[Error] Lower bounds greater than the upper bound.")
 
-getSample :: [Flag] -> IO Structure
-getSample opts = do
-    (sys, _)           <- parseSystem opts
+getSample :: System Int -> [Flag] -> IO Structure
+getSample sys opts = do
     let (lb, ub, genT) = samplerConf sys
     samplerErrors sys (lb, ub, genT)
 
@@ -284,14 +291,31 @@ getSample opts = do
 -- | Runs the specification sampler.
 runSampler :: [Flag] -> IO ()
 runSampler opts = do
-    sample <- getSample opts
+    (sys, _) <- parseSystem opts
+    sample   <- getSample sys opts
     B.putStrLn $ encode sample
+
+rendererConf :: System a -> [Flag]
+             ->  IO ColorScheme
+
+rendererConf sys opts =
+        let ann = annotations sys
+            col = withString ann "colorScheme" "random"
+            in case col of
+                   "black" -> return BlackCol
+                   _       -> do
+                        warning "Using default random color scheme."
+                        when (Werror `elem` opts) $ exitWith (ExitFailure 1)
+                        return RandomCol
 
 -- | Runs the structure renderer.
 runRenderer :: [Flag] -> IO ()
 runRenderer opts = do
-    sample  <- getSample opts
-    dotfile <- toDotFile sample
+    (sys, _) <- parseSystem opts
+    cs       <- rendererConf sys opts
+
+    sample  <- getSample sys opts
+    dotfile <- toDotFile cs sample
     T.putStrLn dotfile
 
 runTuner :: [Flag] -> IO ()

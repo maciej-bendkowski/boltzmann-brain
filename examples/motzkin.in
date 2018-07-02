@@ -8,4 +8,6 @@
 @withLists y
 @withShow  y
 
+@colorScheme black
+
 M = Leaf | Unary M [0.3] | Binary M M.

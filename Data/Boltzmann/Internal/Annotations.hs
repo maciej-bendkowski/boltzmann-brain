@@ -12,6 +12,7 @@
  -}
 module Data.Boltzmann.Internal.Annotations
     ( withDefault
+    , withString
     , withDouble
     , withInt
     , withBool
@@ -33,6 +34,12 @@ withDefault :: Read a
 withDefault f x d = case x `M.lookup` f of
                       Nothing -> d
                       Just x' -> fromMaybe d (readMaybe x')
+
+-- | Read a given key value of a map with a default string fallback.
+withString :: Map String String
+           -> String -> String -> String
+
+withString f x d = fromMaybe d (x `M.lookup` f)
 
 -- | `withDefault` specialised to doubles.
 withDouble :: Map String String

@@ -9,15 +9,16 @@
 
  -}
 module Data.Boltzmann.System.Renderer
-    ( toDotFile
+    ( ColorScheme(..)
+    , toDotFile
     ) where
 
 import Control.Monad
 
 import Data.GraphViz
 import Data.GraphViz.Printing
-import Data.GraphViz.Attributes.Colors
-import Data.GraphViz.Attributes.Complete
+import Data.GraphViz.Attributes.Colors hiding (ColorScheme)
+import Data.GraphViz.Attributes.Complete hiding (ColorScheme)
 
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
@@ -32,6 +33,10 @@ data RTree = RNode { children :: [RTree]
                    , colorT   :: Color
                    , label    :: Int
                    }
+
+-- | Color scheme for nodes.
+data ColorScheme = RandomCol  -- ^ Nodes get random colors beased on their type.
+                 | BlackCol   -- ^ Each node get the same, black color.
 
 -- | Constructrs an appripriate color attribute.
 toColorAttr :: RTree -> Attribute
@@ -49,10 +54,15 @@ renderEdges t = egs ++ concatMap renderEdges (children t)
 
 -- | Converts a given structure into its ranked variant
 --    where each node type is assigned a random RGB color.
-toRTree :: Structure -> IO RTree
-toRTree s = do
+toRTree :: ColorScheme
+        -> Structure
+        -> IO RTree
+
+toRTree RandomCol s = do
     (t, _, _) <- toRTree' M.empty 0 s
     return t
+
+toRTree BlackCol s = return $ fst (toBlackRTree' 0 s)
 
 -- | Node color map.
 type ColorMap = Map String Color
@@ -65,7 +75,7 @@ toRTree' cm rk str =
     let s = name str in
     case s `M.lookup` cm of
         Nothing -> do
-            col             <- randomColor
+            col             <- getColor
             let cm'         = M.insert s col cm
             (xs, rk', cm'') <- toRTreeL' cm' rk (nodes str)
             return (RNode { children = xs
@@ -89,16 +99,44 @@ toRTreeL' cm rk (x:xs) = do
     (xs', rk'', cm'') <- toRTreeL' cm' rk' xs
     return (x' : xs', rk'', cm'')
 
+toBlackRTree' :: Int -> Structure
+              -> (RTree, Int)
+
+toBlackRTree' rk str =
+    let (xs, rk') = toBlackRTreeL' rk (nodes str)
+     in (RNode { children = xs
+               , colorT   = black
+               , label    = rk'
+               }, rk' + 1)
+
+toBlackRTreeL' :: Int -> [Structure]
+               -> ([RTree], Int)
+
+toBlackRTreeL' rk [] = ([], rk)
+toBlackRTreeL' rk (x:xs) =
+    let (x', rk')   = toBlackRTree' rk x
+        (xs', rk'') = toBlackRTreeL' rk' xs
+        in (x' : xs', rk'')
+
+black :: Color
+black = RGB { red   = 0
+            , green = 0
+            , blue  = 0
+            }
+
 -- | Constructs a random rgb color.
-randomColor :: IO Color
-randomColor = do
+getColor :: IO Color
+getColor = do
     (r, g, b) <- liftM3 (,,) randomIO randomIO randomIO
     return RGB { red = r, green = g, blue = b }
 
 -- | Given a tree structure, produces a suitable dotfile  representation.
-toGraph :: Structure -> IO (DotGraph String)
-toGraph t = do
-    rT         <- toRTree t
+toGraph :: ColorScheme
+        -> Structure
+        -> IO (DotGraph String)
+
+toGraph cs t = do
+    rT         <- toRTree cs t
     let nodes' = renderNodes rT
     let edges' = renderEdges rT
     return DotGraph { strictGraph     = False
@@ -117,7 +155,10 @@ toGraph t = do
                  }
 
 -- | Prints a dotfile representation of the given structure.
-toDotFile :: Structure -> IO Text
-toDotFile s = do
-    g <- toGraph s
+toDotFile :: ColorScheme
+          -> Structure
+          -> IO Text
+
+toDotFile cs s = do
+    g <- toGraph cs s
     return $ renderDot (toDot g)
