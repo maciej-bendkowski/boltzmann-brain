@@ -7,4 +7,5 @@ extra-deps:
 - haskell-src-exts-1.17.1
 - megaparsec-5.2.0
 - transformers-0.5.4.0
+- pretty-terminal-0.1.0.0
 resolver: lts-9.1

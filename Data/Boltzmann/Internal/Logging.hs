@@ -26,6 +26,8 @@ import Data.Time.Format
 import System.IO
 import System.Exit
 
+import System.Console.Pretty
+
 getTime :: IO String
 getTime = do
     now <- getCurrentTime
@@ -42,26 +44,45 @@ instance Show Level where
     show Warning = "WAR"
     show Error   = "ERR"
 
-brackets :: String -> String
-brackets s = "[" ++ s ++ "]"
+lvlColor :: Level -> Color
+lvlColor Info    = Blue
+lvlColor Warning = Yellow
+lvlColor Error   = Red
 
-parens :: String -> String
-parens s = "(" ++ s ++ ")"
+brackets :: IO a -> IO ()
+brackets m = hPutStr stderr "[" >> m >> hPutStr stderr "] " -- note the trailing space
+
+parens :: IO a -> IO ()
+parens m = hPutStr stderr "(" >> m >> hPutStr stderr ") " -- note the trailing space
 
 data Log = Log { lvl :: Level   -- ^ Logging level.
                , msg :: String  -- ^ Logging message.
                }
 
-instance Show Log where
-    show l = brackets (show $ lvl l) ++ " " ++ msg l
+printLabel :: Log -> IO ()
+printLabel log = do
+    inColor <- supportsPretty
+    let label  = show (lvl log)
+    let format = style Bold . color (lvlColor $ lvl log)
+    let x = if inColor then format label
+                       else label
+    hPutStr stderr x
+
+printTime :: String -> IO ()
+printTime time = do
+    inColor <- supportsPretty
+    let format = style Italic
+    let x = if inColor then format time
+                       else time
+    hPutStr stderr x
 
 -- | Reports a logging message.
 report :: Log -> IO ()
 report log = do
     time <- getTime
-    let label = brackets (show $ lvl log)
-    let msg'  = label ++ " " ++ parens time ++ " " ++  msg log
-    hPutStrLn stderr msg'
+    brackets $ printLabel log
+    parens $ printTime time
+    hPutStrLn stderr $ msg log
 
 -- | Logs an INFO message.
 info :: String -> IO ()
