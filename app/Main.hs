@@ -37,8 +37,7 @@ import Data.Boltzmann.System.Renderer
 
 import Data.Boltzmann.Internal.Parser
 import Data.Boltzmann.Internal.Annotations
-
-import Debug.Trace (trace)
+import Data.Boltzmann.Internal.Logging
 
 import qualified Data.Boltzmann.System.Tuner as T
 
@@ -74,7 +73,7 @@ options = [Option "i" ["input"] (ReqArg InputFile "FILE")
             "Prints this help message."]
 
 quote :: String -> String
-quote msg = "'" ++ msg ++ "'"
+quote m = "'" ++ m ++ "'"
 
 version :: String
 version = "v1.3.1.3"
@@ -85,8 +84,8 @@ signature = "Boltzmann Brain " ++ version
 versionHeader :: String
 versionHeader = signature ++ " (c) Maciej Bendkowski and Sergey Dovgal 2017-2018"
 
-cmdUsage :: String
-cmdUsage =
+cmdMsg :: String
+cmdMsg =
         unlines [ "Commands:"
                 , ""
                 , "compile   Generates a Boltzmann sampler corresponding to the given specification."
@@ -100,7 +99,7 @@ usageHeader :: String
 usageHeader =
     unlines [ versionHeader
             , ""
-            , cmdUsage
+            , cmdMsg
             , "Usage: bb [COMMAND] [OPTIONS...]"
             ]
 
@@ -122,24 +121,11 @@ tuningF (TuningFile f : _) = Just f
 tuningF (_:fs)             = tuningF fs
 tuningF []                 = Nothing
 
-
--- | Report the warning.
-warning :: String -> IO ()
-warning msg = hPutStrLn stderr msg'
-    where msg' = "[Warning] " ++ msg
-
--- | Prints a message to stderr and exits.
-fail :: String -> IO a
-fail msg = do
-    hPutStr stderr msg
-    exitWith (ExitFailure 1)
-
--- | Prints a message to stderr along with
---   the usage header message and exits.
+-- | Logs an error and exists with the usage info.
 fail' :: String -> IO a
-fail' msg = fail $ unlines [msg] ++ usageInfo usageHeader options
+fail' m = fail $ m ++ usageInfo usageHeader options
 
--- | Prints the usage text and exists.
+-- | Prints the usage info and exists.
 usage :: IO a
 usage = do
     putStr $ usageInfo usageHeader options
@@ -152,8 +138,8 @@ parse argv =
     case getOpt Permute options argv of
         (opts, cmds, [])
             | null cmds        -> usage
-            | length cmds /= 1 -> fail' "[Error] Expected a single command."
             | Help `elem` opts -> usage
+            | length cmds /= 1 -> fail' "Expected a single command."
             | otherwise        -> return (head cmds, opts)
 
         (_, _, errs) -> fail' $ concat errs
@@ -183,15 +169,15 @@ main = do
         "render"   -> runRenderer opts
         "tune"     -> runTuner opts
         "spec"     -> runSpec opts
-        _          -> fail' $ "[Error] Unrecognised command " ++ quote cmd ++ "."
+        _          -> fail' $ "Unrecognised command " ++ quote cmd ++ "."
 
 -- | Reports system warnings.
 sysWarnings :: System Int -> [Flag] -> IO ()
 sysWarnings sys opts =
     case warnings sys of
-        Left warn -> do
-            hPrint stderr warn -- report the warnings
-            when (Werror `elem` opts) $ exitWith (ExitFailure 1)
+        Left warnMsg -> do
+            let f = if Werror `elem` opts then warn' else warn
+            f (show warnMsg)
 
         _         -> return ()
 
@@ -264,7 +250,7 @@ runCompiler opts = do
     case sysType of
         Rational  -> R.compile (config tunedSystem moduleName compilerTimestamp :: R.Conf)
         Algebraic -> A.compile (config tunedSystem moduleName compilerTimestamp :: A.Conf)
-        _         -> fail "[Error] Unsupported system type."
+        _         -> fail "Unsupported system type."
 
 samplerConf :: System a -> (Int, Int, String)
 samplerConf sys = (lb, ub, gen)
@@ -276,9 +262,9 @@ samplerConf sys = (lb, ub, gen)
 samplerErrors :: System a -> (Int, Int, String) -> IO ()
 samplerErrors sys (lb, ub, genT) = do
     when (genT `S.notMember` types sys) (
-        fail $ "[Error] " ++ genT ++ " does not name a type.")
+        fail $ genT ++ " does not name a type.")
 
-    when (lb > ub) (fail "[Error] Lower bounds greater than the upper bound.")
+    when (lb > ub) (fail "Lower bounds greater than the upper bound.")
 
 getSample :: System Int -> [Flag] -> IO Structure
 getSample sys opts = do
@@ -304,8 +290,8 @@ rendererConf sys opts =
             in case col of
                    "black" -> return BlackCol
                    _       -> do
-                        warning "Using default random color scheme."
-                        when (Werror `elem` opts) $ exitWith (ExitFailure 1)
+                        let f = if Werror `elem` opts then warn' else warn
+                        f "Using default random color scheme."
                         return RandomCol
 
 -- | Runs the structure renderer.

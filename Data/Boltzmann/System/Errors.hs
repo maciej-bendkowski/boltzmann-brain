@@ -53,34 +53,34 @@ data SystemError = Inconsistent String                -- Type name
                  | UnsupportedSystemType String       -- Invalid system type
 
 instance Show SystemError where
-    show (Inconsistent t con arg) = "[Error] Invalid argument type '"
+    show (Inconsistent t con arg) = "Invalid argument type '"
         ++ arg ++ "' in constructor " ++ con ++ " of type " ++ t ++ "."
 
-    show (InvalidCons t con) = "[Error] Invalid constructor '" ++ con
+    show (InvalidCons t con) = "Invalid constructor '" ++ con
         ++ "' in type " ++ t ++ ": '" ++ con ++ "' names a declared type."
 
-    show (ClashCons cons) = "[Error] Clashing constructor names: "
+    show (ClashCons cons) = "Clashing constructor names: "
         ++ foldl1 (\c c' -> "'" ++ c ++ "', " ++ "'" ++ c' ++ "'") cons
         ++ "."
 
-    show Illfounded = "[Error] Ill-founded system."
+    show Illfounded = "Ill-founded system."
 
-    show Infinite = "[Error] System defines no finite structures."
+    show Infinite = "System defines no finite structures."
 
-    show (Frequencies ts) = "[Error] Incorrect frequencies (expected real in [0.0,1.0]): "
+    show (Frequencies ts) = "Incorrect frequencies (expected real in [0.0,1.0]): "
         ++ foldl1 (\c c' -> "'" ++ c ++ "', " ++ "'" ++ c' ++ "'") ts
         ++ "."
 
-    show InvalidPrecision = "[Error] Invalid precision annotation. "
+    show InvalidPrecision = "Invalid precision annotation. "
             ++ "Expected a positive floating point number."
 
-    show InvalidMaxIter = "[Error] Invalid maxiter annotation. "
+    show InvalidMaxIter = "Invalid maxiter annotation. "
             ++ "Expected a positive integer."
 
-    show InvalidModule = "[Error] Invalid module annotation. "
+    show InvalidModule = "Invalid module annotation. "
             ++ "Expected a name starting with an upper case letter."
 
-    show (UnsupportedSystemType s) = "[Error] Unsupported system type. " ++ s
+    show (UnsupportedSystemType s) = "Unsupported system type. " ++ s
 
 -- | Monadic error handling wrapper.
 type ErrorMonad = Either SystemError

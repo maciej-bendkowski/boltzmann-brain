@@ -29,6 +29,7 @@ library
                      , Data.Boltzmann.System.Sampler
                      , Data.Boltzmann.System.Renderer
                      , Data.Boltzmann.Internal.Annotations
+                     , Data.Boltzmann.Internal.Logging
                      , Data.Boltzmann.Internal.Parser
                      , Data.Boltzmann.Compiler
                      , Data.Boltzmann.Compiler.Haskell.Helpers
@@ -49,6 +50,7 @@ library
                      , graphviz >= 2999.18
                      , text >= 1.2.2.2
                      , random >= 1.1
+                     , time >= 1.6.0.1
   ghc-options:         -O2 -Wall
   default-language:    Haskell2010
 

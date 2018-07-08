@@ -43,6 +43,7 @@ import Data.Maybe
 
 import Data.Boltzmann.System
 import Data.Boltzmann.Internal.Parser
+import Data.Boltzmann.Internal.Logging
 
 -- | Catch IO exceptions.
 try' :: IO a ->  IO (Either IOException a)
@@ -96,9 +97,6 @@ defaultArgs sys =
       Algebraic -> algebraicArgs
       _         -> error "Unsupported"
 
-logger :: String -> IO ()
-logger s = hPutStrLn stderr ("[LOG] " ++ s)
-
 writeListLn :: Show a => Handle -> [a] -> IO ()
 writeListLn h xs = hPutStrLn h (showsList xs)
 
@@ -117,7 +115,7 @@ showsList = printer shows
 --   input handle.
 writeSpecification :: System Int -> Handle -> IO ()
 writeSpecification sys hout = do
-    logger "Writing system specification..."
+    info "Writing system specification..."
     let freqs   = frequencies sys
     let seqs    = seqTypes sys
     let spec    = toPSpec sys
@@ -136,7 +134,7 @@ writeSpecification sys hout = do
     -- sequence specifications
     mapM_ (seqSpecification hout find' spec) seqs
 
-    logger "... done."
+    info "... done."
 
 getArgs :: System Int -> Maybe PArg -> PArg
 getArgs sys = fromMaybe (defaultArgs sys)
@@ -156,9 +154,9 @@ runPaganini :: System Int -> Parametrisation -> Maybe PArg
 
 runPaganini sys paramT arg = do
 
-    logger "Running paganini..."
+    info "Running paganini..."
     let arg' = getArgs sys arg
-    logger (printer (++) $ "Arguments: " : toArgs arg')
+    info (printer (++) $ "Arguments: " : toArgs arg')
 
     -- Execute the paganini tuning script.
     pp <- try' $ createProcess (proc "paganini" (toArgs arg')){ std_out = CreatePipe
@@ -179,10 +177,10 @@ runPaganini sys paramT arg = do
             case pag of
               Left err -> return $ Left err
               Right (rho, us, ts) -> do
-                  logger "Parsing paganini output..."
+                  info "Parsing paganini output..."
                   let ts'  = fromList ts
                   let sys' = parametrise sys paramT rho ts' us
-                  logger "... done."
+                  info "... done."
                   return $ Right sys'
 
         _ -> handleIOEx "Could not establish inter-process communication with paganini."

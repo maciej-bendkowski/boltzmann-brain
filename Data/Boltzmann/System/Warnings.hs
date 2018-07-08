@@ -27,7 +27,7 @@ data SystemWarning = NullCons String                -- Type name
                               String                -- Constructor name
 
 instance Show SystemWarning where
-    show (NullCons t con) = "[Warning] Invalid constructor '" ++ con
+    show (NullCons t con) = "Invalid constructor '" ++ con
         ++ "' in type " ++ t ++ ": encountered a structure of size 0."
 
 -- | Monadic warning handling wrapper.
