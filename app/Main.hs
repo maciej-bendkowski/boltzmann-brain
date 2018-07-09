@@ -123,7 +123,8 @@ tuningF []                 = Nothing
 
 -- | Logs an error and exists with the usage info.
 fail' :: String -> IO a
-fail' m = fail $ m ++ usageInfo usageHeader options
+fail' m = fail $ msg' ++ usageInfo usageHeader options
+    where msg' = unlines [m]
 
 -- | Prints the usage info and exists.
 usage :: IO a
