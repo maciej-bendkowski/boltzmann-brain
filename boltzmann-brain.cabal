@@ -31,6 +31,7 @@ library
                      , Data.Boltzmann.Internal.Annotations
                      , Data.Boltzmann.Internal.Logging
                      , Data.Boltzmann.Internal.Parser
+                     , Data.Boltzmann.Internal.Utils
                      , Data.Boltzmann.Compiler
                      , Data.Boltzmann.Compiler.Haskell.Helpers
                      , Data.Boltzmann.Compiler.Haskell.Algebraic

@@ -38,6 +38,7 @@ import Data.Boltzmann.System.Renderer
 import Data.Boltzmann.Internal.Parser
 import Data.Boltzmann.Internal.Annotations
 import Data.Boltzmann.Internal.Logging
+import Data.Boltzmann.Internal.Utils
 
 import qualified Data.Boltzmann.System.Tuner as T
 
@@ -94,6 +95,14 @@ cmdMsg =
                 , "tune      Decorates the given specification with appropriate Boltzmann branching probabilities."
                 , "spec      Generates a paganini input tuning problem corresponding to the given specification."
                 ]
+
+commands :: [String]
+commands = ["compile"
+           ,"sample"
+           ,"render"
+           ,"tune"
+           ,"spec"
+           ]
 
 usageHeader :: String
 usageHeader =
@@ -170,7 +179,13 @@ main = do
         "render"   -> runRenderer opts
         "tune"     -> runTuner opts
         "spec"     -> runSpec opts
-        _          -> fail' $ "Unrecognised command " ++ quote cmd ++ "."
+        _          -> fail' $ unrecognisedCmd cmd
+
+unrecognisedCmd :: String -> String
+unrecognisedCmd cmd =
+    "Unrecognised command " ++ cmd' ++ ". Did you mean " ++ hint ++ "?"
+    where cmd' = quote cmd
+          hint = closest commands cmd
 
 -- | Reports system warnings.
 sysWarnings :: System Int -> [Flag] -> IO ()
