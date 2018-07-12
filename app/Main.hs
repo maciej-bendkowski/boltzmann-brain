@@ -111,9 +111,10 @@ commandsMsg =
 usageHeader :: IO String
 usageHeader = do
     commandsMsg' <- commandsMsg
+    usage' <- underline "Usage:"
     return $ unlines [versionHeader, ""
                      ,commandsMsg'
-                     ,"Usage: bb [COMMAND] [OPTIONS...]"
+                     ,usage' ++ " bb [COMMAND] [OPTIONS...]"
                      ]
 
 compilerTimestamp :: String
@@ -137,7 +138,7 @@ tuningF []                 = Nothing
 -- | Logs an error and exists with the usage info.
 fail' :: String -> IO a
 fail' m = do
-    let msg' = unlines [m]
+    let msg' = ensureLn m
     usage' <- usageHeader
     fail (msg' ++ usageInfo usage' options)
 

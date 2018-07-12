@@ -11,7 +11,9 @@
  -}
 module Data.Boltzmann.Internal.Utils
     ( quote
+    , ensureLn
     , closest
+
     , bold
     , italic
     , underline
@@ -19,6 +21,13 @@ module Data.Boltzmann.Internal.Utils
     ) where
 
 import System.Console.Pretty
+
+-- | Given a string, ensures that it ends with
+--   a newline character, appending it if needed.
+ensureLn :: String -> String
+ensureLn s
+    | last s == '\n' = s
+    | otherwise = unlines [s]
 
 -- | Single-quotes the given string.
 quote :: String -> String
