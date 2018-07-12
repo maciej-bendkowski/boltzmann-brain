@@ -73,9 +73,6 @@ options = [Option "i" ["input"] (ReqArg InputFile "FILE")
            Option "h?" ["help"] (NoArg Help)
             "Prints this help message."]
 
-quote :: String -> String
-quote m = "'" ++ m ++ "'"
-
 version :: String
 version = "v1.3.1.3"
 
@@ -85,32 +82,39 @@ signature = "Boltzmann Brain " ++ version
 versionHeader :: String
 versionHeader = signature ++ " (c) Maciej Bendkowski and Sergey Dovgal 2017-2018"
 
-cmdMsg :: String
-cmdMsg =
-        unlines [ "Commands:"
-                , ""
-                , "compile   Generates a Boltzmann sampler corresponding to the given specification."
-                , "sample    Generates a random structure corresponding to the given specification."
-                , "render    Generates a random structure and outputs its dotfile representation."
-                , "tune      Decorates the given specification with appropriate Boltzmann branching probabilities."
-                , "spec      Generates a paganini input tuning problem corresponding to the given specification."
-                ]
-
-commands :: [String]
-commands = ["compile"
-           ,"sample"
-           ,"render"
-           ,"tune"
-           ,"spec"
+-- | Available boltzmann-brain commands.
+commands :: [(String, String)]
+commands = [("compile","Generates a Boltzmann sampler corresponding to the given specification.")
+           ,("sample","Generates a random structure corresponding to the given specification.")
+           ,("render","Generates a random structure and outputs its dotfile representation.")
+           ,("tune","Decorates the given specification with appropriate Boltzmann branching probabilities.")
+           ,("spec","Generates a paganini input tuning problem corresponding to the given specification.")
            ]
 
-usageHeader :: String
-usageHeader =
-    unlines [ versionHeader
-            , ""
-            , cmdMsg
-            , "Usage: bb [COMMAND] [OPTIONS...]"
-            ]
+-- | Renders the given commands and its description.
+renderCmd :: (String -> String) -> (String, String) -> IO String
+renderCmd pause (cmd,desc) = do
+    cmd'  <- bold cmd
+    return (cmd' ++ pause cmd ++ desc)
+
+-- | Renders a commands usage note.
+commandsMsg :: IO String
+commandsMsg =
+    let cmdLen   = 3 + maximum (map (length . fst) commands)
+        offset x = cmdLen - length x         -- offest computing function
+        pause  x = replicate (offset x) ' '  -- treats offset as whitespace pause
+        in do
+            cmds' <- underline "Commands:"
+            xs <- mapM (renderCmd pause) commands
+            return (unlines $ [cmds', ""] ++ xs)
+
+usageHeader :: IO String
+usageHeader = do
+    commandsMsg' <- commandsMsg
+    return $ unlines [versionHeader, ""
+                     ,commandsMsg'
+                     ,"Usage: bb [COMMAND] [OPTIONS...]"
+                     ]
 
 compilerTimestamp :: String
 compilerTimestamp = signature
@@ -132,13 +136,16 @@ tuningF []                 = Nothing
 
 -- | Logs an error and exists with the usage info.
 fail' :: String -> IO a
-fail' m = fail $ msg' ++ usageInfo usageHeader options
-    where msg' = unlines [m]
+fail' m = do
+    let msg' = unlines [m]
+    usage' <- usageHeader
+    fail (msg' ++ usageInfo usage' options)
 
 -- | Prints the usage info and exists.
 usage :: IO a
 usage = do
-    putStr $ usageInfo usageHeader options
+    usage' <- usageHeader
+    putStr $ usageInfo usage' options
     exitSuccess
 
 -- | Parses the cli arguments into the command string
@@ -179,13 +186,15 @@ main = do
         "render"   -> runRenderer opts
         "tune"     -> runTuner opts
         "spec"     -> runSpec opts
-        _          -> fail' $ unrecognisedCmd cmd
+        _          -> do
+           err <- unrecognisedCmd cmd
+           fail' err
 
-unrecognisedCmd :: String -> String
-unrecognisedCmd cmd =
-    "Unrecognised command " ++ cmd' ++ ". Did you mean " ++ hint ++ "?"
-    where cmd' = quote cmd
-          hint = closest commands cmd
+unrecognisedCmd :: String -> IO String
+unrecognisedCmd cmd = do
+    let cmd' = quote cmd
+    hint <- bold $ closest (map fst commands) cmd
+    return $ "Unrecognised command " ++ cmd' ++ ". Did you meant " ++ hint ++ "?"
 
 -- | Reports system warnings.
 sysWarnings :: System Int -> [Flag] -> IO ()
@@ -194,7 +203,6 @@ sysWarnings sys opts =
         Left warnMsg -> do
             let f = if Werror `elem` opts then warn' else warn
             f (show warnMsg)
-
         _         -> return ()
 
 -- | Performs semantic validity checks
