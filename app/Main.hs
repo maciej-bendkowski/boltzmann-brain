@@ -145,7 +145,7 @@ fail' m = do
 usage :: IO a
 usage = do
     usage' <- usageHeader
-    putStr $ usageInfo usage' options
+    putStrLn $ usageInfo usage' options
     exitSuccess
 
 -- | Parses the cli arguments into the command string
