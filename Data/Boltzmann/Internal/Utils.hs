@@ -18,9 +18,18 @@ module Data.Boltzmann.Internal.Utils
     , italic
     , underline
     , boldColor
+
+    , csv
     ) where
 
 import System.Console.Pretty
+
+-- | Produces a comma separated value (csv) representation
+--   of the given list of string. Note that after each comma
+--   there's placed an additional whitespace character.
+csv :: [String] -> String
+csv [] = ""
+csv xs = foldl1 (\x y -> x ++ ", " ++ y) xs
 
 -- | Given a string, ensures that it ends with
 --   a newline character, appending it if needed.

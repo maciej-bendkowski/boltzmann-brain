@@ -16,6 +16,7 @@ module Data.Boltzmann.System
     , constructors
     , Cons(..)
     , Arg(..)
+    , argName
     , types
 
     , PSystem(..)

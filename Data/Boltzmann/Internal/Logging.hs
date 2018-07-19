@@ -14,7 +14,10 @@ module Data.Boltzmann.Internal.Logging
     , info
     , warn
     , warn'
+    , hint
+    , hint'
     , fail
+    , fail'
     ) where
 
 import Prelude hiding (log, fail)
@@ -37,16 +40,19 @@ getTime = do
 
 data Level = Info
            | Warning
+           | Hint
            | Error
 
 instance Show Level where
-    show Info    = "INF"
-    show Warning = "WAR"
+    show Info    = "INFO"
+    show Warning = "WARN"
+    show Hint    = "HINT"
     show Error   = "ERR"
 
 lvlColor :: Level -> Color
 lvlColor Info    = Blue
 lvlColor Warning = Yellow
+lvlColor Hint    = Green
 lvlColor Error   = Red
 
 brackets :: IO a -> IO ()
@@ -92,14 +98,28 @@ info s = report Log { lvl = Info, msg = s }
 warn :: String -> IO ()
 warn s = report Log { lvl = Warning, msg = s }
 
+-- | Logs a HINT message.
+hint :: String -> IO ()
+hint s = report Log { lvl = Hint , msg = s }
+
+-- | Logs a HINT message and terminates.
+hint' :: String -> IO a
+hint' s = do
+    report Log { lvl = Hint , msg = s }
+    exitWith (ExitFailure 1)
+
 -- | Logs a WARNING message and terminates.
 warn' :: String -> IO a
 warn' s = do
     report Log { lvl = Warning, msg = s }
     exitWith (ExitFailure 1)
 
+-- | Logs an ERROR message.
+fail :: String -> IO ()
+fail s = report Log { lvl = Error, msg = s }
+
 -- | Logs an ERROR message and terminates.
-fail :: String -> IO a
-fail s = do
+fail' :: String -> IO a
+fail' s = do
     report Log { lvl = Error, msg = s }
     exitWith (ExitFailure 1)

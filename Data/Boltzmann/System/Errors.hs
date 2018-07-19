@@ -9,13 +9,14 @@
 
  Common error utilities for combinatorial systems.
  -}
+{-# LANGUAGE ExistentialQuantification #-}
 module Data.Boltzmann.System.Errors
-    ( SystemError
-    , ErrorMonad
-    , errors
+    ( errors
     ) where
 
-import Control.Monad.Except
+import Prelude hiding (log)
+
+import Control.Monad (unless)
 
 import Data.Map (Map)
 import qualified Data.Map.Strict as M
@@ -25,166 +26,293 @@ import qualified Data.Set as S
 import Data.MultiSet (MultiSet)
 import qualified Data.MultiSet as MultiSet
 
+import Data.Maybe (mapMaybe)
+
 import Data.Char (isUpper)
 import Text.Read (readMaybe)
+
+import System.Exit
 
 import Data.Boltzmann.System
 import Data.Boltzmann.System.Jacobian
 
+import Data.Boltzmann.Internal.Utils
+import qualified Data.Boltzmann.Internal.Logging as L
+
+-- | Finds the closest (in terms of editing distance)
+--   type in the given system.
+closestType :: System a -> String -> String
+closestType sys = closest types'
+    where types' = S.toList $ types sys
+
 -- | Semantic system errors referring to invalid
 --   input data, for instance ill-founded systems.
-data SystemError = Inconsistent String                -- Type name
-                                String                -- Constructor name
-                                String                -- Argument name
+class SystemErr a where
 
-                 | InvalidCons  String                -- Type name
-                                String                -- Constructor name
+    -- | System error message.
+    report :: a -> String
 
-                 | ClashCons    [String]              -- Clashing constructors
-                 | Illfounded                         -- Ill-founded system
-                 | Infinite                           -- Infinite structures
+    -- | System error hint message.
+    hint :: a -> String
 
-                 | Frequencies  [String]              -- Incorrect frequencies
+-- | Existential error type.
+data ErrorExt = forall a. (SystemErr a) => ErrorExt a
 
-                 | InvalidPrecision                   -- Invalid precision
-                 | InvalidMaxIter                     -- Invalid maxiter
-                 | InvalidModule                      -- Invalid module
+-- | Constructor arguments reference non-existing types.
+data ArgRefError a =
+        ArgRefError { argRefType :: String   -- ^ Type name.
+                    , argRefCons :: String   -- ^ Constructor name.
+                    , argRefArg  :: String   -- ^ Argument name.
+                    , argRefSys  :: System a -- ^ Corresponding system.
+                    }
 
-                 | UnsupportedSystemType String       -- Invalid system type
+argRefErrors :: System a -> [ErrorExt]
+argRefErrors sys = concatMap argRefErrorType (M.toList $ defs sys)
+    where
+        types' = types sys
+        argRefErrorType (typ, consL) =
+            concatMap (argRefErrorCons typ) consL
 
-instance Show SystemError where
-    show (Inconsistent t con arg) = "Invalid argument type '"
-        ++ arg ++ "' in constructor " ++ con ++ " of type " ++ t ++ "."
+        argRefErrorCons typ cons =
+            mapMaybe (argRefErrorArg typ cons) (args cons)
 
-    show (InvalidCons t con) = "Invalid constructor '" ++ con
-        ++ "' in type " ++ t ++ ": '" ++ con ++ "' names a declared type."
+        argRefErrorArg typ cons arg
+            | argName arg `S.member` types' = Nothing
+            | otherwise = Just $ ErrorExt ArgRefError { argRefType = typ
+                                                      , argRefArg  = argName arg
+                                                      , argRefCons = func cons
+                                                      , argRefSys  = sys
+                                                      }
+instance SystemErr (ArgRefError a) where
+    report err = "Invalid argument type "
+            ++ arg' ++ " in constructor "
+            ++ cons' ++ " of type "
+            ++ typ' ++ "."
+        where arg'  = quote $ argRefArg err
+              cons' = quote $ argRefCons err
+              typ'  = argRefType err
 
-    show (ClashCons cons) = "Clashing constructor names: "
-        ++ foldl1 (\c c' -> "'" ++ c ++ "', " ++ "'" ++ c' ++ "'") cons
-        ++ "."
+    hint err = "Perhaps you meant " ++ type' ++ " instead?"
+        where (system', arg') = (argRefSys err, argRefArg err)
+              type'           = quote $ closestType system' arg'
 
-    show Illfounded = "Ill-founded system."
+-- | Constructor name clashes with an existing type.
+data ConsRefError =
+        ConsRefError { consRefType :: String -- ^ Type name.
+                     , consRefCons :: String -- ^ Constructor name.
+                     }
 
-    show Infinite = "System defines no finite structures."
+consRefErrors :: System a -> [ErrorExt]
+consRefErrors sys =
+        concatMap consRefErrorsType (M.toList $ defs sys)
+    where
+        types' = types sys
+        consRefErrorsType (typ, consL) =
+            mapMaybe (consRefErrorsCons typ) consL
 
-    show (Frequencies ts) = "Incorrect frequencies (expected real in [0.0,1.0]): "
-        ++ foldl1 (\c c' -> "'" ++ c ++ "', " ++ "'" ++ c' ++ "'") ts
-        ++ "."
+        consRefErrorsCons typ cons
+            | null (args cons) && func cons `S.member` types' =
+                    Just $ ErrorExt ConsRefError { consRefType = typ
+                                                 , consRefCons = func cons
+                                                 }
+            | otherwise = Nothing
 
-    show InvalidPrecision = "Invalid precision annotation. "
-            ++ "Expected a positive floating point number."
+instance SystemErr ConsRefError where
+    report err = "Invalid constructor "
+            ++ cons' ++ " of type "
+            ++ typ' ++ ". " ++ cons'
+            ++ " names a declared type."
+        where cons' = quote $ consRefCons err
+              typ'  = consRefType err
 
-    show InvalidMaxIter = "Invalid maxiter annotation. "
-            ++ "Expected a positive integer."
+    hint _ = "Use a different constructor name instead."
 
-    show InvalidModule = "Invalid module annotation. "
-            ++ "Expected a name starting with an upper case letter."
-
-    show (UnsupportedSystemType s) = "Unsupported system type. " ++ s
-
--- | Monadic error handling wrapper.
-type ErrorMonad = Either SystemError
-
--- | Checks whether the given input system is correct, yielding its type.
---   Otherwise, returns an appropriate SystemError.
-errors :: Bool -> System Int -> ErrorMonad SystemType
-errors useForce sys = do
-    void $ consistent sys
-    void $ validCons sys
-    void $ clashCons sys
-    void $ infinite sys
-    void $ incorrectFrequencies sys
-    void $ invalidAnnotations sys
-    unless useForce $ illfounded sys
-    invalidSystemType sys
-
-invalidSystemType :: System a -> ErrorMonad SystemType
-invalidSystemType sys =
-    case systemType sys of
-      (Unsupported s) -> throwError (UnsupportedSystemType s) `catchError` Left
-      sysT            -> return sysT
-
-infinite :: System a -> ErrorMonad ()
-infinite sys = unless (hasAtoms sys || not (null $ seqTypes sys)) $ throwError Infinite `catchError` Left
-
-consistent :: System a -> ErrorMonad ()
-consistent sys = mapM_ consistentType (M.toList $ defs sys) `catchError` Left
-    where ts = types sys
-          consistentType (t,cons) = mapM_ (consistentCons t) cons
-          consistentCons t con    = mapM_ (consistentArg t con) $ args con
-
-          consistentArg :: String -> Cons a -> Arg -> ErrorMonad ()
-          consistentArg t con (List s)
-            | s `S.member` ts = return ()
-            | otherwise = throwError $ Inconsistent t (func con) s
-          consistentArg t con (Type s)
-            | s `S.member` ts = return ()
-            | otherwise = throwError $ Inconsistent t (func con) s
-
-validCons :: System a -> ErrorMonad ()
-validCons sys = mapM_ validType (M.toList $ defs sys) `catchError` Left
-    where ts = types sys
-          validType (t,cons) = mapM_ (validCon t) cons
-
-          validCon :: String -> Cons a -> ErrorMonad ()
-          validCon t con
-            | null (args con) && func con `S.member` ts =
-                throwError $ InvalidCons t (func con)
-            | otherwise = return ()
-
-consNames :: System a -> MultiSet String
-consNames sys = MultiSet.unions (map insT $ M.elems (defs sys))
-    where insT = MultiSet.fromList . map func
+-- | Clashing constructor names.
+newtype ClashConsError =
+        ClashConsError { clashConTypes :: [String] -- ^ Type names.
+                       }
 
 duplicates :: System a -> [String]
 duplicates sys = map fst $ filter gather $ MultiSet.toOccurList ms
     where gather (_,n) = n /= 1
           ms           = consNames sys
 
-clashCons :: System a -> ErrorMonad ()
-clashCons sys = let cs = duplicates sys in
-                    unless (null cs) $ throwError (ClashCons cs) `catchError` Left
+consNames :: System a -> MultiSet String
+consNames sys = MultiSet.unions (map insT $ M.elems (defs sys))
+    where insT = MultiSet.fromList . map func
 
-illfounded :: System Int -> ErrorMonad ()
-illfounded sys = unless (wellFounded sys) $ throwError Illfounded `catchError` Left
+clashConsErrors :: System a -> [ErrorExt]
+clashConsErrors sys =
+    let dups' = duplicates sys
+    in if null dups' then []
+                     else [ErrorExt
+                            ClashConsError { clashConTypes = dups' }]
 
-incorrectFrequencies :: System Int -> ErrorMonad ()
-incorrectFrequencies sys = unless (null fs) $ throwError (Frequencies fs) `catchError` Left
-    where fs = incorrectFrequencies' sys
+instance SystemErr ClashConsError where
+    report err = "Clasing constructor names: "
+            ++ csv (map quote $ clashConTypes err) ++ "."
 
-incorrectFrequencies' :: System Int -> [String]
-incorrectFrequencies' sys = concatMap incF $ M.elems (defs sys)
+    hint _ = "Declared constructor names have to be unique."
+
+-- | System defines no finite structures.
+data InfLangError = InfLangError
+
+infLangErrors :: System a -> [ErrorExt]
+infLangErrors sys =
+        [ErrorExt InfLangError | not (hasAtoms sys) && null (seqTypes sys)]
+
+instance SystemErr InfLangError where
+    report _ = "Given system defines no finite structures."
+    hint _ = "Declare nullary type constructors or use list constructions."
+
+-- | System is not well-founded.
+data WellFoundedError = WellFoundedError
+
+wellFoundedErrors :: System Int -> [ErrorExt]
+wellFoundedErrors sys = [ErrorExt WellFoundedError | not $ wellFounded sys]
+
+instance SystemErr WellFoundedError where
+    report _ = "Given system is not well-founded."
+    hint _ = "Examine the system specification."
+
+-- | Invalid frequencies.
+newtype FreqError =
+        FreqError { freqTypes :: [String] -- ^ Type names.
+                  }
+
+incorrectFrequencies :: System a -> [String]
+incorrectFrequencies sys = concatMap incF $ M.elems (defs sys)
     where incF cons  = map func $ filter incF' cons
           incF' cons = case frequency cons of
                          Nothing -> False
                          Just f  -> 0.0 > f || 1.0 < f
 
--- | General, compiler-independent admissible annotations.
-invalidAnnotations :: System Int -> ErrorMonad ()
-invalidAnnotations sys = do
-    let ann = annotations sys
-    void $ precisionAnnotation ann
-    void $ maxiterAnnotation ann
-    moduleAnnotation ann
+freqErrors :: System a -> [ErrorExt]
+freqErrors sys = [ErrorExt FreqError { freqTypes = freqs } | not (null freqs)]
+    where freqs = incorrectFrequencies sys
 
-precisionAnnotation :: Map String String -> ErrorMonad ()
+instance SystemErr FreqError where
+    report err = "Incorrect frequencies corresponding to constructors: "
+            ++ csv (map quote $ freqTypes err) ++ "."
+
+    hint _ = "Declared frequencies have to be reals in the interval (0.0, 1.0)."
+
+-- | Unsupported system type.
+newtype SysTypeError =
+        SysTypeError { sysTypeMsg :: String -- ^ System type message.
+                   }
+
+-- | Checks if the specification type is supported.
+supportedSystemType :: System a -> Either SysTypeError SystemType
+supportedSystemType sys =
+    case systemType sys of
+      (Unsupported s) -> Left SysTypeError { sysTypeMsg = s }
+      sysT            -> Right sysT
+
+instance SystemErr SysTypeError where
+    report = sysTypeMsg
+    hint _ = "Supported systems include algebraic and"
+            ++ " strongly-connected, interruptible rational specifications."
+
+-- | General error including various annotation errors.
+data GenErr = GenErr { errorMsg :: String -- ^ General error message.
+                     , hintMsg  :: String -- ^ General hint message.
+                     }
+
+instance SystemErr GenErr where
+    report = errorMsg
+    hint = hintMsg
+
+-- | Reports the given error with its hint and terminates.
+reportError :: ErrorExt -> IO ()
+reportError (ErrorExt err) = do
+    L.fail (report err)
+    L.hint (hint err)
+
+checkSysType :: SystemErr a => Either a b -> IO b
+checkSysType (Right x)  = return x
+checkSysType (Left err) = do
+    L.fail (report err)
+    L.hint' (hint err)
+
+checkErrors :: [ErrorExt] -> IO ()
+checkErrors errs = do
+    mapM_ reportError errs
+    unless (null errs)
+        (exitWith $ ExitFailure 1)
+
+-- | Some trivial errors.
+trivialErrors :: System a -> [ErrorExt]
+trivialErrors sys
+    = concat [argRefErrors sys
+              ,consRefErrors sys
+              ,clashConsErrors sys
+              ,freqErrors sys
+              ]
+
+-- | Some less trivial errors.
+otherErrors :: System Int -> [ErrorExt]
+otherErrors sys
+    = infLangErrors sys ++ wellFoundedErrors sys
+
+-- | Checks whether the given input system is correct, yielding its type.
+--   Otherwise, terminate with an appropriate system error message.
+errors :: Bool -> System Int -> IO SystemType
+errors force sys =
+    if force then checkSysType $ supportedSystemType sys -- the force is strong with this one.
+             else do
+                checkErrors (annotationErrors $ annotations sys)
+                checkErrors (trivialErrors sys)
+                checkErrors (otherErrors sys)
+                errors True sys
+
+annotationErrors :: Map String String -> [ErrorExt]
+annotationErrors ann
+    = mapMaybe ($ ann)
+        [precisionAnnotation
+        ,maxIterAnnotation
+        ,moduleAnnotation
+        ]
+
+precisionError :: Maybe ErrorExt
+precisionError = Just
+    (ErrorExt GenErr { errorMsg = "Incorrect precision annotation."
+                     , hintMsg  = "Use a positive double precision value."
+                     })
+
+precisionAnnotation :: Map String String -> Maybe ErrorExt
 precisionAnnotation ann =
     case "precision" `M.lookup` ann of
-      Nothing -> return ()
+      Nothing -> Nothing
       Just x -> case readMaybe x :: Maybe Double of
-                  Nothing -> throwError InvalidPrecision
-                  Just x' -> unless (x' > 0) $ throwError InvalidPrecision `catchError` Left
+                  Nothing -> precisionError
+                  Just x' -> if x' > 0 then Nothing
+                                       else precisionError
 
-maxiterAnnotation :: Map String String -> ErrorMonad ()
-maxiterAnnotation ann =
+maxIterError :: Maybe ErrorExt
+maxIterError = Just
+    (ErrorExt GenErr { errorMsg = "Incorrect maxiter annotation."
+                     , hintMsg  = "Use a positive integer value."
+                     })
+
+maxIterAnnotation :: Map String String -> Maybe ErrorExt
+maxIterAnnotation ann =
     case "maxiter" `M.lookup` ann of
-      Nothing -> return ()
+      Nothing -> Nothing
       Just x -> case readMaybe x :: Maybe Int of
-                  Nothing -> throwError InvalidMaxIter
-                  Just x' -> unless (x' > 0) $ throwError InvalidMaxIter `catchError` Left
+                  Nothing -> maxIterError
+                  Just x' -> if x' > 0 then Nothing
+                                       else maxIterError
 
-moduleAnnotation :: Map String String -> ErrorMonad ()
+moduleError :: Maybe ErrorExt
+moduleError = Just
+    (ErrorExt GenErr { errorMsg = "Incorrect module annotation."
+                     , hintMsg  = "Module names have to start with an uppercase letter."
+                     })
+
+moduleAnnotation :: Map String String -> Maybe ErrorExt
 moduleAnnotation ann =
     case "module" `M.lookup` ann of
-      Nothing -> return ()
-      Just x -> unless (isUpper $ head x) $ throwError InvalidModule `catchError` Left
+      Nothing -> Nothing
+      Just x -> if isUpper (head x) then Nothing
+                                    else moduleError

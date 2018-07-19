@@ -136,11 +136,11 @@ tuningF (_:fs)             = tuningF fs
 tuningF []                 = Nothing
 
 -- | Logs an error and exists with the usage info.
-fail' :: String -> IO a
-fail' m = do
+failWithUsage :: String -> IO a
+failWithUsage m = do
     let msg' = ensureLn m
     usage' <- usageHeader
-    fail (msg' ++ usageInfo usage' options)
+    fail' (msg' ++ usageInfo usage' options)
 
 -- | Prints the usage info and exists.
 usage :: IO a
@@ -157,10 +157,10 @@ parse argv =
         (opts, cmds, [])
             | null cmds        -> usage
             | Help `elem` opts -> usage
-            | length cmds /= 1 -> fail' "Expected a single command."
+            | length cmds /= 1 -> failWithUsage "Expected a single command."
             | otherwise        -> return (head cmds, opts)
 
-        (_, _, errs) -> fail' $ concat errs
+        (_, _, errs) -> failWithUsage $ concat errs
 
 -- | Sets up stdout and stdin IO handles.
 handleIO :: [Flag] -> IO ()
@@ -189,13 +189,13 @@ main = do
         "spec"     -> runSpec opts
         _          -> do
            err <- unrecognisedCmd cmd
-           fail' err
+           failWithUsage err
 
 unrecognisedCmd :: String -> IO String
 unrecognisedCmd cmd = do
     let cmd' = quote cmd
-    hint <- bold $ closest (map fst commands) cmd
-    return $ "Unrecognised command " ++ cmd' ++ ". Did you meant " ++ hint ++ "?"
+    cmdHint <- bold $ closest (map fst commands) cmd
+    return $ "Unrecognised command " ++ cmd' ++ ". Did you meant " ++ cmdHint ++ "?"
 
 -- | Reports system warnings.
 sysWarnings :: System Int -> [Flag] -> IO ()
@@ -205,14 +205,6 @@ sysWarnings sys opts =
             let f = if Werror `elem` opts then warn' else warn
             f (show warnMsg)
         _         -> return ()
-
--- | Performs semantic validity checks
---   returning the detected system type.
-sysErrors :: System Int -> [Flag] -> IO SystemType
-sysErrors sys opts =
-    case errors (Force `elem` opts) sys of
-        Left err   -> fail $ show err
-        Right typ  -> return typ
 
 -- | Prints parsing errors or returns the parsed system.
 getSystem :: (ShowToken t, Ord t, ShowErrorComponent e)
@@ -229,8 +221,10 @@ parseSystem opts = do
     dat  <- parseSpec text
     sys  <- getSystem dat
 
-    sysWarnings sys opts          -- check for warnings
-    sysType <- sysErrors sys opts -- check for errors
+    sysWarnings sys opts        -- check for warnings
+
+    let force = Force `elem` opts
+    sysType <- errors force sys -- check for errors
     return (sys, sysType)
 
 tuningConf :: System a -> (Double, Int)
