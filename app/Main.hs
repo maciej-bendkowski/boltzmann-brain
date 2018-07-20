@@ -197,15 +197,6 @@ unrecognisedCmd cmd = do
     cmdHint <- bold $ closest (map fst commands) cmd
     return $ "Unrecognised command " ++ cmd' ++ ". Did you meant " ++ cmdHint ++ "?"
 
--- | Reports system warnings.
-sysWarnings :: System Int -> [Flag] -> IO ()
-sysWarnings sys opts =
-    case warnings sys of
-        Left warnMsg -> do
-            let f = if Werror `elem` opts then warn' else warn
-            f (show warnMsg)
-        _         -> return ()
-
 -- | Prints parsing errors or returns the parsed system.
 getSystem :: (ShowToken t, Ord t, ShowErrorComponent e)
           => Either (ParseError t e) a -> IO a
@@ -221,7 +212,8 @@ parseSystem opts = do
     dat  <- parseSpec text
     sys  <- getSystem dat
 
-    sysWarnings sys opts        -- check for warnings
+    let werror = Werror `elem` opts
+    warnings werror sys         -- check for warnings
 
     let force = Force `elem` opts
     sysType <- errors force sys -- check for errors

@@ -10,39 +10,71 @@
  Warning utilities meant to deal with, skippable, well-foundness checks
  or other redundant sanity checks of the considered combinatorial system.
  -}
+{-# LANGUAGE ExistentialQuantification #-}
 module Data.Boltzmann.System.Warnings
-    ( SystemWarning
-    , WarningMonad
-    , warnings
+    ( warnings
     ) where
 
-import Control.Monad.Except
+import Control.Monad (unless)
+import Data.Maybe (mapMaybe)
+
+import System.Exit
 
 import qualified Data.Map.Strict as M
 
 import Data.Boltzmann.System
 
+import Data.Boltzmann.Internal.Utils
+import qualified Data.Boltzmann.Internal.Logging as L
+
 -- | Semantic system warnings.
-data SystemWarning = NullCons String                -- Type name
-                              String                -- Constructor name
+class SystemWarn a where
 
-instance Show SystemWarning where
-    show (NullCons t con) = "Invalid constructor '" ++ con
-        ++ "' in type " ++ t ++ ": encountered a structure of size 0."
+    -- | System warning message.
+    report :: a -> String
 
--- | Monadic warning handling wrapper.
-type WarningMonad = Either SystemWarning
+-- | Existential warning type.
+data WarningExt = forall a. (SystemWarn a) => WarningExt a
+
+-- | Constructors without positive weight.
+data ConsWeightWarn =
+    ConsWeightWarn { consWeightType :: String -- ^ Type name.
+                   , consWeightCons :: String -- ^ Constructor name.
+                   }
+
+consWeightWarn :: (Eq a, Num a) => System a -> [WarningExt]
+consWeightWarn sys =
+        concatMap nullType (M.toList $ defs sys)
+    where
+        nullCons typ cons
+            | null (args cons) && weight cons == 0 =
+                Just $ WarningExt ConsWeightWarn { consWeightType = typ
+                                                 , consWeightCons = func cons
+                                                 }
+            | otherwise = Nothing
+        nullType (typ, cons) = mapMaybe (nullCons typ) cons
+
+instance SystemWarn ConsWeightWarn where
+    report warn = "Found a constructor " ++ cons'
+            ++ " in type " ++ typ' ++ " of weight 0."
+        where
+            cons' = quote $ consWeightCons warn
+            typ'  = quote $ consWeightType warn
+
+-- | Reports the given warning.
+reportWarning :: WarningExt -> IO ()
+reportWarning (WarningExt warn) = L.warn (report warn)
+
+checkWarns :: Bool -> [WarningExt] -> IO ()
+checkWarns werror warns = do
+    mapM_ reportWarning warns
+    unless (null warns || not werror)
+        (exitWith $ ExitFailure 1)
+
+-- | List of checked warnings.
+warningList :: System Int -> [WarningExt]
+warningList = consWeightWarn
 
 -- | Checks whether the given input system admits no warnings.
-warnings :: System Int -> WarningMonad ()
-warnings = nullCons
-
-nullCons :: (Num a, Eq a) => System a -> WarningMonad ()
-nullCons sys = mapM_ nullType (M.toList $ defs sys) `catchError` Left
-    where nullType (t,cons) = mapM_ (nullCon t) cons
-
-          nullCon :: (Num a, Eq a) => String -> Cons a -> WarningMonad ()
-          nullCon t con
-            | null (args con) && weight con == 0 =
-                throwError $ NullCons t (func con)
-            | otherwise = return ()
+warnings :: Bool -> System Int -> IO ()
+warnings werror sys =  checkWarns werror (warningList sys)
