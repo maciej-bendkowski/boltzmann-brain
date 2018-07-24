@@ -214,6 +214,7 @@ getSystem (Right sys) = return sys
 --   and warnings checks. Returns the parsed system and its type.
 parseSystem :: [Flag] -> IO (System Int, SystemType)
 parseSystem opts = do
+    info "Parsing system..."
     text <- getContents
     dat  <- parseSpec text
     sys  <- getSystem dat
@@ -264,10 +265,12 @@ runCompiler opts = do
     let moduleName = compilerConf sys
 
     tunedSystem    <- tuneSystem sys opts T.Cummulative
+    info "Running sampler compiler..."
+
     case sysType of
         Rational  -> R.compile (config tunedSystem moduleName compilerTimestamp :: R.Conf)
         Algebraic -> A.compile (config tunedSystem moduleName compilerTimestamp :: A.Conf)
-        _         -> fail "Unsupported system type."
+        _         -> fail' "Unsupported system type."
 
 samplerConf :: System a -> (Int, Int, String)
 samplerConf sys = (lb, ub, gen)
@@ -295,6 +298,7 @@ getSample sys opts = do
 runSampler :: [Flag] -> IO ()
 runSampler opts = do
     (sys, _) <- parseSystem opts
+    info "Sampling random structure..."
     sample   <- getSample sys opts
     B.putStrLn $ encode sample
 
@@ -318,6 +322,8 @@ runRenderer opts = do
     cs       <- rendererConf sys opts
 
     sample  <- getSample sys opts
+
+    info "Writing dotfile output..."
     dotfile <- toDotFile cs sample
     T.putStrLn dotfile
 
@@ -325,9 +331,13 @@ runTuner :: [Flag] -> IO ()
 runTuner opts = do
     (sys, _)    <- parseSystem opts
     tunedSystem <- tuneSystem sys opts T.Regular
+
+    info "Writing system output..."
     B.putStr $ encode (toSystemT $ system tunedSystem)
 
 runSpec :: [Flag] -> IO ()
 runSpec opts = do
     (sys, _) <- parseSystem opts
+
+    info "Writing system output..."
     T.writeSpecification sys stdout -- write specification to output

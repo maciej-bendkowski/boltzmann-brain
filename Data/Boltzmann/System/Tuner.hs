@@ -24,7 +24,6 @@ import Control.Monad
 import Control.Exception
 
 import System.IO
-import System.Exit
 import System.Process hiding (system)
 
 import Text.Megaparsec
@@ -134,15 +133,8 @@ writeSpecification sys hout = do
     -- sequence specifications
     mapM_ (seqSpecification hout find' spec) seqs
 
-    info "... done."
-
 getArgs :: System Int -> Maybe PArg -> PArg
 getArgs sys = fromMaybe (defaultArgs sys)
-
-handleIOEx :: String -> IO a
-handleIOEx ex =  do
-    hPutStrLn stderr $ "[ERROR] " ++ ex
-    exitWith (ExitFailure 1)
 
 -- | Communicates with Paganini and collects the respective
 --   tuning vector for the given system. If communication is not possible,
@@ -163,7 +155,7 @@ runPaganini sys paramT arg = do
                                                               , std_in  = CreatePipe }
 
     case pp of
-        Left _ -> handleIOEx "Could not locate the paganini tuner. Is is available in the PATH?"
+        Left _ -> fail' "Could not locate the paganini tuner. Is is available in the PATH?"
         Right (Just hin, Just hout, _, _) -> do
 
             -- write to paganini's stdout
@@ -180,10 +172,9 @@ runPaganini sys paramT arg = do
                   info "Parsing paganini output..."
                   let ts'  = fromList ts
                   let sys' = parametrise sys paramT rho ts' us
-                  info "... done."
                   return $ Right sys'
 
-        _ -> handleIOEx "Could not establish inter-process communication with paganini."
+        _ -> fail' "Could not establish inter-process communication with paganini."
 
 -- | Parses the given input string as a Paganini tuning vector.
 readPaganini :: System Int -> Parametrisation -> String
