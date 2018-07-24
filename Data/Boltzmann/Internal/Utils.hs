@@ -23,6 +23,7 @@ module Data.Boltzmann.Internal.Utils
     ) where
 
 import System.Console.Pretty
+import Text.EditDistance
 
 -- | Produces a comma separated value (csv) representation
 --   of the given list of string. Note that after each comma
@@ -84,14 +85,4 @@ closest' ((x,k):xs) (m, k')
 
 -- | Levenshtein distance of two strings.
 editDist :: String -> String -> Int
-editDist xs ys = editDist' (reverse xs) (reverse ys)
-
-editDist' :: String -> String -> Int
-editDist' "" b = length b
-editDist' a "" = length a
-editDist' a @ (x:xs) b @ (y:ys)
-    | x == y = editDist xs ys
-    | otherwise = minimum [1 + editDist' a ys
-                          ,1 + editDist' xs b
-                          ,1 + editDist' xs ys
-                          ]
+editDist = levenshteinDistance defaultEditCosts

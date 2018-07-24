@@ -52,6 +52,7 @@ library
                      , random >= 1.1
                      , time >= 1.6.0.1
                      , pretty-terminal >= 0.1.0.0
+                     , edit-distance >= 0.2.2.1
   ghc-options:         -O2 -Wall
   default-language:    Haskell2010
 
