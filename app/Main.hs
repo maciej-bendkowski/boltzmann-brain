@@ -19,7 +19,9 @@ import System.Console.GetOpt
 import System.Environment
 
 import GHC.IO.Handle
-import Control.Monad (when)
+import System.Directory (doesFileExist)
+
+import Control.Monad (when, unless)
 
 import Data.Aeson
 import qualified Data.ByteString.Lazy.Char8 as B
@@ -167,6 +169,10 @@ handleIO :: [Flag] -> IO ()
 handleIO opts = do
     case inputF opts of
         Just file -> do
+            inputExists <- doesFileExist file
+            unless inputExists
+                (fail' $ "Input file " ++  quote file ++ " does not exist.")
+
             h <- openFile file ReadMode
             hDuplicateTo h stdin   -- h becomes the new stdin
         Nothing   -> return ()
