@@ -34,7 +34,7 @@ import Text.Read (readMaybe)
 import System.Exit
 
 import Data.Boltzmann.System
-import Data.Boltzmann.System.Jacobian
+import Data.Boltzmann.System.Utils
 
 import Data.Boltzmann.Internal.Utils
 import qualified Data.Boltzmann.Internal.Logging as L
@@ -165,15 +165,17 @@ instance SystemErr InfLangError where
     report _ = "Given system defines no finite structures."
     hint _ = "Declare nullary type constructors or use list constructions."
 
--- | System is not well-founded.
+-- | System is not well-founded at zero.
 data WellFoundedError = WellFoundedError
 
 wellFoundedErrors :: System Int -> [ErrorExt]
-wellFoundedErrors sys = [ErrorExt WellFoundedError | not $ wellFounded sys]
+wellFoundedErrors sys =
+    [ErrorExt WellFoundedError |
+        not (isEmptyAtZero sys) || not (wellFoundedAtZero sys)]
 
 instance SystemErr WellFoundedError where
-    report _ = "Given system is not well-founded."
-    hint _ = "Examine the system specification."
+    report _ = "Given system is not well-founded at zero."
+    hint _ = "Examine the system specification or use the --force flag."
 
 -- | Invalid frequencies.
 newtype FreqError =

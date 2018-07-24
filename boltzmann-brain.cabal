@@ -20,8 +20,8 @@ cabal-version:       >=1.10
 
 library
   exposed-modules:     Data.Boltzmann.System
+                     , Data.Boltzmann.System.Utils
                      , Data.Boltzmann.System.Parser
-                     , Data.Boltzmann.System.Jacobian
                      , Data.Boltzmann.System.Errors
                      , Data.Boltzmann.System.Warnings
                      , Data.Boltzmann.System.Tuner
