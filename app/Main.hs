@@ -82,7 +82,7 @@ signature :: String
 signature = "Boltzmann Brain " ++ version
 
 versionHeader :: String
-versionHeader = signature ++ " (c) Maciej Bendkowski and Sergey Dovgal 2017-2018"
+versionHeader = signature ++ " (c) Maciej Bendkowski and Sergey Dovgal 2017-2018."
 
 -- | Available boltzmann-brain commands.
 commands :: [(String, String)]
