@@ -263,22 +263,81 @@ errors :: Bool -> System Int -> IO SystemType
 errors force sys =
     if force then checkSysType $ supportedSystemType sys -- the force is strong with this one.
              else do
-                checkErrors (annotationErrors $ annotations sys)
+                checkErrors (annotationErrors sys $ annotations sys)
                 checkErrors (trivialErrors sys)
                 checkErrors (otherErrors sys)
                 errors True sys
 
-annotationErrors :: Map String String -> [ErrorExt]
-annotationErrors ann
+annotationErrors :: System a -> Map String String -> [ErrorExt]
+annotationErrors sys ann
     = mapMaybe ($ ann)
         [precisionAnnotation
         ,maxIterAnnotation
         ,moduleAnnotation
+        ,lowerBoundAnnotation
+        ,upperBoundAnnotation
+        ,incoherentBoundsAnnotation
+        ,incorrectGenerateAnnotation sys
         ]
+
+incorrectIntError :: String -> Maybe ErrorExt
+incorrectIntError typ = Just
+    (ErrorExt GenErr { errorMsg = "Incorrect " ++ typ ++ " annotation."
+                     , hintMsg  = "Use a positive integer value."
+                     })
+
+lowerBoundAnnotation :: Map String String -> Maybe ErrorExt
+lowerBoundAnnotation ann =
+    case "lowerBound" `M.lookup` ann of
+      Nothing -> Nothing
+      Just x -> case readMaybe x :: Maybe Int of
+                  Nothing -> incorrectIntError "@lowerBound"
+                  Just x' -> if x' > 0 then Nothing
+                                       else incorrectIntError "@lowerBound"
+
+upperBoundAnnotation :: Map String String -> Maybe ErrorExt
+upperBoundAnnotation ann =
+    case "upperBound" `M.lookup` ann of
+      Nothing -> Nothing
+      Just x -> case readMaybe x :: Maybe Int of
+                  Nothing -> incorrectIntError "@upperBound"
+                  Just x' -> if x' > 0 then Nothing
+                                       else incorrectIntError "@upperBound"
+
+incoherentBoundsErrors :: Maybe ErrorExt
+incoherentBoundsErrors = Just
+    (ErrorExt GenErr { errorMsg = "Incorrect @lowerBound and @upperBound annotations."
+                     , hintMsg  = "The lower bound must be less or equal to the upper bound."
+                     })
+
+incoherentBoundsAnnotation :: Map String String -> Maybe ErrorExt
+incoherentBoundsAnnotation ann = do
+    lbs <- "lowerBound" `M.lookup` ann
+    lb  <- readMaybe lbs :: Maybe Int
+
+    ubs <- "upperBound" `M.lookup` ann
+    ub  <- readMaybe ubs :: Maybe Int
+    if ub < lb then incoherentBoundsErrors
+               else Nothing
+
+incorrectGenerateError :: System a -> String -> Maybe ErrorExt
+incorrectGenerateError sys typ = Just
+    (ErrorExt GenErr { errorMsg = "Incorrect @generate annotation."
+                     , hintMsg  = quote typ ++ " does not name a declared type."
+                            ++ " Perhaps you meant " ++ quote typ' ++ " instead?"
+                     })
+    where
+        typ' = closestType sys typ
+
+incorrectGenerateAnnotation :: System a -> Map String String -> Maybe ErrorExt
+incorrectGenerateAnnotation sys ann = do
+    typ <- "generate" `M.lookup` ann
+    if typ `S.member` types sys then Nothing
+                                else incorrectGenerateError sys typ
 
 precisionError :: Maybe ErrorExt
 precisionError = Just
-    (ErrorExt GenErr { errorMsg = "Incorrect precision annotation."
+    (ErrorExt GenErr { errorMsg = "Incorrect @precision annotation."
                      , hintMsg  = "Use a positive double precision value."
                      })
 
@@ -293,7 +352,7 @@ precisionAnnotation ann =
 
 maxIterError :: Maybe ErrorExt
 maxIterError = Just
-    (ErrorExt GenErr { errorMsg = "Incorrect maxiter annotation."
+    (ErrorExt GenErr { errorMsg = "Incorrect @maxiter annotation."
                      , hintMsg  = "Use a positive integer value."
                      })
 
@@ -308,7 +367,7 @@ maxIterAnnotation ann =
 
 moduleError :: Maybe ErrorExt
 moduleError = Just
-    (ErrorExt GenErr { errorMsg = "Incorrect module annotation."
+    (ErrorExt GenErr { errorMsg = "Incorrect @module annotation."
                      , hintMsg  = "Module names have to start with an uppercase letter."
                      })
 
