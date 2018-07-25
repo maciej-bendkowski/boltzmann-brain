@@ -23,6 +23,7 @@ cache:
 addons:
   apt:
     packages:
+      - cmake
       - libgmp-dev
       - libblas-dev
       - liblapack-dev
