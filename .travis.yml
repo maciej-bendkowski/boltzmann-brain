@@ -45,4 +45,4 @@ deploy:
   - "$HOME/.local/bin/paganini"
   skip_cleanup: true
   on:
-    tags: false
+    tags: true
