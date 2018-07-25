@@ -1,55 +1,46 @@
-# This is the simple Travis configuration, which is intended for use
-# on applications which do not require cross-platform and
-# multiple-GHC-version support. For more information and other
-# options, see:
-#
-# https://docs.haskellstack.org/en/stable/travis_ci/
-#
-# Copy these contents into the root directory of your Github project in a file
-# named .travis.yml
-
-# Use new container infrastructure to enable caching
 sudo: false
-
-# Do not choose a language; we provide our own build tools.
 language: generic
-
-# Caching so the next build will be fast too.
 cache:
   directories:
-  - $HOME/.stack
-
-# Ensure necessary system libraries are present
+  - "$HOME/.stack"
 addons:
   apt:
     packages:
-      - cmake
-      - libgmp-dev
-      - libblas-dev
-      - liblapack-dev
-      - python3
-      - python3-pip
+    - cmake
+    - libgmp-dev
+    - libblas-dev
+    - liblapack-dev
+    - python3
+    - python3-pip
 
 before_install:
-# Download and unpack the stack executable
 - mkdir -p ~/.local/bin
 - export PATH=$HOME/.local/bin:$PATH
+
 - travis_retry curl -L https://get.haskellstack.org/stable/linux-x86_64.tar.gz | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
-# Prepare paganini dependencies
+
 - pip3 install --user --upgrade pip
 - pip3 install --user numpy scipy
 - pip3 install --user cvxpy six
 
 install:
-# Build paganini
 - cd $TRAVIS_BUILD_DIR/paganini
 - python3 setup.py install --user
 - cd $TRAVIS_BUILD_DIR
-# Build happy
+
 - stack install happy
-# Build dependencies for boltzmann-brain
 - stack --no-terminal --install-ghc test --only-dependencies
 
 script:
-# Build the package, its tests, and its docs and run the tests
 - stack --no-terminal test --haddock --no-haddock-deps
+
+deploy:
+  provider: releases
+  api_key:
+    secure: jw3HDOEci9NLYT4gdzyRWHMPuAOAhLO6i5UmOpP0UyCVW6TKaIJvscXmavw/bSV30HjWLi/NWeKAl/f0bGgMLY/8t+s4VfhJ0Z6dgdXzOmuHRIwej6HOiPTSWvrZZ1my7bRfFaVTXkEiSGGeSjS/iiSON4hTIPyjfL3xKFViBKnBsItpHwxu3ppIbsHsebgu+1l5nV62UbmQ+qtUyfk8yIUrGu3YM+qVHgxz1p4idLBNzSxpvh8nWq+oX3aOTj7eAD2iXMdR+lqOQTC45Le8D12q50v3rDDdTh4JHPRKbJo0GDn0lPDfO+XCzJeqiktFQ27C5BftR5to9PxkE7OYvcdtZBM8hwp4aCAAWRRwa/t8wsXIsXjmRRHa5qkgmxIwmzcdFNy8z8qxJ6etQIluQBLi9vPWIICf2ZQUzgCnAHYu2NiyewJJvTcB00tdsTGYESa1wYq5ZCgaVbyyI+TprjOS54WeuWXBgBMR4Bd/Y9MSZeOl7c60qtLC7bcWk1gchcoGgjTvyzshN4oyfozUULE75DI3q+HXp7uM9m1YIUAmEQ6Ye+jaSCD2qgjMsYqYS1ww9y0fdc2W8S26nHIjXKYWFFysh2PaetbHZ9a3Qv0+FA+z0KYR5Jp4kf/MjJcZKY86sMqq3cWDjlxjrgbpXgZsvaV4HfKjJdTJpqr/DiI=
+  file_glob: true
+  file:
+  - .stack-work/dist/*
+  skip_cleanup: true
+  on:
+    tags: false
