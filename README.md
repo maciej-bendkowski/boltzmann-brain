@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/maciej-bendkowski/boltzmann-brain.svg?branch=master)](https://travis-ci.org/maciej-bendkowski/boltzmann-brain)
+
 Boltzmann Brain
 ---------------
 
