@@ -42,7 +42,6 @@ deploy:
   file_glob: true
   file:
   - "$HOME/.local/bin/bb"
-  - "$HOME/.local/bin/paganini"
   skip_cleanup: true
   on:
     tags: true
