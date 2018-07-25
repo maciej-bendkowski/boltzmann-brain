@@ -26,16 +26,27 @@ addons:
       - libgmp-dev
       - libblas-dev
       - liblapack-dev
+      - python3
+      - python3-pip
 
 before_install:
 # Download and unpack the stack executable
 - mkdir -p ~/.local/bin
 - export PATH=$HOME/.local/bin:$PATH
 - travis_retry curl -L https://get.haskellstack.org/stable/linux-x86_64.tar.gz | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
+# Prepare paganini dependencies
+- pip3 install --upgrade pip
+- pip3 install --user numpy scipy
+- pip3 install --user cvxpy six
 
 install:
-# Build dependencies
+# Build paganini
+- cd $TRAVIS_BUILD_DIR/paganini
+- python3 setup.py install --user
+- cd $TRAVIS_BUILD_DIR
+# Build happy
 - stack install happy
+# Build dependencies for boltzmann-brain
 - stack --no-terminal --install-ghc test --only-dependencies
 
 script:
