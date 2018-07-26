@@ -1,8 +1,17 @@
 sudo: false
 language: generic
+
+os:
+- linux
+- osx
+
 cache:
   directories:
+  - "$HOME/.ghc"
+  - "$HOME/.cabal"
   - "$HOME/.stack"
+  - "$TRAVIS_BUILD_DIR/.stack-work"
+
 addons:
   apt:
     packages:
