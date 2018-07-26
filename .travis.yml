@@ -27,11 +27,13 @@ before_install:
 - export PATH=$HOME/.local/bin:$PATH
 
 - |
-  if [ `uname` = "Linux" ]
+  if [ $TRAVIS_OS_NAME = linux ]
     then
       travis_retry curl -L https://get.haskellstack.org/stable/linux-x86_64.tar.gz | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
     else
       travis_retry curl --insecure -L https://get.haskellstack.org/stable/osx-x86_64.tar.gz | tar xz --strip-components=1 --include '*/stack' -C ~/.local/bin
+      brew install python3
+      brew postinstall python3
   fi
 
 - pip3 install --user --upgrade pip
