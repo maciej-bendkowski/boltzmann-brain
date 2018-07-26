@@ -41,27 +41,13 @@ before_install:
       brew postinstall python
   fi
 
-- |
-  if [ $TRAVIS_OS_NAME = osx ]
-    then
-      pip install --user --upgrade pip
-      pip install --user numpy scipy
-      pip install --user cvxpy six
-    else
-      pip3 install --user --upgrade pip
-      pip3 install --user numpy scipy
-      pip3 install --user cvxpy six
-  fi
+- pip3 install --user --upgrade pip
+- pip3 install --user numpy scipy
+- pip3 install --user cvxpy six
 
 install:
 - cd $TRAVIS_BUILD_DIR/paganini
-- |
-  if [ $TRAVIS_OS_NAME = osx ]
-    then
-      python setup.py install --user
-    else
-      python3 setup.py install --user
-  fi
+- python3 setup.py install --user
 - cd $TRAVIS_BUILD_DIR
 
 - stack install happy
