@@ -12,6 +12,13 @@ Remarkably, using *Boltzmann Brain* it is possible to **control the outcome dist
 
 **If you can specify it, you can sample it!**
 
+1. [Overview](#overview)
+2. [Sampler tuning](#sampler-tuning)
+3. [Basic usage](#basic-usage)
+4. [Advanced usage](#advanced-usage)
+5. [Installation](#installation)
+6. [References](#references)
+
 ### Citing Boltzmann Brain
 If you use *Boltzmann Brain* or its components for published work,  we encourage you to cite the accompanying paper:
 
