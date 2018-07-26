@@ -75,7 +75,7 @@ deploy:
       - "$HOME/.local/bin/bb-x86_64-linux"
     skip_cleanup: true
     on:
-      tags: false
+      tags: true
       condition: $TRAVIS_OS_NAME = linux
   - provider: releases
     api_key:
@@ -85,5 +85,5 @@ deploy:
       - "$HOME/.local/bin/bb-x86_64-osx"
     skip_cleanup: true
     on:
-      tags: false
+      tags: true
       condition: $TRAVIS_OS_NAME = osx
