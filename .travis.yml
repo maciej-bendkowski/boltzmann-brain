@@ -47,7 +47,13 @@ before_install:
 
 install:
 - cd $TRAVIS_BUILD_DIR/paganini
-- python3 setup.py install --user
+- |
+  if [ $TRAVIS_OS_NAME = osx ]
+    then
+      python setup.py install --user
+    else
+      python3 setup.py install --user
+  fi
 - cd $TRAVIS_BUILD_DIR
 
 - stack install happy
