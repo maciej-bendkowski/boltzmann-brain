@@ -47,7 +47,7 @@ before_install:
 
 install:
 - cd $TRAVIS_BUILD_DIR/paganini
-- python3 setup.py install --user
+- python3 setup.py install --user --prefix=
 - cd $TRAVIS_BUILD_DIR
 
 - stack install happy
