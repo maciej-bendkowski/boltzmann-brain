@@ -6,6 +6,7 @@ os:
 - osx
 
 cache:
+  # For faster build times.
   directories:
   - "$HOME/.ghc"
   - "$HOME/.cabal"
@@ -16,16 +17,17 @@ addons:
   apt:
     packages:
     - cmake
-    - libgmp-dev
-    - libblas-dev
+    - libgmp-dev       # for cabal
+    - libblas-dev      # for hmatrix
     - liblapack-dev
-    - python3
+    - python3          # for paganini
     - python3-pip
 
 before_install:
 - mkdir -p ~/.local/bin
 - export PATH=$HOME/.local/bin:$PATH
 
+# Install stack.
 - |
   if [ $TRAVIS_OS_NAME = linux ]
     then
@@ -34,6 +36,7 @@ before_install:
       travis_retry curl --insecure -L https://get.haskellstack.org/stable/osx-x86_64.tar.gz | tar xz --strip-components=1 --include '*/stack' -C ~/.local/bin
   fi
 
+# Install python3 on OSX.
 - |
   if [ $TRAVIS_OS_NAME = osx ]
     then
@@ -41,23 +44,28 @@ before_install:
       brew postinstall python
   fi
 
+# Install paganini dependencies.
 - pip3 install --user --upgrade pip
 - pip3 install --user numpy scipy
 - pip3 install --user cvxpy six
 
 install:
+# Install paganini.
 - cd $TRAVIS_BUILD_DIR/paganini
 - python3 setup.py install --user --prefix=
 - cd $TRAVIS_BUILD_DIR
 
+# Compile boltzmann-brain and its dependencies.
 - stack install happy
 - stack --no-terminal --install-ghc test --only-dependencies
 - stack install
 
 script:
+# Compile haddock etc.
 - stack --no-terminal test --haddock --no-haddock-deps
 
 before_deploy:
+# Rename boltzmann-brain binaries according to the OS.
 - |
   if [ $TRAVIS_OS_NAME = linux ]
     then
@@ -66,6 +74,7 @@ before_deploy:
       mv $HOME/.local/bin/bb $HOME/.local/bin/bb-x86_64-osx
   fi
 
+# Deploy boltzmann-brain to github releases.
 deploy:
   - provider: releases
     api_key:
