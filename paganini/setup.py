@@ -23,9 +23,9 @@ setup(
             'paganini = paganini.__main__:main'
         ]
     },
-    classifiers=(
+    classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: BSD License",
         "Operating System :: OS Independent",
-    ),
+    ],
 )
