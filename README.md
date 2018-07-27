@@ -153,7 +153,7 @@ might become unbounded).
 ```bb compile -o Sampler.hs -t bb.param -i specification.in ```
 
 ### Installation
-*Boltzmann Brain* consists of two executables, ```bb``` and ```paganini```. The former one is implemented in [Haskell](https://www.haskell.org/) whereas the latter is implemented in [Python](https://www.python.org/). Both applications rely on some (few) external libraries to work, such as ```LAPACK``` or ```BLAS```. The following sections explain several common installation methods.
+*Boltzmann Brain* consists of two executables, ```bb``` and ```paganini```. The former one is implemented in [Haskell](https://www.haskell.org/) whereas the latter is implemented in [Python](https://www.python.org/). Both applications rely on some (few) external libraries to work, such as [LAPACK](http://www.netlib.org/lapack/) or [BLAS](http://www.netlib.org/blas/). The following sections explain several common installation methods.
 
 We start with the recommended method of compiling *Boltzmann Brain* from sources.
 The following section explains the compilation process under Ubuntu 16.04, however, let us note that with little modifications it should also work under other Linux distributions.
@@ -174,13 +174,13 @@ Next, we install required python dependencies
  pip3 install --user cvxpy six
 ```
 
-Note that the above packages play the central role in system tuning. Without them, paganini will not work properly. Next, we pull the current repository
+Note that the above packages play the central role in the system tuning procedure. Without them, paganini cannot not work properly. Next, we clone the current repository
 
 ```
 git clone https://github.com/maciej-bendkowski/boltzmann-brain.git
 ```
 
-and navigate into the ```paganini``` subfolder and install ```paganini```:
+and install ```paganini```:
 ```
 cd boltzmann-brain/paganini
 python3 setup.py install --user --prefix=
@@ -210,6 +210,8 @@ stack install
 ```
 
 #### macOS >= 10.12
+
+In the following section we explain how to compile *Boltzmann Brain* in OSX.
 
 * First, you need `python` to be installed (both versions 2 or 3 are fine).
 If you don't have `python` installed, you can find it at
