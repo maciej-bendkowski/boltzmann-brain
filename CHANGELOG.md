@@ -1,7 +1,17 @@
 # Changelog
 Notable major changes since version *1.2* are listed below.
 
-## [1.3.0] - 08-10-2017
+### [1.4.0] - 27-07-2018
+- The command line interface of ```bb``` has changed quite a bit. *Boltzmann Brain* can
+  now be used as a standalone sampler, compiler, or even generate GraphViz dotfiles. Moreover,
+  decorated specifications are also available in a clear JSON format.
+- *Boltzmann Brain* provides now better error handling and messaging. In particular,
+  each error is accompanied with an additional hint message, helping the users in fixing
+  the problem.
+- *Paganini* can now read from standard input if given the flag ```--stdin```.
+- *Boltzmann Brain* has its own Travis CI pipline.
+
+### [1.3.0] - 08-10-2017
 - *Paganini* is now fully integrated with *Boltzmann brain*. By default, *bb*
   handles the data flow between both *paganini* and itself, providing a seamless
   usage experience. Manual workflow is still available via flags `-p` and `-s`.
