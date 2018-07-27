@@ -76,13 +76,13 @@ options = [Option "i" ["input"] (ReqArg InputFile "FILE")
             "Prints this help message."]
 
 version :: String
-version = "v1.3.1.3"
+version = "v1.4"
 
 signature :: String
 signature = "Boltzmann Brain " ++ version
 
 versionHeader :: String
-versionHeader = signature ++ " (c) Maciej Bendkowski and Sergey Dovgal 2017-2018."
+versionHeader = signature ++ " (c) 2017-2018."
 
 -- | Available boltzmann-brain commands.
 commands :: [(String, String)]
