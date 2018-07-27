@@ -12,6 +12,8 @@ Remarkably, using *Boltzmann Brain* it is possible to **control the outcome dist
 
 **If you can specify it, you can sample it!**
 
+![Random tree](https://github.com/maciej-bendkowski/boltzmann-brain/blob/master/examples/images/tree-large.png)
+
 1. [Overview](#overview)
 2. [Sampler tuning](#sampler-tuning)
 3. [Basic usage](#basic-usage)
