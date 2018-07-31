@@ -21,14 +21,15 @@ import System.Environment
 import GHC.IO.Handle
 import System.Directory (doesFileExist)
 
-import Control.Monad (when, unless)
+import Control.Monad (replicateM, unless)
 
 import Data.Aeson
 import qualified Data.ByteString.Lazy.Char8 as B
 import qualified Data.Text.Lazy.IO as T
 
 import Text.Megaparsec hiding (parse)
-import qualified Data.Set as S
+
+import qualified Data.Map.Strict as M
 
 import Data.Boltzmann.System
 import Data.Boltzmann.System.Parser
@@ -272,35 +273,33 @@ runCompiler opts = do
         Algebraic -> A.compile (config tunedSystem moduleName compilerTimestamp :: A.Conf)
         _         -> fail' "Unsupported system type."
 
-samplerConf :: System a -> (Int, Int, String)
-samplerConf sys = (lb, ub, gen)
-    where ann = annotations sys
-          lb  = withInt ann "lowerBound" 10
-          ub  = withInt ann "upperBound" 200
-          gen = withDefault ann "generate" (initType sys)
+samplerConf :: System Int -> [Flag] -> IO (Int, Int, Int, String)
+samplerConf sys opts =
+    let ann = annotations sys
+        n   = withInt ann "samples" 1
+        lb  = withInt ann "lowerBound" 10
+        ub  = withInt ann "upperBound" 200
+        gen = withDefault ann "generate" (initType sys)
+        in case "samples" `M.lookup` ann of
+               Just _  -> return (lb, ub, n, gen)
+               Nothing -> do
+                   let f = if Werror `elem` opts then warn' else warn
+                   f "No explicit @samples annotation. Sampling a single structure."
+                   return (lb, ub, n, gen)
 
-samplerErrors :: System a -> (Int, Int, String) -> IO ()
-samplerErrors sys (lb, ub, genT) = do
-    when (genT `S.notMember` types sys) (
-        fail $ genT ++ " does not name a type.")
-
-    when (lb > ub) (fail "Lower bounds greater than the upper bound.")
-
-getSample :: System Int -> [Flag] -> IO Structure
-getSample sys opts = do
-    let (lb, ub, genT) = samplerConf sys
-    samplerErrors sys (lb, ub, genT)
-
-    tunedSystem  <- tuneSystem sys opts T.Cummulative
-    sampleStrIO tunedSystem genT lb ub
+getSamples :: System Int -> [Flag] -> IO [Structure]
+getSamples sys opts = do
+    (lb, ub, n, genT) <- samplerConf sys opts
+    tunedSystem       <- tuneSystem sys opts T.Cummulative
+    replicateM n (sampleStrIO tunedSystem genT lb ub) -- get n samples.
 
 -- | Runs the specification sampler.
 runSampler :: [Flag] -> IO ()
 runSampler opts = do
     (sys, _) <- parseSystem opts
     info "Sampling random structure..."
-    sample   <- getSample sys opts
-    B.putStrLn $ encode sample
+    samples <- getSamples sys opts
+    B.putStrLn $ encode samples
 
 rendererConf :: System a -> [Flag]
              ->  IO ColorScheme
@@ -321,10 +320,13 @@ runRenderer opts = do
     (sys, _) <- parseSystem opts
     cs       <- rendererConf sys opts
 
-    sample  <- getSample sys opts
+    -- generate a single structure
+    samples  <- getSamples sys opts
 
     info "Writing dotfile output..."
-    dotfile <- toDotFile cs sample
+
+    -- TODO: Consider rendering multiple structures.
+    dotfile <- toDotFile cs (head samples)
     T.putStrLn dotfile
 
 runTuner :: [Flag] -> IO ()

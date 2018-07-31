@@ -274,6 +274,7 @@ annotationErrors sys ann
         [precisionAnnotation
         ,maxIterAnnotation
         ,moduleAnnotation
+        ,samplesAnnotation
         ,lowerBoundAnnotation
         ,upperBoundAnnotation
         ,incoherentBoundsAnnotation
@@ -285,6 +286,15 @@ incorrectIntError typ = Just
     (ErrorExt GenErr { errorMsg = "Incorrect " ++ typ ++ " annotation."
                      , hintMsg  = "Use a positive integer value."
                      })
+
+samplesAnnotation :: Map String String -> Maybe ErrorExt
+samplesAnnotation ann =
+    case "samples" `M.lookup` ann of
+      Nothing -> Nothing
+      Just x -> case readMaybe x :: Maybe Int of
+                  Nothing -> incorrectIntError "@samples"
+                  Just x' -> if x' > 0 then Nothing
+                                       else incorrectIntError "@samples"
 
 lowerBoundAnnotation :: Map String String -> Maybe ErrorExt
 lowerBoundAnnotation ann =
