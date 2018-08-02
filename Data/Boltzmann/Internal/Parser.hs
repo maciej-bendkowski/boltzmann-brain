@@ -41,7 +41,6 @@ sc = L.space (void spaceChar) lineCmnt blockCmnt
           blockCmnt = L.skipBlockComment "{-" "-}"
 
 -- | Lexeme parser.
--- | Lexeme parser.
 lexeme :: Parser a -> Parser a
 lexeme = L.lexeme sc
 
