@@ -57,8 +57,8 @@ install:
 
 # Compile boltzmann-brain and its dependencies.
 - stack install happy
-- stack --no-terminal --install-ghc test --only-dependencies
-- stack install
+- stack --no-terminal --install-ghc test --only-dependencies --ghc-options=-Werror
+- stack install --ghc-options=-Werror
 
 script:
 # Compile haddock etc.
