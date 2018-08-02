@@ -64,7 +64,15 @@ library
 executable bb
   hs-source-dirs:      app
   main-is:             Main.hs
-  ghc-options:         -O2 -Wall -threaded -rtsopts -with-rtsopts=-N
+  ghc-options:         -O2
+                       -Wall
+                       -Wcompat
+                       -Wincomplete-record-updates
+                       -Wincomplete-uni-patterns
+                       -Wredundant-constraints
+                       -threaded
+                       -rtsopts
+                       -with-rtsopts=-N
   build-depends:       base
                      , hmatrix >= 0.18.0.0
                      , containers >= 0.5.6
