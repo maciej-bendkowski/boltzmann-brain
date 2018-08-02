@@ -107,7 +107,7 @@ square :: Matrix Double -> Matrix Double
 square m = m <> m
 
 -- | Fast matrix exponentiation.
-power :: (Eq a, Num a, Integral a)
+power :: Integral a
       => Matrix Double -> a -> Matrix Double
 
 power m 1 = m

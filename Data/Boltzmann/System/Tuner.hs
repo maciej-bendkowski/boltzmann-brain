@@ -99,7 +99,7 @@ defaultArgs sys =
 writeListLn :: Show a => Handle -> [a] -> IO ()
 writeListLn h xs = hPutStrLn h (showsList xs)
 
-printer :: Show a => (a -> String -> String) -> [a] -> String
+printer :: (a -> String -> String) -> [a] -> String
 printer _ [] = ""
 printer f xs = foldl1 (\a b -> (a . (" " ++) . b))
                         (map f xs) ""

@@ -101,15 +101,15 @@ instance ToJSON ArgT where
                           ]
 
 -- | Converts a given system to an output format.
-toSystemT :: Num a => System a -> SystemT a
+toSystemT :: System a -> SystemT a
 toSystemT sys = SystemT { systemTypes = map toTypeT (M.toList $ defs sys) }
 
-toTypeT :: Num a => (String, [Cons a]) -> TypeT a
+toTypeT :: (String, [Cons a]) -> TypeT a
 toTypeT (t, cons) = TypeT { typeName = t
                           , constrs  = map toConsT cons
                           }
 
-toConsT :: Num a => Cons a -> ConsT a
+toConsT :: Cons a -> ConsT a
 toConsT con = ConsT { constrName   = func con
                     , arguments    = map toArgT (args con)
                     , constrWeight = weight con

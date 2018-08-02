@@ -116,10 +116,10 @@ applyF = foldl App
 dot :: Exp -> Exp -> Exp
 dot x = InfixApp x (symbol ".")
 
-declareADTs :: Real a => Bool -> PSystem a -> [Decl]
+declareADTs :: Bool -> PSystem a -> [Decl]
 declareADTs withShow sys = map (declADT withShow) $ paramTypes sys
 
-declADT :: Real a => Bool -> (String, [Cons a]) -> Decl
+declADT :: Bool -> (String, [Cons a]) -> Decl
 declADT withShow (t,[con]) = DataDecl noLoc flag [] (Ident t) []
                                [QualConDecl noLoc [] [] (declCon con)]
                                [(unname "Show", []) | withShow]
@@ -132,7 +132,7 @@ declADT withShow (t,cons) = DataDecl noLoc DataType [] (Ident t) []
                               (map (QualConDecl noLoc [] [] . declCon) cons)
                               [(unname "Show", []) | withShow]
 
-declCon :: Real a => Cons a -> ConDecl
+declCon :: Cons a -> ConDecl
 declCon expr = ConDecl (Ident $ func expr) ags
     where ags = map declArg (args expr)
 
