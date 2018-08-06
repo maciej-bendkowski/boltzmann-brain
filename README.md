@@ -1,5 +1,4 @@
-[![Build Status](https://travis-ci.org/maciej-bendkowski/boltzmann-brain.svg?branch=master)](https://travis-ci.org/maciej-bendkowski/boltzmann-brain)
-Boltzmann Brain
+Boltzmann Brain [![Build Status](https://travis-ci.org/maciej-bendkowski/boltzmann-brain.svg?branch=master)](https://travis-ci.org/maciej-bendkowski/boltzmann-brain) [![Hackage](https://img.shields.io/badge/hackage-v1.4-blue.svg)](http://hackage.haskell.org/package/boltzmann-brain)
 ---------------
 
 *Boltzmann Brain* is a [Haskell](https://www.haskell.org/) library and standalone application meant for random generation of combinatorial structures. Using an **easy** and **intuitive** context-free text input representing a combinatorial specification of rational or algebraic objects, *Boltzmann Brain* allows its users to:
