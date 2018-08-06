@@ -281,6 +281,14 @@ For more help on installation, please consult also our Travis CI tool chain.
 We use Travis CI in order to build ```bb``` for Linux and OSX, both in the
 x86_64 architecture. Pre-compiled binaries of ```bb``` are available at out  [releases webpage](https://github.com/maciej-bendkowski/boltzmann-brain/releases).
 
+#### Package managers
+
+We offer [Hackage](https://hackage.haskell.org/package/boltzmann-brain-1.4) and [pip](https://pypi.org/project/paganini/) packages for ```bb``` and ```paganini```, respectively. You can install by typing
+```
+pip install paganini
+stack install boltzmann-brain
+```
+
 ### References
 *Boltzmann Brain* heavily relies on published work of numerous excellent authors. Below, you can find a short (and definitely inexhaustive) list of papers on the subject:
 
