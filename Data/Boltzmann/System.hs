@@ -58,9 +58,11 @@ import Data.Graph
 
 import Data.Aeson
 
+import Data.Boltzmann.System.Annotations
+
 -- | System of combinatorial structures.
 data System a = System { defs        :: Map String [Cons a]   -- ^ Type definitions.
-                       , annotations :: Map String String     -- ^ System annotations.
+                       , annotations :: Annotations           -- ^ System annotations.
                        } deriving (Show)
 
 newtype SystemT a = SystemT { systemTypes :: [TypeT a] }

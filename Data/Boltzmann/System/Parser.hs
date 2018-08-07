@@ -24,25 +24,12 @@ import qualified Data.Map.Strict as M
 import Data.Boltzmann.Internal.Parser
 import qualified Data.Boltzmann.System as S
 
--- | Identifier producer.
-identifierP :: Parser Char
-            -> (Parser Char -> Parser String)
-            -> Parser String
-
-identifierP p f = lexeme $ (:) <$> p <*> f (alphaNumChar <|> char '_')
-
-identifier :: Parser String
-identifier = identifierP upperChar many
-
-toFreq :: Double -> Maybe Double
-toFreq x
-    | x < 0     = Nothing
-    | otherwise = Just x
+import Data.Boltzmann.System.Annotations
 
 systemStmt :: Parser (S.System Int)
 systemStmt = sc *> systemStmt' <* eof
     where systemStmt' = do
-            an <- many annotationStmt
+            an <- annotationParser
             ds <- some defsStmt
             return S.System { S.defs        = M.fromList ds
                             , S.annotations = M.fromList an
@@ -110,19 +97,6 @@ typeStmt :: Parser S.Arg
 typeStmt = do
     t <- identifier
     return $ S.Type t
-
-annotationIdentifier :: Parser String
-annotationIdentifier = identifierP (char '@') some
-
-annotationValue :: Parser String
-annotationValue = lexeme $ some (alphaNumChar <|> punctuationChar)
-
--- | System annotations.
-annotationStmt :: Parser (String, String)
-annotationStmt = do
-    lhs <- annotationIdentifier
-    rhs <- annotationValue
-    return (tail lhs, rhs)
 
 -- | Parses the given system specification from the given input file.
 parseFileSpec :: String

@@ -12,6 +12,10 @@
 module Data.Boltzmann.Internal.Parser
     ( sc
 
+    , identifierP
+    , identifier
+    , toFreq
+
     , lexeme
     , symbol
     , parens
@@ -33,6 +37,22 @@ import Control.Monad (void)
 import Text.Megaparsec
 import Text.Megaparsec.String
 import qualified Text.Megaparsec.Lexer as L
+
+-- | Identifier producer.
+identifierP :: Parser Char
+            -> (Parser Char -> Parser String)
+            -> Parser String
+
+identifierP p f = lexeme $ (:) <$> p <*> f (alphaNumChar <|> char '_')
+
+identifier :: Parser String
+identifier = identifierP upperChar many
+
+toFreq :: Double -> Maybe Double
+toFreq x
+    | x < 0     = Nothing
+    | otherwise = Just x
+
 
 -- | Cut-out block and line comments parser.
 sc :: Parser ()
