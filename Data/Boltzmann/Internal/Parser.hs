@@ -20,6 +20,7 @@ module Data.Boltzmann.Internal.Parser
     , symbol
     , parens
     , brackets
+    , setBrackets
     , integer
     , double
 
@@ -53,7 +54,6 @@ toFreq x
     | x < 0     = Nothing
     | otherwise = Just x
 
-
 -- | Cut-out block and line comments parser.
 sc :: Parser ()
 sc = L.space (void spaceChar) lineCmnt blockCmnt
@@ -75,6 +75,10 @@ parens = between (symbol "(") (symbol ")")
 -- | Brackets parser.
 brackets :: Parser a -> Parser a
 brackets = between (symbol "[") (symbol "]")
+
+-- | Curly brackets parser.
+setBrackets :: Parser a -> Parser a
+setBrackets = between (symbol "{") (symbol "}")
 
 -- | Integer parser.
 integer :: Parser Int

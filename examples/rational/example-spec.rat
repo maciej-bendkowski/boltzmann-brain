@@ -1,0 +1,14 @@
+-- Example rational specification in new format.
+
+-- alphabet
+{
+     a : 0.33
+   , b : 0.33
+   , c
+}
+
+A -> B (a)
+   | A (b).
+
+B -> _       -- note: epsilon transition.
+   | A (c).

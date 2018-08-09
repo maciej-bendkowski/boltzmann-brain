@@ -20,6 +20,7 @@ import System.Environment
 
 import GHC.IO.Handle
 import System.Directory (doesFileExist)
+import System.FilePath (takeExtension)
 
 import Control.Monad (replicateM, unless)
 
@@ -32,11 +33,12 @@ import Text.Megaparsec hiding (parse)
 import qualified Data.Map.Strict as M
 
 import Data.Boltzmann.System
-import Data.Boltzmann.System.Parser
 import Data.Boltzmann.System.Errors
 import Data.Boltzmann.System.Warnings
 import Data.Boltzmann.System.Sampler
 import Data.Boltzmann.System.Renderer
+
+import Data.Boltzmann.System.Parser
 
 import Data.Boltzmann.Internal.Parser
 import Data.Boltzmann.Internal.Annotations
@@ -52,6 +54,7 @@ import qualified Data.Boltzmann.Compiler.Haskell.Rational as R
 data Flag = InputFile  String  -- ^ input file location
           | OutputFile String  -- ^ output file location
           | TuningFile String  -- ^ paganini tuning data file location
+          | Format String      -- ^ whether to assume a rational input specification format
           | Force              -- ^ whether to skip some sanity check
           | Werror             -- ^ whether to treat warnings as errors
           | Help               -- ^ whether to print usage help text
@@ -66,6 +69,9 @@ options = [Option "i" ["input"] (ReqArg InputFile "FILE")
 
            Option "t" ["tuning-data"] (ReqArg TuningFile "FILE")
             "Optional paganini tuning data file corresponding to the input specification.",
+
+           Option "r" ["format"] (ReqArg Format "EXT")
+            "Optional input specification format (algebraic|rational). If not given, the algebraic format is used instead.",
 
            Option "w" ["werror"] (NoArg Werror)
             "Whether to treat warnings as errors.",
@@ -138,6 +144,12 @@ tuningF (TuningFile f : _) = Just f
 tuningF (_:fs)             = tuningF fs
 tuningF []                 = Nothing
 
+format :: [Flag] -> Maybe Format
+format (Format "algebraic" : _) = Just AlgebraicF
+format (Format "rational" : _)  = Just RationalF
+format (_:fs)                   = format fs
+format []                       = Nothing
+
 -- | Logs an error and exists with the usage info.
 failWithUsage :: String -> IO a
 failWithUsage m = do
@@ -152,7 +164,7 @@ usage = do
     putStrLn $ usageInfo usage' options
     exitSuccess
 
--- | Parses the cli arguments into the command string
+-- | Parses the CLI arguments into the command string
 --   and some additional (optional) flags.
 parse :: [String] -> IO (String, [Flag])
 parse argv =
@@ -164,6 +176,32 @@ parse argv =
             | otherwise        -> return (head cmds, opts)
 
         (_, _, errs) -> failWithUsage $ concat errs
+
+parseFileExt :: FilePath -> Maybe Format
+parseFileExt file =
+    case takeExtension file of
+        ".rat" -> Just RationalF
+        ".alg" -> Just AlgebraicF
+        _      -> Nothing
+
+inputFormat :: [Flag] -> FilePath -> IO Format
+inputFormat opts file =
+    case format opts of
+        Just f -> return f
+        Nothing -> case parseFileExt file of
+                       Nothing       -> do
+                          warn "Cannot guess input specification format. Defaulting to 'algebraic'."
+                          hint "Use conventional file extensions '.rat', '.alg' or use the --format flag."
+                          return AlgebraicF
+                       Just inFormat -> return inFormat
+
+getInputFormat :: [Flag] -> IO Format
+getInputFormat opts =
+    case inputF opts of
+        Just file -> inputFormat opts file
+        Nothing   -> case format opts of
+                         Just f  -> return f
+                         Nothing -> return AlgebraicF
 
 -- | Sets up stdout and stdin IO handles.
 handleIO :: [Flag] -> IO ()
@@ -215,9 +253,12 @@ getSystem (Right sys) = return sys
 --   and warnings checks. Returns the parsed system and its type.
 parseSystem :: [Flag] -> IO (System Int, SystemType)
 parseSystem opts = do
+    inFormat <- getInputFormat opts
+    info $ "Assuming "++ quote (show inFormat) ++ " specification format."
+
     info "Parsing system..."
     text <- getContents
-    dat  <- parseSpec text
+    dat  <- parseSpec inFormat text
     sys  <- getSystem dat
 
     let werror = Werror `elem` opts

@@ -11,7 +11,11 @@
  -}
 {-# LANGUAGE OverloadedStrings #-}
 module Data.Boltzmann.System
-    ( System(..)
+    ( Alphabet
+    , Letter(..)
+    , Format(..)
+
+    , System(..)
     , size
     , constructors
     , Cons(..)
@@ -60,17 +64,42 @@ import Data.Aeson
 
 import Data.Boltzmann.System.Annotations
 
+-- | Set of letters with auxiliary frequencies.
+--   Note: Used for rational specification only.
+type Alphabet = Set Letter
+
+-- | Letter symbols with optional frequencies.
+data Letter = Letter { symb :: String
+                     , freq :: Maybe Double
+                     } deriving (Show,Ord,Eq)
+
+instance ToJSON Letter where
+    toJSON letter = object ["symbol" .= symb letter
+                           ,"freq"   .= freq letter
+                           ]
+
+-- | Input specification format.
+data Format = AlgebraicF
+            | RationalF
+
+instance Show Format where
+    show AlgebraicF = "algebraic"
+    show RationalF  = "rational"
+
 -- | System of combinatorial structures.
-data System a = System { defs        :: Map String [Cons a]   -- ^ Type definitions.
-                       , annotations :: Annotations           -- ^ System annotations.
+data System a = System { defs        :: Map String [Cons a] -- ^ Type definitions.
+                       , alphabet    :: Alphabet            -- ^ System alphabet.
+                       , annotations :: Annotations         -- ^ System annotations.
                        } deriving (Show)
 
 data SystemT a = SystemT { systemTypes       :: [TypeT a]
+                         , systemAlphabet    :: Alphabet
                          , systemAnnotations :: Annotations
                          } deriving (Show)
 
 instance ToJSON a => ToJSON (SystemT a) where
-        toJSON sys = object ["types" .= systemTypes sys
+        toJSON sys = object ["types"       .= systemTypes sys
+                            ,"alphabet"    .= systemAlphabet sys
                             ,"annotations" .= systemAnnotations sys]
 
 data TypeT a = TypeT { typeName :: String
@@ -78,7 +107,7 @@ data TypeT a = TypeT { typeName :: String
                      } deriving (Show)
 
 instance ToJSON a => ToJSON (TypeT a) where
-        toJSON t = object ["name" .= typeName t
+        toJSON t = object ["name"         .= typeName t
                           ,"constructors" .= constrs t
                           ]
 
@@ -100,15 +129,17 @@ data ArgT = ArgT { argumentName :: String
                  } deriving (Show)
 
 instance ToJSON ArgT where
-        toJSON t = object ["name"   .= argumentName t
-                          ,"type"   .= argumentType t
+        toJSON t = object ["name" .= argumentName t
+                          ,"type" .= argumentType t
                           ]
 
 -- | Converts a given system to an output format.
 toSystemT :: System a -> SystemT a
-toSystemT sys = SystemT { systemTypes = map toTypeT (M.toList $ defs sys)
-                        , systemAnnotations = annotations sys
-                        }
+toSystemT sys =
+        SystemT { systemTypes       = map toTypeT (M.toList $ defs sys)
+                , systemAlphabet    = alphabet sys
+                , systemAnnotations = annotations sys
+                }
 
 toTypeT :: (String, [Cons a]) -> TypeT a
 toTypeT (t, cons) = TypeT { typeName = t
