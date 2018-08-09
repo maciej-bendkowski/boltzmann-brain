@@ -65,11 +65,13 @@ data System a = System { defs        :: Map String [Cons a]   -- ^ Type definiti
                        , annotations :: Annotations           -- ^ System annotations.
                        } deriving (Show)
 
-newtype SystemT a = SystemT { systemTypes :: [TypeT a] }
-                     deriving (Show)
+data SystemT a = SystemT { systemTypes       :: [TypeT a]
+                         , systemAnnotations :: Annotations
+                         } deriving (Show)
 
 instance ToJSON a => ToJSON (SystemT a) where
-        toJSON sys = object ["types" .= systemTypes sys]
+        toJSON sys = object ["types" .= systemTypes sys
+                            ,"annotations" .= systemAnnotations sys]
 
 data TypeT a = TypeT { typeName :: String
                      , constrs  :: [ConsT a]
@@ -104,7 +106,9 @@ instance ToJSON ArgT where
 
 -- | Converts a given system to an output format.
 toSystemT :: System a -> SystemT a
-toSystemT sys = SystemT { systemTypes = map toTypeT (M.toList $ defs sys) }
+toSystemT sys = SystemT { systemTypes = map toTypeT (M.toList $ defs sys)
+                        , systemAnnotations = annotations sys
+                        }
 
 toTypeT :: (String, [Cons a]) -> TypeT a
 toTypeT (t, cons) = TypeT { typeName = t
