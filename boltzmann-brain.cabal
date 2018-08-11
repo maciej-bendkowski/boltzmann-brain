@@ -25,6 +25,8 @@ library
                      , Data.Boltzmann.System.Errors
                      , Data.Boltzmann.System.Warnings
                      , Data.Boltzmann.System.Tuner
+                     , Data.Boltzmann.System.Tuner.Utils
+                     , Data.Boltzmann.System.Tuner.Algebraic
                      , Data.Boltzmann.System.Sampler
                      , Data.Boltzmann.System.Renderer
                      , Data.Boltzmann.System.Parser

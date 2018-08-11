@@ -45,7 +45,9 @@ import Data.Boltzmann.Internal.Annotations
 import Data.Boltzmann.Internal.Logging
 import Data.Boltzmann.Internal.Utils
 
-import qualified Data.Boltzmann.System.Tuner as T
+import Data.Boltzmann.System.Tuner
+import qualified Data.Boltzmann.System.Tuner.Utils as T
+import qualified Data.Boltzmann.System.Tuner.Algebraic as TA
 
 import Data.Boltzmann.Compiler
 import qualified Data.Boltzmann.Compiler.Haskell.Algebraic as A
@@ -287,12 +289,12 @@ tuneSystem sys opts prob =
         Nothing -> do
            let arg                  = T.defaultArgs sys
            let (precision, maxiter) = tuningConf sys
-           dat <- T.runPaganini sys prob (Just $ arg { T.precision = precision
-                                                     , T.maxiters  = maxiter
-                                                     })
+           dat <- runPaganini sys prob (Just $ arg { T.precision = precision
+                                                   , T.maxiters  = maxiter
+                                                   })
            getSystem dat
         Just file -> do
-            dat  <- T.readPaganini sys prob file
+            dat  <- readPaganini sys prob file
             getSystem dat
 
 compilerConf :: System a -> String
@@ -383,4 +385,4 @@ runSpec opts = do
     (sys, _) <- parseSystem opts
 
     info "Writing system output..."
-    T.writeSpecification sys stdout -- write specification to output
+    TA.writeSpecification sys stdout -- write specification to output
