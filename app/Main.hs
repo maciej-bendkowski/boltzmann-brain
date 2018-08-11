@@ -254,7 +254,7 @@ getSystem (Right sys) = return sys
 parseSystem :: [Flag] -> IO (System Int, SystemType)
 parseSystem opts = do
     inFormat <- getInputFormat opts
-    info $ "Assuming "++ quote (show inFormat) ++ " specification format."
+    info $ "Using "++ quote (show inFormat) ++ " specification format."
 
     info "Parsing system..."
     text <- getContents

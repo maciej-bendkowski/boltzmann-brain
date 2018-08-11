@@ -65,10 +65,7 @@ defsStmt = do
     return (t, exprs)
 
 exprListStmt :: Parser [S.Cons Int]
-exprListStmt = do
-    stms <- try (epsStmt <|> exprStmt) `sepBy1` symbol "|"
-    void (symbol ".")
-    return stms
+exprListStmt = try (epsStmt <|> exprStmt) `sepBy1` symbol "|"
 
 epsStmt :: Parser (S.Cons Int)
 epsStmt = do

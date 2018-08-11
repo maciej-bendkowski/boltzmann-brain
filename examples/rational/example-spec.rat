@@ -2,13 +2,13 @@
 
 -- alphabet
 {
-     a : 0.33
-   , b : 0.33
-   , c
+   a : 0.33,
+   b : 0.33,
+   c
 }
 
 A -> B (a)
-   | A (b).
+   | A (b)
 
-B -> _       -- note: epsilon transition.
-   | A (c).
+B -> A (c)
+   | _      -- note: epsilon transition.
