@@ -14,6 +14,7 @@ module Data.Boltzmann.System
     ( Alphabet
     , Letter(..)
     , Format(..)
+    , letterFreq
 
     , System(..)
     , size
@@ -71,7 +72,18 @@ type Alphabet = Set Letter
 -- | Letter symbols with optional frequencies.
 data Letter = Letter { symb :: String
                      , freq :: Maybe Double
-                     } deriving (Show,Ord,Eq)
+                     } deriving (Show,Eq)
+
+-- | Given a string and an alphabet, finds
+--   the corresponding letter frequency.
+letterFreq :: String -> Alphabet -> Maybe Double
+letterFreq s alph = freq letter
+    where x = Letter { symb = s, freq = Nothing }
+          letter = idx `S.elemAt` alph
+          idx    = x `S.findIndex` alph
+
+instance Ord Letter where
+    compare a b = compare (symb a) (symb b) -- ignore frequencies.
 
 instance ToJSON Letter where
     toJSON letter = object ["symbol" .= symb letter

@@ -23,35 +23,34 @@ import System.Process hiding (system)
 import Text.Megaparsec
 import Text.Megaparsec.String
 
+import qualified Data.Map.Strict as M
 import Numeric.LinearAlgebra hiding (size,double)
 
 import Data.Boltzmann.System
 import Data.Boltzmann.Internal.Parser
 import Data.Boltzmann.Internal.Logging
+import Data.Boltzmann.Internal.Tuner
+import Data.Boltzmann.Internal.Utils
 
-import Data.Boltzmann.System.Tuner.Utils
 import qualified Data.Boltzmann.System.Tuner.Algebraic as A
+import qualified Data.Boltzmann.System.Tuner.Rational as R
 
 -- | Catch IO exceptions.
 try' :: IO a ->  IO (Either IOException a)
 try' =  Control.Exception.try
 
-printer :: (a -> String -> String) -> [a] -> String
-printer _ [] = ""
-printer f xs = foldl1 (\a b -> (a . (" " ++) . b))
-                        (map f xs) ""
-
 -- | Communicates with Paganini and collects the respective
 --   tuning vector for the given system. If communication is not possible,
 --   for instance due to the missing Paganini script, the current process
 --   is terminated with an error message on the standard error output.
-runPaganini :: System Int -> Parametrisation -> Maybe PArg
+runPaganini :: Format -> System Int -> Parametrisation -> Maybe PArg
             -> IO (Either (ParseError Char Dec)
                     (PSystem Double))
 
-runPaganini sys paramT arg = do
+runPaganini sysFormat sys paramT arg = do
 
     info "Running paganini..."
+
     let arg' = getArgs sys arg
     info (printer (++) $ "Arguments: " : toArgs arg')
 
@@ -65,11 +64,16 @@ runPaganini sys paramT arg = do
 
             -- write to paganini's stdout
             info "Writing system specification..."
-            A.writeSpecification sys hin
+            case sysFormat of
+                RationalF  -> R.writeSpecification sys hin
+                AlgebraicF -> A.writeSpecification sys hin
 
             -- read output parameters
+            let spec = case sysFormat of
+                          RationalF  -> R.toPSpec sys
+                          AlgebraicF -> A.toPSpec sys
+
             s <- hGetContents hout
-            let spec = A.toPSpec sys
             let pag  = parse (paganiniStmt spec) "" s
 
             case pag of
@@ -77,24 +81,27 @@ runPaganini sys paramT arg = do
               Right (rho, us, ts) -> do
                   info "Parsing paganini output..."
                   let ts'  = fromList ts
-                  let sys' = parametrise sys paramT rho ts' us
+                  let sys' = parametrise sysFormat sys paramT rho ts' us
                   return $ Right sys'
 
         _ -> fail' "Could not establish inter-process communication with paganini."
 
 -- | Parses the given input string as a Paganini tuning vector.
-readPaganini :: System Int -> Parametrisation -> String
+readPaganini :: Format -> System Int -> Parametrisation -> String
              -> IO (Either (ParseError Char Dec)
                    (PSystem Double))
 
-readPaganini sys paramT f = do
-    let spec = A.toPSpec sys
+readPaganini sysFormat sys paramT f = do
+    let spec = case sysFormat of
+                   RationalF  -> R.toPSpec sys
+                   AlgebraicF -> A.toPSpec sys
+
     pag <- parsePaganini spec f
     case pag of
         Left err -> return $ Left err
         Right (rho, us, ts) -> do
             let ts'  = fromList ts
-            return (Right $ parametrise sys paramT rho ts' us)
+            return (Right $ parametrise sysFormat sys paramT rho ts' us)
 
 paganiniStmt :: PSpec -> Parser (Double, [Double], [Double])
 paganiniStmt spec = do
@@ -109,3 +116,38 @@ parsePaganini :: PSpec -> String
                     (Double, [Double], [Double]))
 
 parsePaganini spec = parseFromFile (paganiniStmt spec)
+
+accumulateCons :: Double -> [Cons Double] -> [Cons Double]
+accumulateCons _ [] = []
+accumulateCons acc (con : xs) =
+    con' : accumulateCons acc' xs
+    where con' = con { weight = w + acc }
+          acc' = acc + w
+          w    = weight con
+
+accumulateType :: (String, [Cons Double]) -> (String, [Cons Double])
+accumulateType (t, cons) =
+    (t, accumulateCons 0 cons)
+
+accumulate :: PSystem Double -> PSystem Double
+accumulate psys = psys { system = sys { defs = M.fromList types' } }
+    where sys    = system psys
+          typs   = M.toList (defs sys)
+          types' = map accumulateType typs
+
+-- | Compute the numerical branching probabilities for the given system.
+parametrise :: Format
+            -> System Int
+            -> Parametrisation
+            -> Double -> Vector Double
+            -> [Double] -> PSystem Double
+
+parametrise sysFormat sys paramT rho ts us =
+    let sys'     = paramFun sys rho ts us
+        paramFun = case sysFormat of
+                       RationalF  -> R.paramSystem
+                       AlgebraicF -> A.paramSystem
+
+        in case paramT of
+            Regular     -> sys'
+            Cummulative -> accumulate sys'

@@ -12,6 +12,7 @@
  -}
 module Data.Boltzmann.System.Tuner.Algebraic
     ( writeSpecification
+    , paramSystem
     , toPSpec
     ) where
 
@@ -22,6 +23,8 @@ import System.IO
 import Data.Map (Map)
 import qualified Data.Map.Strict as M
 
+import Numeric.LinearAlgebra hiding (size)
+
 import Data.MultiSet (MultiSet)
 import qualified Data.MultiSet as B
 import qualified Data.Set as S
@@ -29,29 +32,14 @@ import qualified Data.Set as S
 import Data.Maybe
 
 import Data.Boltzmann.System
-import Data.Boltzmann.Internal.Logging
-
-import Data.Boltzmann.System.Tuner.Utils
-
-writeListLn :: Show a => Handle -> [a] -> IO ()
-writeListLn h xs = hPutStrLn h (showsList xs)
-
-printer :: (a -> String -> String) -> [a] -> String
-printer _ [] = ""
-printer f xs = foldl1 (\a b -> (a . (" " ++) . b))
-                        (map f xs) ""
-
-showsList :: Show a => [a]
-          -> String
-
-showsList = printer shows
+import Data.Boltzmann.Internal.Utils
+import Data.Boltzmann.Internal.Tuner
 
 -- | Writes the system specification into the given
 --   file handle. In paricular, to Paganini's standard
 --   input handle.
 writeSpecification :: System Int -> Handle -> IO ()
 writeSpecification sys hout = do
-    info "Writing system specification..."
     let freqs   = frequencies sys
     let seqs    = seqTypes sys
     let spec    = toPSpec sys
@@ -151,3 +139,46 @@ seqSpecification hout find' spec st = do
     hPrint hout (2 :: Int) -- # of constructors
     writeListLn hout $ replicate n (0 :: Int)
     writeListLn hout $ 0 : f ++ t ++ s
+
+evalExp :: System Int -> Double -> Vector Double
+        -> [Double] -> Cons Int -> (Double, [Double])
+
+evalExp sys rho ts us exp' =
+    let w     = weight exp'
+        xs    = args exp'
+        exp'' = (rho ^^ w) * product (map (evalA sys ts) xs)
+     in case frequency exp' of
+          Nothing -> (exp'', us)
+          Just _  -> (head us ^^ w * exp'', tail us)
+
+computeExp :: System Int
+           -> Double -> Vector Double
+           -> [Double] -> Double -> Double -> [Cons Int]
+           -> ([Cons Double], [Double])
+
+computeExp _ _ _ us _ _ [] = ([], us)
+computeExp sys rho ts us tw _ (e:es) = (e { weight = w' / tw } : es', us'')
+    where (es', us'') = computeExp sys rho ts us' tw 0 es
+          (w', us')   = evalExp sys rho ts us e
+
+computeProb :: System Int
+            -> Double -> Vector Double
+            -> [Double] -> [(String, [Cons Int])]
+            -> [(String, [Cons Double])]
+
+computeProb _ _ _ _ [] = []
+computeProb sys rho ts us ((t,cons):tys) = (t,cons') : tys'
+    where (cons', us') = computeExp sys rho ts us (value t sys ts) 0 cons
+          tys'         = computeProb sys rho ts us' tys
+
+paramSystem :: System Int
+            -> Double -> Vector Double
+            -> [Double] -> PSystem Double
+
+paramSystem sys rho ts us = sys'
+    where types'  = computeProb sys rho ts us (M.toList $ defs sys)
+          sys'    = PSystem { system  = sys { defs = M.fromList types' }
+                            , values  = ts
+                            , param   = rho
+                            , weights = sys
+                            }

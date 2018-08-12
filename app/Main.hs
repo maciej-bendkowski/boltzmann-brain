@@ -46,8 +46,9 @@ import Data.Boltzmann.Internal.Logging
 import Data.Boltzmann.Internal.Utils
 
 import Data.Boltzmann.System.Tuner
-import qualified Data.Boltzmann.System.Tuner.Utils as T
+import qualified Data.Boltzmann.Internal.Tuner as T
 import qualified Data.Boltzmann.System.Tuner.Algebraic as TA
+import qualified Data.Boltzmann.System.Tuner.Rational as TR
 
 import Data.Boltzmann.Compiler
 import qualified Data.Boltzmann.Compiler.Haskell.Algebraic as A
@@ -203,7 +204,7 @@ getInputFormat opts =
         Just file -> inputFormat opts file
         Nothing   -> case format opts of
                          Just f  -> return f
-                         Nothing -> return AlgebraicF
+                         Nothing -> return AlgebraicF -- default
 
 -- | Sets up stdout and stdin IO handles.
 handleIO :: [Flag] -> IO ()
@@ -289,12 +290,14 @@ tuneSystem sys opts prob =
         Nothing -> do
            let arg                  = T.defaultArgs sys
            let (precision, maxiter) = tuningConf sys
-           dat <- runPaganini sys prob (Just $ arg { T.precision = precision
-                                                   , T.maxiters  = maxiter
-                                                   })
+           sysFormat <- getInputFormat opts
+           dat <- runPaganini sysFormat sys prob (Just $ arg { T.precision = precision
+                                                             , T.maxiters  = maxiter
+                                                             })
            getSystem dat
         Just file -> do
-            dat  <- readPaganini sys prob file
+            sysFormat <- getInputFormat opts
+            dat  <- readPaganini sysFormat sys prob file
             getSystem dat
 
 compilerConf :: System a -> String
@@ -376,13 +379,13 @@ runTuner :: [Flag] -> IO ()
 runTuner opts = do
     (sys, _)    <- parseSystem opts
     tunedSystem <- tuneSystem sys opts T.Regular
-
-    info "Writing system output..."
     B.putStr $ encode (toSystemT $ system tunedSystem)
 
 runSpec :: [Flag] -> IO ()
 runSpec opts = do
     (sys, _) <- parseSystem opts
-
-    info "Writing system output..."
-    TA.writeSpecification sys stdout -- write specification to output
+    sysFormat <- getInputFormat opts
+    -- write specification to output
+    case sysFormat of
+        RationalF  -> TR.writeSpecification sys stdout
+        AlgebraicF -> TA.writeSpecification sys stdout

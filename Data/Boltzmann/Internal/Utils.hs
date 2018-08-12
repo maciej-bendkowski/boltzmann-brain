@@ -20,10 +20,30 @@ module Data.Boltzmann.Internal.Utils
     , boldColor
 
     , csv
+
+    , writeListLn
+    , printer
+    , showsList
     ) where
+
+import System.IO
 
 import System.Console.Pretty
 import Text.EditDistance
+
+writeListLn :: Show a => Handle -> [a] -> IO ()
+writeListLn h xs = hPutStrLn h (showsList xs)
+
+printer :: (a -> String -> String) -> [a] -> String
+printer _ [] = ""
+printer f xs = foldl1 (\a b -> (a . (" " ++) . b))
+                        (map f xs) ""
+
+showsList :: Show a => [a]
+          -> String
+
+showsList = printer shows
+
 
 -- | Produces a comma separated value (csv) representation
 --   of the given list of string. Note that after each comma
