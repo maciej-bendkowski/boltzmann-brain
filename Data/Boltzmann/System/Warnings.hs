@@ -16,10 +16,13 @@ module Data.Boltzmann.System.Warnings
     ) where
 
 import Control.Monad (unless)
+
 import Data.Maybe (mapMaybe)
+import Data.List (isPrefixOf)
 
 import System.Exit
 
+import qualified Data.Set as S
 import qualified Data.Map.Strict as M
 
 import Data.Boltzmann.System
@@ -61,6 +64,24 @@ instance SystemWarn ConsWeightWarn where
             cons' = quote $ consWeightCons warn
             typ'  = quote $ consWeightType warn
 
+newtype PrefixAlphabetWarn =
+    PrefixAlphabetWarn { conflicts :: [(String, String)] -- ^ Conflicting symbols.
+                       }
+
+-- | Raises a warning if the given system alphabet is not prefix-free.
+prefixAlphabetWarn :: System a -> [WarningExt]
+prefixAlphabetWarn sys =
+    [WarningExt PrefixAlphabetWarn { conflicts = conflicting }
+        | not (null conflicting)]
+    where alph = S.toList $ alphabet sys
+          symbolPairs = [(symb a, symb b) | a <- alph, b <- alph, a < b]
+          conflicting = filter (uncurry isPrefixOf) symbolPairs
+
+instance SystemWarn PrefixAlphabetWarn where
+    report warn = "The system alphabet is not prefix-free. Conflicts: "
+        ++ csv (map (\(a,b) -> "(" ++ quote a ++ " and " ++ quote b ++ ")") $ conflicts warn)
+        ++ "."
+
 -- | Reports the given warning.
 reportWarning :: WarningExt -> IO ()
 reportWarning (WarningExt warn) = L.warn (report warn)
@@ -73,7 +94,8 @@ checkWarns werror warns = do
 
 -- | List of checked warnings.
 warningList :: System Int -> [WarningExt]
-warningList = consWeightWarn
+warningList sys = consWeightWarn sys
+               ++ prefixAlphabetWarn sys
 
 -- | Checks whether the given input system admits no warnings.
 warnings :: Bool -> System Int -> IO ()
