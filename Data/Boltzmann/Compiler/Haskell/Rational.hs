@@ -62,7 +62,8 @@ moduleHeader :: PSystem Double -> String -> String
 moduleHeader sys compilerNote =
     unlines (["-- | Compiler: " ++ compilerNote,
               "-- | Singularity: " ++ show (param sys),
-              "-- | System type: rational"] ++ systemNote sys)
+              "-- | System type: rational",
+              "-- | Stability: experimental"] ++ systemNote sys)
 
 compileModule :: PSystem Double -> String -> Bool -> Bool -> Module
 compileModule sys mod' withIO' withShow' =

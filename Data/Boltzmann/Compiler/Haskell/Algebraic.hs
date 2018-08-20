@@ -66,7 +66,8 @@ moduleHeader :: PSystem Double -> String -> String
 moduleHeader sys compilerNote =
     unlines (["-- | Compiler: " ++ compilerNote,
               "-- | Singularity: " ++ show (param sys),
-              "-- | System type: algebraic"] ++ systemNote sys)
+              "-- | System type: algebraic",
+              "-- | Stability: experimental"] ++ systemNote sys)
 
 compileModule :: PSystem Double -> String -> Bool -> Bool -> Bool -> Module
 compileModule sys mod' withIO' withLists' withShow' =
