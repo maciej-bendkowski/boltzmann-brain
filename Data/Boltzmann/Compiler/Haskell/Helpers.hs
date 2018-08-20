@@ -50,15 +50,28 @@ importFunc = IVar . Ident
 
 -- | Simple import declaration.
 importFrom :: String -> [ImportSpec] -> ImportDecl
-importFrom module' specs = ImportDecl { importLoc = noLoc
-                                      , importModule = ModuleName module'
-                                      , importQualified = False
-                                      , importSrc = False
-                                      , importSafe = False
-                                      , importPkg = Nothing
-                                      , importAs = Nothing
-                                      , importSpecs = Just (False, specs)
-                                      }
+importFrom module' specs =
+        ImportDecl { importLoc       = noLoc
+                   , importModule    = ModuleName module'
+                   , importQualified = False
+                   , importSrc       = False
+                   , importSafe      = False
+                   , importPkg       = Nothing
+                   , importAs        = Nothing
+                   , importSpecs     = Just (False, specs)
+                   }
+
+importQual :: String -> String -> ImportDecl
+importQual module' synonym =
+        ImportDecl { importLoc       = noLoc
+                   , importModule    = ModuleName module'
+                   , importQualified = True
+                   , importSrc       = False
+                   , importSafe      = False
+                   , importPkg       = Nothing
+                   , importAs        = Just (ModuleName synonym)
+                   , importSpecs     = Nothing
+                   }
 
 exportType :: String -> ExportSpec
 exportType = EThingAll . unname
@@ -91,6 +104,12 @@ and x = InfixApp x (symbol "&&")
 
 lessEq :: Exp -> Exp -> Exp
 lessEq x = InfixApp x (symbol "<=")
+
+toDouble :: Double -> Exp
+toDouble = Lit . Frac . toRational
+
+toString :: String -> Exp
+toString = Lit . String
 
 lessF :: Real a => Exp -> a -> Exp
 lessF v x = less v (Lit $ Frac (toRational x))

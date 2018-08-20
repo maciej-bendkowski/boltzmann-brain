@@ -53,6 +53,7 @@ import qualified Data.Boltzmann.System.Tuner.Rational as TR
 import Data.Boltzmann.Compiler
 import qualified Data.Boltzmann.Compiler.Haskell.Algebraic as A
 import qualified Data.Boltzmann.Compiler.Haskell.Rational as R
+import qualified Data.Boltzmann.Compiler.Haskell.Matrix as X
 
 data Flag = InputFile  String  -- ^ input file location
           | OutputFile String  -- ^ output file location
@@ -303,7 +304,7 @@ tuneSystem sys opts prob =
 compilerConf :: System a -> String
 compilerConf sys = moduleName
     where ann        = annotations sys
-          moduleName = withDefault ann "module" "Sampler"
+          moduleName = withString ann "module" "Sampler"
 
 -- | Runs the specification compiler.
 runCompiler :: [Flag] -> IO ()
@@ -314,10 +315,13 @@ runCompiler opts = do
     tunedSystem    <- tuneSystem sys opts T.Cummulative
     info "Running sampler compiler..."
 
-    case sysType of
-        Rational  -> R.compile (config tunedSystem moduleName compilerTimestamp :: R.Conf)
-        Algebraic -> A.compile (config tunedSystem moduleName compilerTimestamp :: A.Conf)
-        _         -> fail' "Unsupported system type."
+    sysFormat <- getInputFormat opts
+    case sysFormat of
+        RationalF  -> X.compile (config tunedSystem moduleName compilerTimestamp :: X.Conf)
+        AlgebraicF -> case sysType of
+                          Rational  -> R.compile (config tunedSystem moduleName compilerTimestamp :: R.Conf)
+                          Algebraic -> A.compile (config tunedSystem moduleName compilerTimestamp :: A.Conf)
+                          _         -> fail' "Unsupported system type."
 
 samplerConf :: System Int -> [Flag] -> IO (Int, Int, Int, String)
 samplerConf sys opts =
@@ -325,7 +329,7 @@ samplerConf sys opts =
         n   = withInt ann "samples" 1
         lb  = withInt ann "lowerBound" 10
         ub  = withInt ann "upperBound" 200
-        gen = withDefault ann "generate" (initType sys)
+        gen = withString ann "generate" (initType sys)
         in case "samples" `M.lookup` ann of
                Just _  -> return (lb, ub, n, gen)
                Nothing -> do

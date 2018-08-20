@@ -41,6 +41,7 @@ library
                      , Data.Boltzmann.Compiler.Haskell.Helpers
                      , Data.Boltzmann.Compiler.Haskell.Algebraic
                      , Data.Boltzmann.Compiler.Haskell.Rational
+                     , Data.Boltzmann.Compiler.Haskell.Matrix
   build-depends:       base >= 4.7 && < 5
                      , containers >= 0.5.6
                      , megaparsec >= 5.2.0

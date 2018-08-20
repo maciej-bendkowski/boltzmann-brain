@@ -1,5 +1,8 @@
 -- Example rational specification in new format.
 
+@generate A
+@withIO   y
+
 -- alphabet
 {
    a : 0.3,
