@@ -55,8 +55,8 @@ writeSpecification sys hout = do
     writeListLn hout (frequencies $ alphabet sys)
 
     -- type specifications
-    let alph = alphabet sys
     let types' = types sys
+    let alph   = tunedLetters $ alphabet sys
     mapM_ (typeSpecification hout alph types') (M.elems $ defs sys)
 
 typeSpecification :: Handle -> Set Letter -> Set String -> [Cons Int] -> IO ()
@@ -68,17 +68,19 @@ typeSpecification hout alph types' cons = do
 consSpecification :: Handle -> Set Letter -> Set String -> Cons Int -> IO ()
 consSpecification hout alph types' con = do
     let z  = weight con
-    let us = markLetter alph z (func con)
-    let ts = if null (args con) then  replicate (S.size types') 0 -- note: epsilon transition.
-                                else  markType types' (head $ args con)
+    let us = markLetter alph z (func con) -- note: func con is the transition letter.
+    let ts = if isAtomic con then  replicate (S.size types') 0 -- note: epsilon transition.
+                             else  markType types' (head $ args con)
 
     writeListLn hout (z : us ++ ts)
 
 markLetter :: Set Letter -> Int -> String -> [Int]
-markLetter alph _ "_" = replicate (S.size $ tunedLetters alph) 0
-markLetter alph w u   = indicator (S.size $ tunedLetters alph) idx w
-    where idx = letter `S.findIndex` alph
-          letter = Letter { symb = u, freq = Nothing }
+markLetter alph _ "_" = replicate (S.size alph) 0
+markLetter alph w u   =
+    case letter `S.lookupIndex` alph of
+        Nothing  -> replicate (S.size alph) 0
+        Just idx -> indicator (S.size alph) idx w
+    where letter = Letter { symb = u, freq = Nothing }
 
 markType :: Set String -> Arg -> [Int]
 markType types' (Type typ) = indicator (S.size types') idx 1
