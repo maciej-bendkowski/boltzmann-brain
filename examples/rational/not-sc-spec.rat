@@ -1,0 +1,16 @@
+-- Example rational specification in new format.
+
+@generate A
+@withIO   y
+
+-- alphabet
+{
+   a, b
+}
+
+A -> B (a)
+   | A (b)
+   | _
+
+B -> B (a)
+   | _      -- note: epsilon transition.

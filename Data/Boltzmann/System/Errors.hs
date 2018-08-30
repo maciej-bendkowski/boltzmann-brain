@@ -244,29 +244,31 @@ checkErrors errs = do
         (exitWith $ ExitFailure 1)
 
 -- | Some trivial errors.
-trivialErrors :: System a -> [ErrorExt]
-trivialErrors sys
+trivialErrors :: Format -> System a -> [ErrorExt]
+trivialErrors format sys
     = concat [argRefErrors sys
               ,consRefErrors sys
-              ,clashConsErrors sys
               ,freqErrors sys
               ]
+        ++ -- note: the following errors are inherent to algebraic specification formats.
+            concat [clashConsErrors sys | isAlgebraicF format]
 
 -- | Some less trivial errors.
 otherErrors :: System Int -> [ErrorExt]
 otherErrors sys
-    = infLangErrors sys ++ wellFoundedErrors sys
+    = infLangErrors sys
+        ++ wellFoundedErrors sys
 
 -- | Checks whether the given input system is correct, yielding its type.
 --   Otherwise, terminate with an appropriate system error message.
-errors :: Bool -> System Int -> IO SystemType
-errors force sys =
+errors :: Format -> Bool -> System Int -> IO SystemType
+errors format force sys =
     if force then checkSysType $ supportedSystemType sys -- the force is strong with this one.
              else do
                 checkErrors (annotationErrors sys $ annotations sys)
-                checkErrors (trivialErrors sys)
+                checkErrors (trivialErrors format sys)
                 checkErrors (otherErrors sys)
-                errors True sys
+                errors format True sys
 
 annotationErrors :: System a -> Map String String -> [ErrorExt]
 annotationErrors sys ann

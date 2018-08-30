@@ -266,7 +266,7 @@ parseSystem opts = do
     sys  <- getSystem dat
 
     let force = Force `elem` opts
-    sysType <- errors force sys -- check for errors
+    sysType <- errors inFormat force sys -- check for errors
 
     let werror = Werror `elem` opts
     warnings werror sys         -- check for warnings

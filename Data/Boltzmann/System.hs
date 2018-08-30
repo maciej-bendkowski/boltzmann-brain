@@ -14,6 +14,8 @@ module Data.Boltzmann.System
     ( Alphabet
     , Letter(..)
     , Format(..)
+    , isAlgebraicF
+    , isRationalF
     , letterFreq
 
     , System(..)
@@ -97,6 +99,13 @@ data Format = AlgebraicF
 instance Show Format where
     show AlgebraicF = "algebraic"
     show RationalF  = "rational"
+
+isAlgebraicF :: Format -> Bool
+isAlgebraicF AlgebraicF = True
+isAlgebraicF _          = False
+
+isRationalF :: Format -> Bool
+isRationalF = not . isAlgebraicF
 
 -- | System of combinatorial structures.
 data System a = System { defs        :: Map String [Cons a] -- ^ Type definitions.
@@ -307,7 +316,7 @@ isLinear sys = all (all linear) (M.elems $ defs sys)
           linear cons =  not (any isListArg $ args cons)
             && length (compoundArgs atomicT $ args cons) <= 1
 
--- | Determines whether each constructor n the system has at most one atom.
+-- | Determines whether each constructor in the system has at most one atom.
 --   Note: the system is assumed to contain some atoms (see hasAtoms).
 isInterruptible :: System a -> Bool
 isInterruptible sys = all interruptible' $ M.elems (defs sys)
