@@ -32,7 +32,7 @@ systemStmt = sc *> systemStmt' <* eof
     where systemStmt' = do
             an   <- annotationParser
             alph <- alphabetStmt
-            ds   <- some defsStmt
+            ds   <- some (defsStmt alph)
             return S.System { S.defs        = M.fromList ds
                             , S.annotations = M.fromList an
                             , S.alphabet    = alph
@@ -47,8 +47,10 @@ letterStmt :: Parser S.Letter
 letterStmt = do
     letter  <- letterIdent
     letterF <- option (-1.0) (symbol ":" >> double)
-    return S.Letter { S.symb = letter
-                    , S.freq = toFreq letterF
+    letterW <- option (length letter) (parens integer)
+    return S.Letter { S.symb    = letter
+                    , S.freq    = toFreq letterF
+                    , S.weightL = letterW
                     }
 
 -- | Alphabet specification parser.
@@ -57,15 +59,15 @@ alphabetStmt = do
     ls <- setBrackets $ letterStmt `sepBy1` symbol ","
     return $ Z.fromList ls
 
-defsStmt :: Parser (String, [S.Cons Int])
-defsStmt = do
+defsStmt :: S.Alphabet -> Parser (String, [S.Cons Int])
+defsStmt alph = do
     t <- identifier
     void (symbol "->")
-    exprs <- exprListStmt
+    exprs <- exprListStmt alph
     return (t, exprs)
 
-exprListStmt :: Parser [S.Cons Int]
-exprListStmt = try (epsStmt <|> exprStmt) `sepBy1` symbol "|"
+exprListStmt :: S.Alphabet -> Parser [S.Cons Int]
+exprListStmt alph = try (epsStmt <|> exprStmt alph) `sepBy1` symbol "|"
 
 epsStmt :: Parser (S.Cons Int)
 epsStmt = do
@@ -76,12 +78,17 @@ epsStmt = do
                   , S.frequency = Nothing
                   }
 
-exprStmt :: Parser (S.Cons Int)
-exprStmt = do
+exprStmt :: S.Alphabet -> Parser (S.Cons Int)
+exprStmt alph = do
     typ     <- identifier
-    letter  <- parens letterIdent
+    letter  <- option "" (parens letterIdent) -- potential epsilon transitions.
+    let x   = S.Letter { S.symb = letter, S.freq = Nothing, S.weightL = 0 }
+    let w = case x `Z.lookupIndex` alph of
+                Nothing -> 0 -- epsilon transitions or not existing symbols.
+                Just idx -> S.weightL $ Z.elemAt idx alph
+
     return S.Cons { S.func      = letter
                   , S.args      = [S.Type typ]
-                  , S.weight    = length letter
                   , S.frequency = Nothing
+                  , S.weight    = w
                   }

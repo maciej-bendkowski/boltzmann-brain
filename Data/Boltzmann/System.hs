@@ -17,6 +17,7 @@ module Data.Boltzmann.System
     , isAlgebraicF
     , isRationalF
     , letterFreq
+    , letterWeight
 
     , System(..)
     , size
@@ -72,17 +73,28 @@ import Data.Boltzmann.System.Annotations
 type Alphabet = Set Letter
 
 -- | Letter symbols with optional frequencies.
-data Letter = Letter { symb :: String
-                     , freq :: Maybe Double
+data Letter = Letter { symb    :: String
+                     , freq    :: Maybe Double
+                     , weightL :: Int
                      } deriving (Show,Eq)
 
 -- | Given a string and an alphabet, finds
 --   the corresponding letter frequency.
 letterFreq :: String -> Alphabet -> Maybe Double
-letterFreq s alph = freq letter
-    where x = Letter { symb = s, freq = Nothing }
-          letter = idx `S.elemAt` alph
-          idx    = x `S.findIndex` alph
+letterFreq s alph =
+    let x = Letter { symb = s, freq = Nothing, weightL = 0 }
+        in case x `S.lookupIndex` alph of
+            Nothing -> Nothing
+            Just idx -> freq (idx `S.elemAt` alph)
+
+-- | Given a string and an alphabet, finds
+--   the corresponding letter weight.
+letterWeight :: String -> Alphabet -> Maybe Int
+letterWeight s alph =
+    let x = Letter { symb = s, freq = Nothing, weightL = 0 }
+        in case x `S.lookupIndex` alph of
+            Nothing -> Nothing
+            Just idx -> Just $ weightL (idx `S.elemAt` alph)
 
 instance Ord Letter where
     compare a b = compare (symb a) (symb b) -- ignore frequencies.
@@ -90,6 +102,7 @@ instance Ord Letter where
 instance ToJSON Letter where
     toJSON letter = object ["symbol" .= symb letter
                            ,"freq"   .= freq letter
+                           ,"weight" .= weightL letter
                            ]
 
 -- | Input specification format.

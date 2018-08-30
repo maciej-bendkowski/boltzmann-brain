@@ -1,0 +1,17 @@
+-- Example rational specification in new format.
+
+@generate A
+@withIO   y
+
+-- alphabet
+{
+   a : 0.3 (3),   -- note: custom weight 3 (by default, it's the symbol length)
+   b : 0.4,
+   c
+}
+
+A -> B (a)
+   | A (b)
+
+B -> A (c)
+   | _      -- note: epsilon transition.

@@ -80,7 +80,7 @@ markLetter alph w u   =
     case letter `S.lookupIndex` alph of
         Nothing  -> replicate (S.size alph) 0
         Just idx -> indicator (S.size alph) idx w
-    where letter = Letter { symb = u, freq = Nothing }
+    where letter = Letter { symb = u, freq = Nothing, weightL = 0 }
 
 markType :: Set String -> Arg -> [Int]
 markType types' (Type typ) = indicator (S.size types') idx 1
@@ -96,9 +96,9 @@ indicator n k w = 0 : indicator (n-1) (k-1) w
 freqL :: Cons Int -> [Double] -> Alphabet -> Double
 freqL con us alph =
     let f = func con -- note: func con is in fact the letter name.
-        idx = Letter { symb = f, freq = Nothing } `S.findIndex` tunedLetters alph
+        idx = Letter { symb = f, freq = Nothing, weightL = 0 } `S.findIndex` tunedLetters alph
         in case f `letterFreq` alph of
-            Just _  -> us !! idx
+            Just _  -> us !! idx ^^ weight con
             Nothing -> 1
 
 paramCons :: System Int -> Double -> Vector Double
