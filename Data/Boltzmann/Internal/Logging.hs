@@ -44,9 +44,9 @@ data Level = Info
            | Error
 
 instance Show Level where
-    show Info    = "INFO"
-    show Warning = "WARN"
-    show Hint    = "HINT"
+    show Info    = "INF"
+    show Warning = "WAR"
+    show Hint    = "TIP"
     show Error   = "ERR"
 
 lvlColor :: Level -> Color
