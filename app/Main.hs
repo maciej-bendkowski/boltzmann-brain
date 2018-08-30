@@ -265,11 +265,12 @@ parseSystem opts = do
     dat  <- parseSpec inFormat text
     sys  <- getSystem dat
 
+    let force = Force `elem` opts
+    sysType <- errors force sys -- check for errors
+
     let werror = Werror `elem` opts
     warnings werror sys         -- check for warnings
 
-    let force = Force `elem` opts
-    sysType <- errors force sys -- check for errors
     return (sys, sysType)
 
 tuningConf :: System a -> (Double, Int)
