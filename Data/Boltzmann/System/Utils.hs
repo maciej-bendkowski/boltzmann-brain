@@ -17,6 +17,7 @@ module Data.Boltzmann.System.Utils
     ( isEmptyAtZero
     , zeroCoordinates
     , wellFoundedAtZero
+    , polynomial
     ) where
 
 import Data.Map (Map)
@@ -165,3 +166,17 @@ wellFoundedAtZero :: (Eq a, Num a)
 wellFoundedAtZero sys
     | isNilpotent (jacobian sys) = not $ zeroCoordinates sys
     | otherwise                  = False
+
+-- | Yields an infinite stream of successive evaluation iterations
+--   in form of Y[m+1] = H(Z, Y[m]); starting with the given Y[0] and z.
+evals :: System Int -> Vector Double -> Double -> [Vector Double]
+evals sys ys z = ys : evals sys (eval sys ys z) z
+
+-- | Checks whether the given system, assumed to satisfy H(0,0) = 0
+--   and having a nilpotent Jacobian, encodes an implicit polynomial
+--   species. See also the isPolynomial subroutine of Pivoteau et al.
+polynomial :: System Int -> Bool
+polynomial sys = hs !! m  == hs !! (m+1)
+    where m   = size sys
+          hs  = evals sys vec 1 -- note: numerical evaluation.
+          vec = vector $ replicate m 0

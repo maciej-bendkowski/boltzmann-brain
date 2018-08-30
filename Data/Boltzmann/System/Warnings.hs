@@ -26,6 +26,7 @@ import qualified Data.Set as S
 import qualified Data.Map.Strict as M
 
 import Data.Boltzmann.System
+import Data.Boltzmann.System.Utils
 
 import Data.Boltzmann.Internal.Utils
 import qualified Data.Boltzmann.Internal.Logging as L
@@ -64,6 +65,7 @@ instance SystemWarn ConsWeightWarn where
             cons' = quote $ consWeightCons warn
             typ'  = quote $ consWeightType warn
 
+-- | Alphabet with prefix symbols.
 newtype PrefixAlphabetWarn =
     PrefixAlphabetWarn { conflicts :: [(String, String)] -- ^ Conflicting symbols.
                        }
@@ -82,6 +84,16 @@ instance SystemWarn PrefixAlphabetWarn where
         ++ csv (map (\(a,b) -> "(" ++ quote a ++ " and " ++ quote b ++ ")") $ conflicts warn)
         ++ "."
 
+-- | Polynomial species (i.e. finite specification languages).
+data PolynomialSpecies = PolynomialSpecies
+
+polynomialWarn :: System Int -> [WarningExt]
+polynomialWarn sys =
+    [WarningExt PolynomialSpecies | polynomial sys]
+
+instance SystemWarn PolynomialSpecies where
+    report _ = "Given system specifies a finite language."
+
 -- | Reports the given warning.
 reportWarning :: WarningExt -> IO ()
 reportWarning (WarningExt warn) = L.warn (report warn)
@@ -95,6 +107,7 @@ checkWarns werror warns = do
 -- | List of checked warnings.
 warningList :: System Int -> [WarningExt]
 warningList sys = consWeightWarn sys
+               ++ polynomialWarn sys
                ++ prefixAlphabetWarn sys
 
 -- | Checks whether the given input system admits no warnings.
