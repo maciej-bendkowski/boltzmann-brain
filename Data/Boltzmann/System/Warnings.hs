@@ -20,8 +20,6 @@ import Control.Monad (unless)
 import Data.Maybe (mapMaybe)
 import Data.List (isPrefixOf)
 
-import System.Exit
-
 import qualified Data.Set as S
 import qualified Data.Map.Strict as M
 
@@ -102,7 +100,7 @@ checkWarns :: Bool -> [WarningExt] -> IO ()
 checkWarns werror warns = do
     mapM_ reportWarning warns
     unless (null warns || not werror)
-        (exitWith $ ExitFailure 1)
+        (L.fail' "Warnings reported while the --werror flag is enabled. Exiting.")
 
 -- | List of checked warnings.
 warningList :: System Int -> [WarningExt]
