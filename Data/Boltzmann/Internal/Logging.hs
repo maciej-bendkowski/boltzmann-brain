@@ -22,21 +22,12 @@ module Data.Boltzmann.Internal.Logging
 
 import Prelude hiding (log, fail)
 
-import Data.Time.Clock
-import Data.Time.LocalTime
-import Data.Time.Format
-
 import System.IO
 import System.Exit
 
 import System.Console.Pretty
 
-getTime :: IO String
-getTime = do
-    now <- getCurrentTime
-    timeZone <- getCurrentTimeZone
-    let t = utcToLocalTime timeZone now
-    return $ formatTime defaultTimeLocale "%d-%m-%Y %H:%M:%S" t
+import Data.Boltzmann.Internal.Utils
 
 data Level = Info
            | Warning

@@ -7,6 +7,7 @@
  Maintainer  : maciej.bendkowski@tcs.uj.edu.pl
  Stability   : experimental
  -}
+{-# LANGUAGE TemplateHaskell #-}
 module Main
     ( main
     ) where
@@ -45,6 +46,8 @@ import Data.Boltzmann.Internal.Annotations
 import Data.Boltzmann.Internal.Logging
 import Data.Boltzmann.Internal.Utils
 
+import Data.Boltzmann.Internal.TH (compileTime)
+
 import Data.Boltzmann.System.Tuner
 import qualified Data.Boltzmann.Internal.Tuner as T
 import qualified Data.Boltzmann.System.Tuner.Algebraic as TA
@@ -81,7 +84,7 @@ options = [Option "i" ["input"] (ReqArg InputFile "FILE")
             "Whether to treat warnings as errors.",
 
            Option "f" ["force"] (NoArg Force)
-            "Whether skip some sanity checks such as the well-foundedness check.",
+            "Whether to skip some sanity checks such as the well-foundedness check.",
 
            Option "h?" ["help"] (NoArg Help)
             "Prints this help message."]
@@ -125,13 +128,18 @@ usageHeader :: IO String
 usageHeader = do
     commandsMsg' <- commandsMsg
     usage' <- underline "Usage:"
-    return $ unlines [versionHeader, ""
+    return $ unlines [versionHeader
+                     ,compilerBuild
+                     ,"" -- newline
                      ,commandsMsg'
                      ,usage' ++ " bb [COMMAND] [OPTIONS...]"
                      ]
 
 compilerTimestamp :: String
 compilerTimestamp = signature
+
+compilerBuild :: String
+compilerBuild = "Build time: " ++ $compileTime ++ "." -- Note: computed at compilation
 
 inputF :: [Flag] -> Maybe String
 inputF (InputFile f : _) = Just f

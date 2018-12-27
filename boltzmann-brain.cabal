@@ -32,6 +32,7 @@ library
                      , Data.Boltzmann.System.Parser
                      , Data.Boltzmann.System.Parser.Algebraic
                      , Data.Boltzmann.System.Parser.Rational
+                     , Data.Boltzmann.Internal.TH
                      , Data.Boltzmann.Internal.Tuner
                      , Data.Boltzmann.Internal.Annotations
                      , Data.Boltzmann.Internal.Logging
@@ -59,6 +60,7 @@ library
                      , time >= 1.6.0.1
                      , pretty-terminal >= 0.1.0.0
                      , edit-distance >= 0.2.2.1
+                     , template-haskell >= 2.11.1.0
   ghc-options:         -O2
                        -Wall
                        -Wcompat

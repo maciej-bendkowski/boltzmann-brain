@@ -21,6 +21,8 @@ module Data.Boltzmann.Internal.Utils
 
     , csv
 
+    , getTime
+
     , writeListLn
     , printer
     , showsList
@@ -30,6 +32,17 @@ import System.IO
 
 import System.Console.Pretty
 import Text.EditDistance
+
+import Data.Time.Clock
+import Data.Time.LocalTime
+import Data.Time.Format
+
+getTime :: IO String
+getTime = do
+    now <- getCurrentTime
+    timeZone <- getCurrentTimeZone
+    let t = utcToLocalTime timeZone now
+    return $ formatTime defaultTimeLocale "%d-%m-%Y %H:%M:%S" t
 
 writeListLn :: Show a => Handle -> [a] -> IO ()
 writeListLn h xs = hPutStrLn h (showsList xs)
