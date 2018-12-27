@@ -182,8 +182,8 @@ parse :: [String] -> IO (String, [Flag])
 parse argv =
     case getOpt Permute options argv of
         (opts, cmds, [])
-            | null cmds        -> usage
             | Help `elem` opts -> usage
+            | null cmds        -> failWithUsage "Expected a single command."
             | length cmds /= 1 -> failWithUsage "Expected a single command."
             | otherwise        -> return (head cmds, opts)
 
