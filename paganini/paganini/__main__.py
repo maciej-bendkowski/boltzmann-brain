@@ -2,7 +2,7 @@ from __future__ import print_function
 def main(args=None):
 
     __author__    = "Sergey Dovgal and Maciej Bendkowski"
-    __copyright__ = "Copyright (C) 2017 Sergey Dovgal and Maciej Bendkowski"
+    __copyright__ = "Copyright (C) 2017-2019 Sergey Dovgal and Maciej Bendkowski"
     __license__   = "Public Domain"
     __version__   = "0.29559774252"
 
@@ -23,7 +23,7 @@ def main(args=None):
         from argparse import RawTextHelpFormatter
 
     except:
-        print ("Something went wrong, cannot import package 'sys' or 'os' or 'argparse'")
+        print ("Something went wrong, cannot import packages 'sys', 'os' or 'argparse'.")
         exit(1)
 
     if sys.version_info.major != 3:
@@ -34,7 +34,6 @@ def main(args=None):
     ###  PARSING COMMAND LINE ARGUMENTS
     ##
     #
-
 
     class bcolors:
         HEADER = '\033[95m'
@@ -238,6 +237,14 @@ def main(args=None):
     else:
         freq = []
 
+    def unpack(vec):
+        """ Given a splitted text line, unpacks the sparse vector representation. """
+        res = [0] * total_number_of_variables
+        for elem in vec:
+            arr = elem[1:-1].split(',')
+            res[int(arr[1])] = int(arr[0])
+        return res
+
     sys.stderr.write("Reading the coefficients... ")
     # Read the coefficients of equations
     coeff_array = []
@@ -249,7 +256,7 @@ def main(args=None):
         n_monomials = int(vec[0])
         for monomial in range(n_monomials):
             vec = FILE.readline().split()
-            coeff_array[-1] += [[int(elem) for elem in vec]]
+            coeff_array[-1] += [[int(elem) for elem in unpack(vec)]]
 
     sys.stderr.write("done!\n")
 
