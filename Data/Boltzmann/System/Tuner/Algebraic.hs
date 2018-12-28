@@ -20,7 +20,6 @@ import Control.Monad
 
 import System.IO
 
-import Data.Map (Map)
 import qualified Data.Map.Strict as M
 
 import Numeric.LinearAlgebra hiding (size)
@@ -45,8 +44,7 @@ writeSpecification sys hout = do
     let spec    = toPSpec sys
 
     -- # of equations and frequencies
-    writeListLn hout [numTypes spec + numSeqTypes spec
-                     ,length freqs]
+    writeListLn hout [numTypes spec + numSeqTypes spec, length freqs]
 
     -- vector of frequencies
     writeListLn hout freqs
@@ -84,17 +82,9 @@ consSpecification :: Handle -> (String -> Int) -> PSpec
                   -> Int -> Cons Int -> IO Int
 
 consSpecification hout find' spec idx cons = do
-    let (vec, idx') = consVec find' spec idx cons
+    let (vec, idx') = sparseConsVec find' spec idx cons
     writeListLn hout vec -- constructor specification
     return idx'
-
-indicator :: Int -> Int -> [Int]
-indicator n k = indicator' n k 1
-
-indicator' :: Int -> Int -> Int -> [Int]
-indicator' 0 _ _ = []
-indicator' n 0 x = x : replicate (n-1) 0
-indicator' n k x = 0 : indicator' (n-1) (k-1) x
 
 occurrences :: Cons a -> (MultiSet String, MultiSet String)
 occurrences cons = occurrences' (B.empty,B.empty) $ args cons
@@ -106,39 +96,64 @@ occurrences' (ts,sts) [] = (ts,sts)
 occurrences' (ts,sts) (Type s : xs) = occurrences' (s `B.insert` ts,sts) xs
 occurrences' (ts,sts) (List s : xs) = occurrences' (ts, s `B.insert` sts) xs
 
-consVec :: (String -> Int) -> PSpec -> Int -> Cons Int -> ([Int], Int)
-consVec find' spec idx cons =
-      let (tocc, socc) = occurrences cons
-          w            = fromIntegral $ weight cons
-          dv           = indicator' (numFreqs spec) idx (weight cons)
-          tv           = typeVec find' (numTypes spec) tocc
-          sv           = typeVec find' (numSeqTypes spec) socc
+-- | Prepends a pair to a list if its
+--   first component is positive.
+sparsePrepend :: (Num a, Ord a)
+              => (a, b) -> [(a, b)] -> [(a, b)]
 
-      in case frequency cons of
-           Just _  -> (w : dv ++ tv ++ sv, idx + 1)
-           Nothing -> (w : replicate (numFreqs spec) 0 ++ tv ++ sv, idx)
+sparsePrepend x xs
+  | fst x > 0 = x : xs
+  | otherwise = xs
 
-typeVec :: (String -> Int) -> Int -> MultiSet String -> [Int]
-typeVec find' size' m = typeVec' find' vec ls
-    where vec = M.fromList [(n,0) | n <- [0..size'-1]]
-          ls  = B.toOccurList m
+prependWeight :: (Num a, Ord a, Num b)
+              => Cons a -> [(a, b)] -> [(a, b)]
 
-typeVec' :: (String -> Int) -> Map Int Int -> [(String,Int)] -> [Int]
-typeVec' _ vec [] = M.elems vec
-typeVec' find' vec ((t,n) : xs) = typeVec' find' vec' xs
-    where vec' = M.insert (find' t) n vec
+prependWeight cons =
+    sparsePrepend (weight cons, 0)
+
+prependFreq :: (Num a, Ord a, Num b)
+            => Cons a -> b -> [(a, b)] -> [(a, b)]
+
+prependFreq cons idx xs
+  | isJust (frequency cons) =
+      sparsePrepend (weight cons, 1 + idx) xs -- note: offset for z
+  | otherwise = xs
+
+sparseTypeVec :: Num a => (b -> a) -> a -> [(b, c)] -> [(c, a)]
+sparseTypeVec _ _ [] = []
+sparseTypeVec find' offset ((t,n) : xs) =
+    (n, offset + find' t) : sparseTypeVec find' offset xs
+
+sparseConsVec :: (String -> Int) -> PSpec
+              -> Int -> Cons Int -> ([(Int,Int)], Int)
+
+sparseConsVec find' spec idx cons =
+    let (tocc, socc) = occurrences cons
+
+        us = numFreqs spec
+        -- sparse type representation
+        tv = sparseTypeVec find' (1 + us) (B.toOccurList tocc)
+
+        ts = numTypes spec
+        -- sparse sequence representation
+        sv = sparseTypeVec find' (1 + us + ts) (B.toOccurList socc)
+
+        -- prepend weight and frequency
+        xs = prependWeight cons (prependFreq cons idx $ tv ++ sv)
+
+    in case frequency cons of
+         Just _  -> (xs, idx + 1)
+         Nothing -> (xs, idx)
 
 seqSpecification :: Handle -> (String -> Int) -> PSpec
                  -> String -> IO ()
 
 seqSpecification hout find' spec st = do
-    let n = 1 + numTypes spec + numFreqs spec + numSeqTypes spec
-    let f = replicate (numFreqs spec) 0
-    let t = indicator (numTypes spec) (find' st)
-    let s = indicator (numSeqTypes spec) (find' st)
     hPrint hout (2 :: Int) -- # of constructors
-    writeListLn hout $ replicate n (0 :: Int)
-    writeListLn hout $ 0 : f ++ t ++ s
+    writeListLn hout ([] :: [Int]) -- empty sequence constructor
+    let offset = 1 + numFreqs spec
+    writeListLn hout [(1, offset + find' st) :: (Int,Int)
+                     ,(1, offset + numTypes spec + find' st)] -- cons constructor
 
 evalExp :: System Int -> Double -> Vector Double
         -> [Double] -> Cons Int -> (Double, [Double])
