@@ -53,7 +53,9 @@ def main(args=None):
     D = z + z D
 
     We want to have 40% of abstractions, so we encode all the variables and
-    functions into a single vector [z, u, L, D] and construct input file
+    functions into a single vector [z, u, L, D] and start with
+    the virtual specification
+
     2 1
     0.4
     3
@@ -63,6 +65,23 @@ def main(args=None):
     2
     1 0 0 0
     1 0 0 1
+
+    Next, we compress each of the above equations using
+    the following sparse vector notation:
+
+    2 1
+    0.4
+    3
+    (1,0) (1,1) (1,2)
+    (1,0) (2,2)
+    (1,3)
+    2
+    (1,0)
+    (1,0) (1,3)
+
+    In other words, for each equation we write down only its non-zero monomials
+    with respective occurrences. Such an input format encodes the system
+    corresponding to lambda-terms.
     """
 
     parser = argparse.ArgumentParser(
