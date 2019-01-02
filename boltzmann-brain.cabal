@@ -12,7 +12,7 @@ license:             BSD3
 license-file:        LICENSE
 author:              Maciej Bendkowski
 maintainer:          maciej.bendkowski@tcs.uj.edu.pl
-copyright:           2017-2018 Maciej Bendkowski
+copyright:           2017-2019 Maciej Bendkowski
 category:            Math
 build-type:          Simple
 -- extra-source-files:

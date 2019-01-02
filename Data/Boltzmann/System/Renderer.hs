@@ -1,7 +1,7 @@
 {-|
  Module      : Data.Boltzmann.System.Renderer
  Description : Simple graph rendering utilities for combinatorial structures.
- Copyright   : (c) Maciej Bendkowski, 2017-2018
+ Copyright   : (c) Maciej Bendkowski, 2017-2019
 
  License     : BSD3
  Maintainer  : maciej.bendkowski@tcs.uj.edu.pl

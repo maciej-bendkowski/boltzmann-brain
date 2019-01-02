@@ -1,7 +1,7 @@
 {-|
  Module      : Data.Boltzmann.Internal.Logging
  Description : Basic logging utilities.
- Copyright   : (c) Maciej Bendkowski, 2017-2018
+ Copyright   : (c) Maciej Bendkowski, 2017-2019
 
  License     : BSD3
  Maintainer  : maciej.bendkowski@tcs.uj.edu.pl
