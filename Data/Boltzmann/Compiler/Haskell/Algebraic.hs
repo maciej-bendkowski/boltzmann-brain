@@ -71,16 +71,18 @@ moduleHeader sys compilerNote =
 
 compileModule :: PSystem Double -> String -> Bool -> Bool -> Bool -> Module
 compileModule sys mod' withIO' withLists' withShow' =
-    Module noLoc (ModuleName mod') []
+    Module noLoc (ModuleName mod')
+        [LanguagePragma noLoc [Ident "TemplateHaskell"]]
         Nothing (Just exports) imports decls
     where
         exports = declareExports sys withIO' withLists'
         imports = declareImports withIO'
         decls = declareADTs withShow' sys ++
+                    declareDecisionTrees sys ++
+                    declareListDecisionTrees sys withLists' ++
                     declareGenerators sys ++
                     declareListGenerators sys withLists' ++
-                    declareSamplers sys ++
-                    declareListSamplers sys withLists' ++
+                    declareGenericSampler ++
                     declareSamplersIO sys withIO' ++
                     declareListSamplersIO sys withIO' withLists'
 
@@ -91,18 +93,29 @@ declareImports withIO' =
      importFrom "Control.Monad.Trans.Maybe" [importType "MaybeT",
                                              importFunc "runMaybeT"],
 
-     importFrom "Control.Monad.Random" ([importType "RandomGen",
-                                        importFunc "Rand",
-                                        importFunc "getRandomR"]
-                                        ++ importIO withIO')]
+     importFrom "Data.Buffon.Machine" ([importType "BuffonMachine",
+                                        importType "DecisionTree",
+                                        importFunc "decisionTree",
+                                        importFunc "choice"]
+                                        ++ importIO withIO'),
+
+     importQual "Language.Haskell.TH.Syntax" "TH",
+
+     importFrom "System.Random" [importType "RandomGen"]]
 
 importIO :: Bool -> [ImportSpec]
 importIO False = []
-importIO True  = [importFunc "evalRandIO"]
+importIO True  = [importFunc "runRIO"]
 
 -- Naming functions.
 genName :: ShowS
 genName = (++) "genRandom"
+
+decisionTreeName :: ShowS
+decisionTreeName = (++) "decisionTree"
+
+decisionTreeListName :: ShowS
+decisionTreeListName = (++) "decisionTreeList"
 
 listGenName :: ShowS
 listGenName t = genName t ++ "List"
@@ -119,13 +132,15 @@ samplerIOName t = samplerName t ++ "IO"
 listSamplerIOName  :: ShowS
 listSamplerIOName t = listSamplerName t ++ "IO"
 
+genericSamplerName :: String
+genericSamplerName = "sample"
+
 declareExports :: PSystem Double -> Bool -> Bool -> [ExportSpec]
 declareExports sys withIO' withLists' =
     exportTypes sys ++
     exportGenerators sys ++
     exportListGenerators sys withLists' ++
-    exportSamplers sys ++
-    exportListSamplers sys withLists' ++
+    exportGenericSampler ++
     exportSamplersIO sys withIO' ++
     exportListSamplersIO sys withIO' withLists'
 
@@ -137,13 +152,8 @@ exportListGenerators sys withLists' = map (exportFunc . listGenName) $ types' sy
     where types' = if withLists' then typeList
                                  else seqTypes . system
 
-exportSamplers :: PSystem Double -> [ExportSpec]
-exportSamplers sys = map (exportFunc . samplerName) $ typeList sys
-
-exportListSamplers :: PSystem Double -> Bool -> [ExportSpec]
-exportListSamplers sys withLists' = map (exportFunc . listSamplerName) $ types' sys
-    where types' = if withLists' then typeList
-                                 else seqTypes . system
+exportGenericSampler :: [ExportSpec]
+exportGenericSampler = [exportFunc genericSamplerName]
 
 exportSamplersIO :: PSystem Double -> Bool -> [ExportSpec]
 exportSamplersIO _ False = []
@@ -159,8 +169,8 @@ exportListSamplersIO sys True withLists' = map (exportFunc . listSamplerIOName) 
 maybeT' :: Type
 maybeT' = typeCons "MaybeT"
 
-rand' :: Type
-rand' = typeCons "Rand"
+buffonMachine' :: Type
+buffonMachine' = typeCons "BuffonMachine"
 
 int' :: Type
 int' = typeCons "Int"
@@ -185,51 +195,71 @@ weightStream = map ('w' :) nat
 
 -- Generators.
 maybeTType :: Type -> Type
-maybeTType = TyApp (TyApp maybeT' (TyApp rand' g'))
+maybeTType = TyApp (TyApp maybeT' (TyApp buffonMachine' g'))
 
 generatorType :: Type -> Type
 generatorType type' = TyForall Nothing
     [ClassA randomGen' [g']]
     (TyFun int' (maybeTType $ TyTuple Boxed [type', int']))
 
-declRandomP :: [Decl]
-declRandomP = declTFun "randomP" type' [] body
-    where type' = TyForall Nothing [ClassA randomGen' [g']] (maybeTType $ typeVar "Double")
-          body = App (varExp "lift")
-                     (App (varExp "getRandomR")
-                          (Tuple Boxed [toLit 0, toLit 1]))
-
-randomP :: String -> Stmt
-randomP v = bind v $ varExp "randomP"
+choiceN :: String -> String -> Stmt
+choiceN v s = bind v $ applyF (varExp "lift")
+                [applyF (varExp "choice") [varExp s]]
 
 guardian :: String -> Stmt
 guardian v = Qualifier $ App (varExp "guard")
                              (varExp v `greater` toLit 0)
 
+decisionTreeType :: Type
+decisionTreeType = TyForall Nothing []
+    (TyApp (typeCons "DecisionTree")  int')
+
+declareDecisionTrees :: PSystem Double -> [Decl]
+declareDecisionTrees sys =
+    concatMap declareDecisionTree (paramTypesW sys)
+
+declareDecisionT :: Exp -> String -> [Decl]
+declareDecisionT prob name' = declTFun name' type' [] body
+    where type' = decisionTreeType
+          body  = spliceExp lift'
+          lift' = applyF (qVarExp "TH" "lift") [dt']
+          dt'   = applyF (varExp "decisionTree") [prob]
+
+declareDecisionTree :: (String, [(Cons Double, Int)]) -> [Decl]
+declareDecisionTree (t, g) = declareDecisionT prob name'
+    where name' = decisionTreeName t
+          prob = LHE.List (init $ probList g)
+
+probList :: [(Cons Double, Int)] -> [Exp]
+probList = map (Lit . Frac . toRational . weight . fst)
+
 declareGenerators :: PSystem Double -> [Decl]
 declareGenerators sys =
-    declRandomP ++
-        concatMap declGenerator (paramTypesW sys)
+    concatMap declGenerator (paramTypesW sys)
 
 declGenerator :: (String, [(Cons Double, Int)]) -> [Decl]
 declGenerator (t, g) = declTFun (genName t) type' ["ub"] body
     where type' = generatorType $ typeCons t
-          body  = constrGenerator g
+          body  = constrGenerator t g
 
-constrGenerator :: [(Cons Double, Int)] -> Exp
-constrGenerator [(constr, w)] = rec True constr w
-constrGenerator cs = Do (initSteps ++ branching)
-    where branching = [Qualifier $ constrGenerator' cs]
+constrGenerator :: String -> [(Cons Double, Int)] -> Exp
+constrGenerator _ [(constr, w)] = rec True constr w
+constrGenerator t cs = Do (initSteps ++ branching)
+    where branching = [Qualifier $ Case (varExp "n")
+                        (constrGenerator' 0 cs)]
           initSteps = [guardian "ub",
-                       randomP "p"]
+                       choiceN "n" (decisionTreeName t)]
 
-constrGenerator' :: [(Cons Double, Int)] -> Exp
-constrGenerator' [(constr, w)] = rec False constr w
-constrGenerator' ((constr, w) : cs) =
-    If (lessF (varExp "p") $ weight constr)
-       (rec False constr w)
-       (constrGenerator' cs)
-constrGenerator' _ = error "I wasn't expecting the Spanish inquisition!"
+constrGenerator' :: Int -> [(Cons Double, Int)] -> [Alt]
+constrGenerator' _ [(constr, w)] =
+    [caseAlt' (UnGuardedRhs $ rec False constr w)]
+
+constrGenerator' n ((constr, w) : cs) =
+    caseAlt (show n) (UnGuardedRhs $ rec False constr w)
+        : constrGenerator' (succ n) cs
+
+constrGenerator' _ _ =
+    error "I wasn't expecting the Spanish inquisition!"
 
 rec :: Bool -> Cons Double -> Int -> Exp
 rec withGuardian constr w =
@@ -252,7 +282,9 @@ arguments' f arg args' ub (x:xs) (w:ws) = (stmt : stmts, argW', v : vs)
           argW'             = argW `add` varExp w
           ub'               = ub `sub` varExp w
           v                 = varExp x
-arguments' _ _ _ _ _ _ = error "I wasn't expecting the Spanish inquisition!"
+
+arguments' _ _ _ _ _ _ =
+    error "I wasn't expecting the Spanish inquisition!"
 
 ret :: Exp -> [Exp] -> Exp -> Stmt
 ret f [] w = Qualifier $ applyF return' [Tuple Boxed [f, w]]
@@ -260,32 +292,44 @@ ret f xs w = Qualifier $ applyF return' [Tuple Boxed [t, w]]
     where t = applyF f xs
 
 -- List generators.
+declareListDecisionTrees :: PSystem Double -> Bool -> [Decl]
+declareListDecisionTrees sys withLists' =
+    concatMap (declareListDecisionTree sys) (types' sys)
+    where types' = if withLists' then typeList
+                                 else seqTypes . system
+
+declareListDecisionTree :: PSystem Double -> String -> [Decl]
+declareListDecisionTree sys t = declareDecisionT prob name'
+    where name' = decisionTreeListName t
+          prob = LHE.List [Lit . Frac . toRational $ typeWeight sys t]
+
 listGeneratorType :: Type -> Type
 listGeneratorType type' = TyForall Nothing
     [ClassA randomGen' [g']]
         (TyFun int' (maybeTType $ TyTuple Boxed [TyList type', int']))
 
 declareListGenerators :: PSystem Double -> Bool -> [Decl]
-declareListGenerators sys withLists' = concatMap (declListGenerator sys) $ types' sys
+declareListGenerators sys withLists' =
+    concatMap declListGenerator $ types' sys
     where types' = if withLists' then typeList
                                  else seqTypes . system
 
-declListGenerator :: PSystem Double -> String -> [Decl]
-declListGenerator sys t = declTFun (listGenName t) type' ["ub"] body
+declListGenerator :: String -> [Decl]
+declListGenerator t = declTFun (listGenName t) type' ["ub"] body
     where type' = listGeneratorType (typeCons t)
-          body  = constrListGenerator sys t
+          body  = constrListGenerator t
 
-constrListGenerator :: PSystem Double -> String -> Exp
-constrListGenerator sys t = Do (initSteps ++ branching)
-    where branching = [Qualifier $ constrListGenerator' sys t]
+constrListGenerator :: String -> Exp
+constrListGenerator t = Do (initSteps ++ branching)
+    where branching = [Qualifier $ Case (varExp "n")
+                        (constrListGenerator' 0 t)]
           initSteps = [guardian "ub",
-                       randomP "p"]
+                       choiceN "n" (decisionTreeListName t)]
 
-constrListGenerator' :: PSystem Double -> String -> Exp
-constrListGenerator' sys t =
-    If (lessF (varExp "p") (typeWeight sys t))
-       (retHeadList t)
-       retNil
+constrListGenerator' :: Int -> String -> [Alt]
+constrListGenerator' n t =
+    [caseAlt (show n) (UnGuardedRhs $ retHeadList t)
+    ,caseAlt' (UnGuardedRhs retNil)]
 
 retHeadList :: String -> Exp
 retHeadList t = Do
@@ -298,27 +342,23 @@ retNil :: Exp
 retNil = applyF return' [Tuple Boxed [LHE.List [], toLit 0]]
 
 -- Samplers.
-samplerType :: Type -> Type
-samplerType type' = TyForall Nothing
-    [ClassA randomGen' [g']]
-    (TyFun int'
-           (TyFun int'
-                  (TyApp (TyApp rand' g') type')))
+genericSamplerType :: Type
+genericSamplerType =
+    TyForall Nothing [ClassA randomGen' [g']]
+        (TyFun (TyFun int' (maybeTType $ TyTuple Boxed [TyVar (Ident "a"), int']))
+            (TyFun int' (TyFun int' (TyApp (TyApp buffonMachine' g') $ TyVar (Ident "a")))))
 
-declareSamplers :: PSystem Double -> [Decl]
-declareSamplers sys = concatMap declSampler $ typeList sys
+declareGenericSampler :: [Decl]
+declareGenericSampler = declTFun genericSamplerName type' ["gen","lb","ub"] body
+    where type' = genericSamplerType
+          body = constructGenericSampler
 
-declSampler :: String -> [Decl]
-declSampler t = declTFun (samplerName t) type' ["lb","ub"] body
-    where type' = samplerType (typeCons t)
-          body  = constructSampler t
-
-constructSampler' :: (t -> String) -> (t -> String) -> t -> Exp
-constructSampler' gen sam t =
-    Do [bind "sample" (applyF (varExp "runMaybeT")
-            [applyF (varExp $ gen t) [varExp "ub"]]),
+constructGenericSampler :: Exp
+constructGenericSampler =
+    Do [bind "str" (applyF (varExp "runMaybeT")
+            [applyF (varExp "gen") [varExp "ub"]]),
             caseSample]
-    where caseSample = Qualifier $ Case (varExp "sample")
+    where caseSample = Qualifier $ Case (varExp "str")
                  [Alt noLoc (PApp (unname "Nothing") [])
                         (UnGuardedRhs rec') Nothing,
                         Alt noLoc (PApp (unname "Just")
@@ -326,26 +366,11 @@ constructSampler' gen sam t =
                   PVar $ Ident "s"]])
                   (UnGuardedRhs return'') Nothing]
 
-          rec' = applyF (varExp $ sam t) [varExp "lb", varExp "ub"]
+          rec' = applyF (varExp genericSamplerName)
+                    [varExp "gen", varExp "lb", varExp "ub"]
           return'' = If (lessEq (varExp "lb") (varExp "s") `and` lessEq (varExp "s") (varExp "ub"))
                         (applyF (varExp "return") [varExp "x"])
                         rec'
-
-constructSampler :: String -> Exp
-constructSampler = constructSampler' genName samplerName
-
-declareListSamplers :: PSystem Double -> Bool -> [Decl]
-declareListSamplers sys withLists' = concatMap declListSampler $ types' sys
-    where types' = if withLists' then typeList
-                                 else seqTypes . system
-
-declListSampler :: String -> [Decl]
-declListSampler t = declTFun (listSamplerName t) type' ["lb","ub"] body
-    where type' = samplerType (TyList $ typeCons t)
-          body  = constructListSampler t
-
-constructListSampler :: String -> Exp
-constructListSampler = constructSampler' listGenName listSamplerName
 
 -- IO Samplers.
 samplerIOType :: Type -> Type
@@ -359,15 +384,14 @@ declareSamplersIO sys True = concatMap declSamplerIO $ typeList sys
 declSamplerIO :: String -> [Decl]
 declSamplerIO t = declTFun (samplerIOName t) type' ["lb","ub"] body
     where type' = samplerIOType (typeCons t)
-          body  = constructSamplerIO t
+          body  = constructSamplerIO genName t
 
-constructSamplerIO' :: (t -> String) -> t -> Exp
-constructSamplerIO' sam t = applyF (varExp "evalRandIO")
-                               [applyF (varExp $ sam t) [varExp "lb",
-                                                         varExp "ub"]]
-
-constructSamplerIO :: String -> Exp
-constructSamplerIO = constructSamplerIO' samplerName
+constructSamplerIO :: (a -> String) -> a -> Exp
+constructSamplerIO f t = applyF (varExp "runRIO")
+                          [applyF (varExp genericSamplerName)
+                                 [varExp (f t),
+                                  varExp "lb",
+                                  varExp "ub"]]
 
 declareListSamplersIO :: PSystem Double -> Bool -> Bool -> [Decl]
 declareListSamplersIO _ False _ = []
@@ -378,7 +402,4 @@ declareListSamplersIO sys True withLists' = concatMap declListSamplerIO $ types'
 declListSamplerIO :: String -> [Decl]
 declListSamplerIO t = declTFun (listSamplerIOName t) type' ["lb","ub"] body
     where type' = samplerIOType (TyList $ typeCons t)
-          body  = constructListSamplerIO t
-
-constructListSamplerIO :: String -> Exp
-constructListSamplerIO = constructSamplerIO' listSamplerName
+          body  = constructSamplerIO listGenName t

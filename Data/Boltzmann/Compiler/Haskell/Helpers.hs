@@ -36,8 +36,14 @@ typeVar = TyVar . Ident
 varExp :: String -> Exp
 varExp = Var . unname
 
+qVarExp :: String -> String -> Exp
+qVarExp m s = Var $ Qual (ModuleName m) (Ident s)
+
 conExp :: String -> Exp
 conExp = Con . unname
+
+spliceExp :: Exp -> Exp
+spliceExp = SpliceExp . ParenSplice
 
 toLit :: Int -> Exp
 toLit = Lit . Int . toInteger
@@ -158,3 +164,11 @@ declCon expr = ConDecl (Ident $ func expr) ags
 declArg :: Arg -> Type
 declArg (Type s) = typeVar s
 declArg (List s) = TyList $ typeVar s
+
+caseAlt :: String -> Rhs -> Alt
+caseAlt n rhs =
+    Alt noLoc (PVar $ Ident n) rhs Nothing
+
+caseAlt' :: Rhs -> Alt
+caseAlt' rhs =
+    Alt noLoc PWildCard rhs Nothing

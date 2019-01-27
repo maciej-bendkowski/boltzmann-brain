@@ -321,7 +321,7 @@ runCompiler opts = do
     (sys, sysType) <- parseSystem opts
     let moduleName = compilerConf sys
 
-    tunedSystem    <- tuneSystem sys opts T.Cummulative
+    tunedSystem    <- tuneSystem sys opts T.Regular
     info "Running sampler compiler..."
 
     sysFormat <- getInputFormat opts
@@ -349,6 +349,8 @@ samplerConf sys opts =
 getSamples :: System Int -> [Flag] -> IO [Structure]
 getSamples sys opts = do
     (lb, ub, n, genT) <- samplerConf sys opts
+    -- TODO: Consider having generic method of generating samples
+    --       reusing the compiler code. Ad-hoc compilation?
     tunedSystem       <- tuneSystem sys opts T.Cummulative
     replicateM n (sampleStrIO tunedSystem genT lb ub) -- get n samples.
 
