@@ -123,32 +123,8 @@ exportSamplersIO _ False = []
 exportSamplersIO sys True = map (exportFunc . samplerIOName) $ typeList sys
 
 -- Utils.
-maybeT' :: Type
-maybeT' = typeCons "MaybeT"
-
 rand' :: Type
 rand' = typeCons "Rand"
-
-int' :: Type
-int' = typeCons "Int"
-
-g' :: Type
-g' = typeVar "g"
-
-randomGen' :: QName
-randomGen' = unname "RandomGen"
-
-return' :: Exp
-return' = varExp "return"
-
-nat :: [String]
-nat = map show ([0..] :: [Integer])
-
-variableStream :: [String]
-variableStream = map ('x' :) nat
-
-weightStream :: [String]
-weightStream = map ('w' :) nat
 
 -- Generators.
 maybeTType :: Type -> Type

@@ -172,3 +172,55 @@ caseAlt n rhs =
 caseAlt' :: Rhs -> Alt
 caseAlt' rhs =
     Alt noLoc PWildCard rhs Nothing
+
+caseInt :: String -> [(Int, Rhs)] -> Exp
+caseInt n xs = Case (varExp n) (caseInt' xs)
+
+caseInt' :: [(Int, Rhs)] -> [Alt]
+caseInt' [] = error "Absurd case"
+caseInt' [(_,rhs)] = [caseAlt' rhs]
+caseInt' ((n,rhs) : xs) = x : caseInt' xs
+    where x = caseAlt (show n) rhs
+
+-- Utils.
+maybeT' :: Type
+maybeT' = typeCons "MaybeT"
+
+buffonMachine' :: Type
+buffonMachine' = typeCons "BuffonMachine"
+
+int' :: Type
+int' = typeCons "Int"
+
+g' :: Type
+g' = typeVar "g"
+
+randomGen' :: QName
+randomGen' = unname "RandomGen"
+
+return' :: Exp
+return' = varExp "return"
+
+double' :: Type
+double' = typeCons "Double"
+
+nat :: [String]
+nat = map show ([0..] :: [Integer])
+
+variableStream :: [String]
+variableStream = map ('x' :) nat
+
+weightStream :: [String]
+weightStream = map ('w' :) nat
+
+decisionTreeType :: Type
+decisionTreeType = TyForall Nothing []
+    (TyApp (typeCons "DecisionTree")  int')
+
+probList :: [(Cons Double, Int)] -> [Exp]
+probList = map (Lit . Frac . toRational . weight . fst)
+
+choiceN :: String -> Exp -> Stmt
+choiceN v s = bind v $ applyF (varExp "lift")
+                [applyF (varExp "choice") [s]]
+

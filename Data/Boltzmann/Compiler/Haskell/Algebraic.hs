@@ -104,8 +104,7 @@ declareImports withIO' =
      importFrom "System.Random" [importType "RandomGen"]]
 
 importIO :: Bool -> [ImportSpec]
-importIO False = []
-importIO True  = [importFunc "runRIO"]
+importIO withIO' = [importFunc "runRIO" | withIO']
 
 -- Naming functions.
 genName :: ShowS
@@ -165,34 +164,6 @@ exportListSamplersIO sys True withLists' = map (exportFunc . listSamplerIOName) 
     where types' = if withLists' then typeList
                                  else seqTypes . system
 
--- Utils.
-maybeT' :: Type
-maybeT' = typeCons "MaybeT"
-
-buffonMachine' :: Type
-buffonMachine' = typeCons "BuffonMachine"
-
-int' :: Type
-int' = typeCons "Int"
-
-g' :: Type
-g' = typeVar "g"
-
-randomGen' :: QName
-randomGen' = unname "RandomGen"
-
-return' :: Exp
-return' = varExp "return"
-
-nat :: [String]
-nat = map show ([0..] :: [Integer])
-
-variableStream :: [String]
-variableStream = map ('x' :) nat
-
-weightStream :: [String]
-weightStream = map ('w' :) nat
-
 -- Generators.
 maybeTType :: Type -> Type
 maybeTType = TyApp (TyApp maybeT' (TyApp buffonMachine' g'))
@@ -202,17 +173,9 @@ generatorType type' = TyForall Nothing
     [ClassA randomGen' [g']]
     (TyFun int' (maybeTType $ TyTuple Boxed [type', int']))
 
-choiceN :: String -> String -> Stmt
-choiceN v s = bind v $ applyF (varExp "lift")
-                [applyF (varExp "choice") [varExp s]]
-
 guardian :: String -> Stmt
 guardian v = Qualifier $ App (varExp "guard")
                              (varExp v `greater` toLit 0)
-
-decisionTreeType :: Type
-decisionTreeType = TyForall Nothing []
-    (TyApp (typeCons "DecisionTree")  int')
 
 declareDecisionTrees :: PSystem Double -> [Decl]
 declareDecisionTrees sys =
@@ -230,9 +193,6 @@ declareDecisionTree (t, g) = declareDecisionT prob name'
     where name' = decisionTreeName t
           prob = LHE.List (init $ probList g)
 
-probList :: [(Cons Double, Int)] -> [Exp]
-probList = map (Lit . Frac . toRational . weight . fst)
-
 declareGenerators :: PSystem Double -> [Decl]
 declareGenerators sys =
     concatMap declGenerator (paramTypesW sys)
@@ -248,7 +208,7 @@ constrGenerator t cs = Do (initSteps ++ branching)
     where branching = [Qualifier $ Case (varExp "n")
                         (constrGenerator' 0 cs)]
           initSteps = [guardian "ub",
-                       choiceN "n" (decisionTreeName t)]
+                       choiceN "n" (varExp $ decisionTreeName t)]
 
 constrGenerator' :: Int -> [(Cons Double, Int)] -> [Alt]
 constrGenerator' _ [(constr, w)] =
@@ -324,7 +284,7 @@ constrListGenerator t = Do (initSteps ++ branching)
     where branching = [Qualifier $ Case (varExp "n")
                         (constrListGenerator' 0 t)]
           initSteps = [guardian "ub",
-                       choiceN "n" (decisionTreeListName t)]
+                       choiceN "n" (varExp $ decisionTreeListName t)]
 
 constrListGenerator' :: Int -> String -> [Alt]
 constrListGenerator' n t =

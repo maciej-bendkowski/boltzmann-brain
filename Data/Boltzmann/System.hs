@@ -18,6 +18,7 @@ module Data.Boltzmann.System
     , isRationalF
     , letterFreq
     , letterWeight
+    , lookupLetter
 
     , System(..)
     , size
@@ -95,6 +96,13 @@ letterWeight s alph =
         in case x `S.lookupIndex` alph of
             Nothing -> Nothing
             Just idx -> Just $ weightL (idx `S.elemAt` alph)
+
+-- | Given a string and an alphabet, finds
+--   the corresponding letter index.
+lookupLetter :: String -> Alphabet -> Maybe Int
+lookupLetter s alph =
+    let x = Letter { symb = s, freq = Nothing, weightL = 0 }
+      in x `S.lookupIndex` alph
 
 instance Ord Letter where
     compare a b = compare (symb a) (symb b) -- ignore frequencies.
