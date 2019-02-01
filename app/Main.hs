@@ -56,7 +56,6 @@ import qualified Data.Boltzmann.System.Tuner.Rational as TR
 import Data.Boltzmann.Compiler
 import qualified Data.Boltzmann.Compiler.Haskell.Algebraic as A
 import qualified Data.Boltzmann.Compiler.Haskell.Rational as R
-import qualified Data.Boltzmann.Compiler.Haskell.Matrix as X
 
 data Flag = InputFile  String  -- ^ input file location
           | OutputFile String  -- ^ output file location
@@ -318,7 +317,7 @@ compilerConf sys = moduleName
 -- | Runs the specification compiler.
 runCompiler :: [Flag] -> IO ()
 runCompiler opts = do
-    (sys, sysType) <- parseSystem opts
+    (sys, _) <- parseSystem opts
     let moduleName = compilerConf sys
 
     tunedSystem    <- tuneSystem sys opts T.Regular
@@ -326,11 +325,8 @@ runCompiler opts = do
 
     sysFormat <- getInputFormat opts
     case sysFormat of
-        RationalF  -> X.compile (config tunedSystem moduleName compilerTimestamp :: X.Conf)
-        AlgebraicF -> case sysType of
-                          Rational  -> R.compile (config tunedSystem moduleName compilerTimestamp :: R.Conf)
-                          Algebraic -> A.compile (config tunedSystem moduleName compilerTimestamp :: A.Conf)
-                          _         -> fail' "Unsupported system type."
+        RationalF  -> R.compile (config tunedSystem moduleName compilerTimestamp :: R.Conf)
+        AlgebraicF -> A.compile (config tunedSystem moduleName compilerTimestamp :: A.Conf)
 
 samplerConf :: System Int -> [Flag] -> IO (Int, Int, Int, String)
 samplerConf sys opts =
