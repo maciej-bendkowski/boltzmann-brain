@@ -51,6 +51,9 @@ toLit = Lit . Int . toInteger
 importType :: String -> ImportSpec
 importType = IThingAll . Ident
 
+importType' :: String -> ImportSpec
+importType' = IAbs NoNamespace . Ident
+
 importFunc :: String -> ImportSpec
 importFunc = IVar . Ident
 

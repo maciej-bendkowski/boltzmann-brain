@@ -88,7 +88,7 @@ declareImports withIO' =
      importFrom "Control.Monad.Trans.Maybe" [importType "MaybeT",
                                              importFunc "runMaybeT"],
 
-    importFrom "Data.Buffon.Machine" ([importType "BuffonMachine",
+    importFrom "Data.Buffon.Machine" ([importType' "BuffonMachine",
                                         importType "DecisionTree",
                                         importFunc "decisionTree",
                                         importFunc "choice"]
