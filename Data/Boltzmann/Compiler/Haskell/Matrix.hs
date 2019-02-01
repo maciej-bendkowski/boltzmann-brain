@@ -227,14 +227,15 @@ getNeighbourhood' n ((k,w) : xs) = (n, UnGuardedRhs p) : xs'
 getNeighbourhood' _ _ = []
 
 declGen :: [Decl]
-declGen = declTFun "genWord" type' ["ub", "s"] mainIfStmt
+declGen = declTFun "genWord" type' ["ub", "s", "acc", "ct"] mainIfStmt
     where type' = TyForall Nothing [ClassA randomGen' [g']]
-            (TyFun int' $ TyFun int' (maybeTType $ TyTuple Boxed
-                [TyList $ typeCons "Symbol", int']))
+            (TyFun int' $ TyFun int' $ TyFun (TyList $ typeCons "Symbol")
+                $ TyFun int' (maybeTType $ TyTuple Boxed
+                    [TyList $ typeCons "Symbol", int']))
 
           mainIfStmt = If (varExp "ub" `lessEq` toLit 0
                             `and` applyF (varExp "isTerminal") [varExp "s"])
-                         (App return' (Tuple Boxed [LHE.List [], toLit 0]))
+                         (App return' (Tuple Boxed [varExp "acc", varExp "ct"]))
                          mainBody
 
           mainBody = Do [ choiceStmt
@@ -250,11 +251,10 @@ declGen = declTFun "genWord" type' ["ub", "s"] mainIfStmt
                                             [varExp "s", varExp "n"]) Nothing
 
           ifStmt = Qualifier $ If (less (varExp "s'") (toLit 0))
-                      (App return' (Tuple Boxed [LHE.List [], toLit 0])) elseStmt
+                      (App return' (Tuple Boxed [varExp "acc", varExp "ct"])) elseStmt
 
           elseStmt = Do [ bindSymbol
-                        , recursiveCall
-                        , returnStmt]
+                        , recursiveCall]
 
           bindSymbol = LetStmt (BDecls [bindSymbol'])
           bindSymbol' = PatBind noLoc
@@ -264,16 +264,11 @@ declGen = declTFun "genWord" type' ["ub", "s"] mainIfStmt
                                         , applyF (varExp "weight") [varExp "i"]])
                                              Nothing
 
-          recursiveCall = Generator noLoc
-                            (PTuple Boxed [PVar $ Ident "as", PVar $ Ident "w'"])
-                            (App (App (varExp "genWord")
-                                (varExp "ub" `sub` varExp "w"))
-                                (varExp "s'"))
+          recursiveCall = Qualifier $ applyF (varExp "genWord")
+                            [varExp "ub" `sub` varExp "w", varExp "s'",
+                              InfixApp (varExp "a") (symbol ":") (varExp "acc"),
+                              varExp "w" `add` varExp "ct"]
 
-          returnStmt = Qualifier $ App return'
-                        (Tuple Boxed
-                            [InfixApp (varExp "a") (symbol ":") (varExp "as")
-                            ,varExp "w" `add` varExp "w'"])
 
 declSampler :: [Decl]
 declSampler = declTFun "sampleWord" type' ["lb", "ub", "s"] constructSampler
@@ -284,7 +279,7 @@ declSampler = declTFun "sampleWord" type' ["lb", "ub", "s"] constructSampler
 constructSampler :: Exp
 constructSampler =
     Do [bind "str" (applyF (varExp "runMaybeT")
-            [applyF (varExp "genWord") [varExp "lb", varExp "s"]]),
+            [applyF (varExp "genWord") [varExp "lb", varExp "s", LHE.List [], toLit 0]]),
             caseSample]
     where caseSample = Qualifier $ Case (varExp "str")
                  [Alt noLoc (PApp (unname "Nothing") [])
