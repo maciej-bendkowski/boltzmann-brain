@@ -36,3 +36,20 @@ functions into a single vector `[z, u, L, D]` and construct input file
 2
 1 0 0 0
 1 0 0 1
+
+Next, we compress each of the above equations using the following sparse vector
+notation:
+
+2 1
+0.4
+3
+(1,0) (1,1) (1,2)
+(1,0) (2,2)
+(1,3)
+2
+(1,0)
+(1,0) (1,3)
+
+In other words, for each equation we write down only its non-zero monomials with
+respective occurrences. Such an input format encodes the system corresponding to
+lambda-terms.
