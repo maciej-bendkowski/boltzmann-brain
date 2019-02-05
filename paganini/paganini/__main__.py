@@ -4,7 +4,7 @@ def main(args=None):
     __author__    = "Sergey Dovgal and Maciej Bendkowski"
     __copyright__ = "Copyright (C) 2017-2019 Sergey Dovgal and Maciej Bendkowski"
     __license__   = "Public Domain"
-    __version__   = "0.29559774252"
+    __version__   = "0.295597742522"
 
     flag_debug = False
 
@@ -140,6 +140,12 @@ def main(args=None):
     except:
         list_of_noninstalled_packages += ['sympy']
 
+    # --- scipy is required for sparse matrices.
+    try:
+        from scipy import sparse
+    except:
+        list_of_noninstalled_packages += ['scipy']
+
     try:
         import numpy as np
     except:
@@ -216,17 +222,7 @@ def main(args=None):
 
     input_error_string = """
     Input format error in '""" + err_filename + """'!
-    Expected:
-    <n_fun> <n_var>
-    <freq1> <freq2> ... <freq n_var>
-    <number of monomials in first definition>
-    <exponent1> <exponent2> ... <exponent n_var> - for the first monomial
-    <exponent1> <exponent2> ... <exponent n_var> - for the second
-    ...
-    <number of monomials in second definition>
-    ...
-
-    Type python2 paganini.py for help and examples.
+    Type paganini -h for help and examples.
     """
 
     FILE = open(filename,'r') if filename else sys.stdin
@@ -256,38 +252,46 @@ def main(args=None):
     else:
         freq = []
 
-    def unpack(vec):
-        """ Given a splitted text line, unpacks the sparse vector representation. """
-        res = [0] * total_number_of_variables
-        for elem in vec:
-            arr = elem[1:-1].split(',')
-            res[int(arr[1])] = int(arr[0])
-        return res
-
     sys.stderr.write("Reading the coefficients... ")
+
     # Read the coefficients of equations
-    coeff_array = []
+    coeff_rows = [] # non-zero row indices
+    coeff_cols = [] # non-zero column indices
+    coeff_data = [] # non-zero data entries
+    coeff_dim  = [] # 'monomial' dimension
+
     for n_equation in range(number_of_functions):
-        coeff_array += [[]]
+
+        coeff_rows += [[]]
+        coeff_cols += [[]]
+        coeff_data += [[]]
+
         vec = FILE.readline().split()
         assert np.size(vec) >= 1,\
                 'What is the number of monomials in equation '+ n_equation + '?\n'
+
         n_monomials = int(vec[0])
+        coeff_dim.append(n_monomials)
+
         for monomial in range(n_monomials):
             vec = FILE.readline().split()
-            coeff_array[-1] += [[int(elem) for elem in unpack(vec)]]
+            for elem in vec:
+                arr = elem[1:-1].split(',')
+                coeff_rows[-1].append(int(monomial))
+                coeff_cols[-1].append(int(arr[1]))
+                coeff_data[-1].append(int(arr[0]))
 
     sys.stderr.write("done!\n")
-
     sys.stderr.write("Composing optimization problem... ")
 
     z = cvxpy.Variable((number_of_variables + number_of_functions + 1))
-
     obj = np.array( [[1.0] + freq + [0.0] *  number_of_functions])
 
     constraints = [
                 z[idx + number_of_variables + 1] >=
-                cvxpy.log_sum_exp(np.array(coeff_array[idx]) * z)
+                cvxpy.log_sum_exp(sparse.csr_matrix((np.array(coeff_data[idx]),
+                    (np.array(coeff_rows[idx]),np.array(coeff_cols[idx]))),
+                        shape=(coeff_dim[idx], total_number_of_variables)) * z)
                 for idx in range(number_of_functions)
             ]
     if is_rational:
