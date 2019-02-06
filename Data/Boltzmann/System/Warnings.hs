@@ -109,5 +109,6 @@ warningList sys = consWeightWarn sys
                ++ prefixAlphabetWarn sys
 
 -- | Checks whether the given input system admits no warnings.
-warnings :: Bool -> System Int -> IO ()
-warnings werror sys =  checkWarns werror (warningList sys)
+warnings :: Bool -> Bool -> System Int -> IO ()
+warnings werror force sys =
+    unless force (checkWarns werror $ warningList sys)

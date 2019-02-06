@@ -61,7 +61,7 @@ data Flag = InputFile  String  -- ^ input file location
           | OutputFile String  -- ^ output file location
           | TuningFile String  -- ^ paganini tuning data file location
           | Format String      -- ^ whether to assume a rational input specification format
-          | Force              -- ^ whether to skip some sanity check
+          | Force              -- ^ whether to skip sanity checks
           | Werror             -- ^ whether to treat warnings as errors
           | Help               -- ^ whether to print usage help text
             deriving (Show,Eq)
@@ -83,7 +83,7 @@ options = [Option "i" ["input"] (ReqArg InputFile "FILE")
             "Whether to treat warnings as errors.",
 
            Option "f" ["force"] (NoArg Force)
-            "Whether to skip some sanity checks such as the well-foundedness check.",
+            "Whether to skip sanity checks such as the well-foundedness check.",
 
            Option "h?" ["help"] (NoArg Help)
             "Prints this help message."]
@@ -276,7 +276,7 @@ parseSystem opts = do
     sysType <- errors inFormat force sys -- check for errors
 
     let werror = Werror `elem` opts
-    warnings werror sys         -- check for warnings
+    warnings werror force sys         -- check for warnings
 
     return (sys, sysType)
 
