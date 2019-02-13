@@ -25,6 +25,7 @@ import Language.Haskell.Exts.SrcLoc (noLoc)
 
 import Data.Boltzmann.System
 import Data.Boltzmann.Internal.Annotations
+import Data.Boltzmann.Internal.Utils (getTime)
 
 import Data.Boltzmann.Compiler
 import Data.Boltzmann.Compiler.Haskell.Helpers
@@ -59,15 +60,16 @@ instance Configuration Conf where
                        module'    = compileModule sys name'
                                         withIO' withLists' withShow'
                    in do
-                       putStr $ moduleHeader sys note
+                       time <- getTime
+                       putStr $ moduleHeader sys note time
                        putStrLn $ prettyPrint module'
 
-moduleHeader :: PSystem Double -> String -> String
-moduleHeader sys compilerNote =
-    unlines (["-- | Compiler: " ++ compilerNote,
-              "-- | Singularity: " ++ show (param sys),
-              "-- | System type: algebraic",
-              "-- | Stability: experimental"] ++ systemNote sys)
+moduleHeader :: PSystem Double -> String -> String -> String
+moduleHeader sys compilerNote time =
+    unlines (["-- | Compiler:     " ++ compilerNote,
+              "-- | Generated at: " ++ time,
+              "-- | Singularity:  " ++ show (param sys)]
+              ++ systemNote sys (show Algebraic))
 
 compileModule :: PSystem Double -> String -> Bool -> Bool -> Bool -> Module
 compileModule sys mod' withIO' withLists' withShow' =

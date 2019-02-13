@@ -17,10 +17,13 @@ import Language.Haskell.Exts.SrcLoc (noLoc)
 import Data.Boltzmann.System
 
 -- | Prepares a system/module note.
-systemNote :: PSystem Double -> [String]
-systemNote psys = ["-- | System size: " ++ show n,
-                   "-- | Constructors: " ++ show m]
+systemNote :: PSystem Double -> String -> [String]
+systemNote psys t = ["-- | System:       " ++ p,
+                     "-- | System type:  " ++ t,
+                     "-- | Stability:    experimental"]
+
     where sys = system psys
+          p   = "(Types: " ++ show n ++ ", Constr: " ++ show m ++ ")"
           m   = constructors sys
           n   = size sys
 

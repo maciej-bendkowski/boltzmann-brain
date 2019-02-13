@@ -32,6 +32,7 @@ import Data.Maybe (fromMaybe)
 
 import Data.Boltzmann.System
 import Data.Boltzmann.Internal.Annotations
+import Data.Boltzmann.Internal.Utils (getTime)
 
 import Data.Boltzmann.Compiler
 import Data.Boltzmann.Compiler.Haskell.Helpers
@@ -59,15 +60,16 @@ instance Configuration Conf where
                        withIO'    = withIO conf
                        module'    = compileModule sys name' withIO'
                    in do
-                       putStr $ moduleHeader sys note
+                       time <- getTime
+                       putStr $ moduleHeader sys note time
                        putStrLn $ prettyPrint module'
 
-moduleHeader :: PSystem Double -> String -> String
-moduleHeader sys compilerNote =
-    unlines (["-- | Compiler: " ++ compilerNote,
-              "-- | Singularity: " ++ show (param sys),
-              "-- | System type: rational",
-              "-- | Stability: experimental"] ++ systemNote sys)
+moduleHeader :: PSystem Double -> String -> String -> String
+moduleHeader sys compilerNote time =
+    unlines (["-- | Compiler:     " ++ compilerNote,
+              "-- | Generated at: " ++ time,
+              "-- | Singularity:  " ++ show (param sys)]
+              ++ systemNote sys (show Rational))
 
 compileModule :: PSystem Double -> String -> Bool -> Module
 compileModule sys mod' withIO' =

@@ -135,7 +135,7 @@ usageHeader = do
                      ]
 
 compilerTimestamp :: String
-compilerTimestamp = signature
+compilerTimestamp = signature ++ " (" ++ $compileTime ++ ")"
 
 compilerBuild :: String
 compilerBuild = "Build time: " ++ $compileTime ++ "." -- Note: computed at compilation
