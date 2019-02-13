@@ -38,6 +38,8 @@ module Data.Boltzmann.System
 
     , SystemType(..)
     , systemType
+    , isAlgebraic
+    , isRational
     , hasAtoms
     , isAtomic
 
@@ -293,6 +295,14 @@ instance Show SystemType where
     show Rational        = "rational"
     show Algebraic       = "algebraic"
     show (Unsupported _) = "unsupported"
+
+isAlgebraic :: SystemType -> Bool
+isAlgebraic Algebraic = True
+isAlgebraic _         = False
+
+isRational :: SystemType -> Bool
+isRational Rational = True
+isRational _        = False
 
 -- | Determines the system type.
 systemType :: System a -> SystemType

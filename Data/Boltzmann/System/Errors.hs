@@ -170,8 +170,9 @@ data WellFoundedError = WellFoundedError
 
 wellFoundedErrors :: System Int -> [ErrorExt]
 wellFoundedErrors sys =
-    [ErrorExt WellFoundedError |
-        not (isEmptyAtZero sys) || not (wellFoundedAtZero sys)]
+    -- note: do not check well-foundness of systems other than algebraic.
+    [ErrorExt WellFoundedError | isAlgebraic (systemType sys) &&
+        (not (isEmptyAtZero sys) || not (wellFoundedAtZero sys))]
 
 instance SystemErr WellFoundedError where
     report _ = "Given system is not well-founded at zero."
@@ -202,7 +203,7 @@ instance SystemErr FreqError where
 -- | Unsupported system type.
 newtype SysTypeError =
         SysTypeError { sysTypeMsg :: String -- ^ System type message.
-                   }
+                     }
 
 -- | Checks if the specification type is supported.
 supportedSystemType :: System a -> Either SysTypeError SystemType
@@ -260,7 +261,7 @@ otherErrors sys
         ++ wellFoundedErrors sys
 
 -- | Checks whether the given input system is correct, yielding its type.
---   Otherwise, terminate with an appropriate system error message.
+--   Otherwise, terminates with an appropriate system error message.
 errors :: Format -> Bool -> System Int -> IO SystemType
 errors format force sys =
     if force then checkSysType $ supportedSystemType sys -- the force is strong with this one.

@@ -63,6 +63,16 @@ instance SystemWarn ConsWeightWarn where
             cons' = quote $ consWeightCons warn
             typ'  = quote $ consWeightType warn
 
+-- | Skipping the well-foundness check.
+data SkipWellFoundness = SkipWellFoundness
+
+skipWellFoundness :: System a -> [WarningExt]
+skipWellFoundness sys =
+    [WarningExt SkipWellFoundness | not (isAlgebraic $ systemType sys)]
+
+instance SystemWarn SkipWellFoundness where
+    report _ = "Given system specifies a rational language. Skipping well-foundness check."
+
 -- | Alphabet with prefix symbols.
 newtype PrefixAlphabetWarn =
     PrefixAlphabetWarn { conflicts :: [(String, String)] -- ^ Conflicting symbols.
@@ -104,7 +114,8 @@ checkWarns werror warns = do
 
 -- | List of checked warnings.
 warningList :: System Int -> [WarningExt]
-warningList sys = consWeightWarn sys
+warningList sys = skipWellFoundness sys
+               ++ consWeightWarn sys
                ++ polynomialWarn sys
                ++ prefixAlphabetWarn sys
 
