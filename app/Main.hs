@@ -68,22 +68,22 @@ data Flag = InputFile  String  -- ^ input file location
 
 options :: [OptDescr Flag]
 options = [Option "i" ["input"] (ReqArg InputFile "FILE")
-            "Optional input file. If not given, stdin is used instead.",
+            "Input specification file. If not given, STDIN is used instead.",
 
            Option "o" ["output"] (ReqArg OutputFile "FILE")
-            "Optional output file. If not given, stdout is used instead.",
+            "Output file. If not given, STDOUT is used instead.",
 
            Option "t" ["tuning-data"] (ReqArg TuningFile "FILE")
-            "Optional paganini tuning data file corresponding to the input specification.",
+            "Tuning data file created using paganini.",
 
            Option "r" ["format"] (ReqArg Format "EXT")
-            "Optional input specification format (algebraic|rational). If not given, the algebraic format is used instead.",
+            "Input format (algebraic|rational). Default: algebaic.",
 
            Option "w" ["werror"] (NoArg Werror)
-            "Whether to treat warnings as errors.",
+            "Whether to treat warnings as errors or not.",
 
            Option "f" ["force"] (NoArg Force)
-            "Whether to skip sanity checks such as the well-foundedness check.",
+            "Whether to skip input specification correctness checks.",
 
            Option "h?" ["help"] (NoArg Help)
             "Prints this help message."]
@@ -99,12 +99,13 @@ versionHeader = signature ++ " (c) 2017-2019."
 
 -- | Available boltzmann-brain commands.
 commands :: [(String, String)]
-commands = [("compile","Generates a Boltzmann sampler corresponding to the given specification.")
-           ,("sample","Generates a random structure corresponding to the given specification.")
-           ,("render","Generates a random structure and outputs its dotfile representation.")
-           ,("tune","Decorates the given specification with appropriate Boltzmann branching probabilities.")
-           ,("spec","Generates a paganini input tuning problem corresponding to the given specification.")
-           ]
+commands =
+    [("compile", "Generates an analytic sampler corresponding to the given specification.")
+    ,("sample" , "Generates a random structure corresponding to the given specification.")
+    ,("render" , "Generates a random structure and outputs its dotfile representation.")
+    ,("tune"   , "Decorates the given specification with appropriate branching probabilities.")
+    ,("spec"   , "Generates a corresponding paganini input tuning problem.")
+    ]
 
 -- | Renders the given commands and its description.
 renderCmd :: (String -> String) -> (String, String) -> IO String
@@ -127,8 +128,7 @@ usageHeader :: IO String
 usageHeader = do
     commandsMsg' <- commandsMsg
     usage' <- underline "Usage:"
-    return $ unlines [versionHeader
-                     ,compilerBuild
+    return $ unlines [artLogo
                      ,"" -- newline
                      ,commandsMsg'
                      ,usage' ++ " bb [COMMAND] [OPTIONS...]"
@@ -139,6 +139,39 @@ compilerTimestamp = signature
 
 compilerBuild :: String
 compilerBuild = "Build time: " ++ $compileTime ++ "." -- Note: computed at compilation
+
+align :: String -> String -> String
+align s t = s ++ t ++ replicate (80 - length s - length t) ' '
+
+logoHeader :: String
+logoHeader = align s versionHeader
+    where s = "       `/:/::-  `  ././:.`             "
+
+buildTimeHeader :: String
+buildTimeHeader = align s compilerBuild
+    where s = "        .-         `..-                "
+
+artLogo :: String
+artLogo =
+    unlines
+       ["                                                .--                             ",
+        "                             .-`                ./:``  `                        ",
+        "                             .:.-`      `.-` ..--:/    .+-           ``....:::. ",
+        "                         ``.:`-:-::`   --..:--//:+/-````:-`.```.-`  `//::///---`",
+        "                       ``::-:` //+:.   `. `...`-::.++//++/:----:-:.-:/-`/oo+::/-",
+        "                      /o. .:::/-.-:`        `   -://:::/://       .::`.-..::/:- ",
+        "            ``  ``````.-:`  `.`...-/`.         `- ``.`            `.:/:`  -:.   ",
+        "            ...+-/-:--::-:`     -::/-/:-`.-.`..:::/+:.              `+`         ",
+        "              `:-.-::::--::.```:/+:-:` ./+/:-+:. :-`.`              --.         ",
+        "         ``       .`.:-``.////-``../++:/::-:/--::::-+/:.           -+-          ",
+        "..`..-...:```````-:::`.`.///:-.`  ``-.-``.:.  `   `/.:/:`          `-`          ",
+        "`:////::/+-/+/.`:/o++/:::++-:-.--        .    `     `.+/.           `           ",
+        " `  :/:``--.:-  .--/+++-::-:-: `                     .:.                        ",
+        " -::+:./:://+:--.-:://-``/+-`                        .`                         ",
+        " -/`.-   -/o+/o+/+//+++//o+.                                                    ",
+        "  `    `:/+/s+-...```.://--                                                     ",
+                                                       logoHeader                         ,
+                                                       buildTimeHeader                    ]
 
 inputF :: [Flag] -> Maybe String
 inputF (InputFile f : _) = Just f
@@ -164,15 +197,15 @@ format []                       = Nothing
 -- | Logs an error and exists with the usage info.
 failWithUsage :: String -> IO a
 failWithUsage m = do
-    let msg' = ensureLn m
     usage' <- usageHeader
-    fail' (msg' ++ usageInfo usage' options)
+    putStrLn $ usageInfo usage' options
+    fail' m
 
 -- | Prints the usage info and exists.
 usage :: IO a
 usage = do
     usage' <- usageHeader
-    putStrLn $ usageInfo usage' options
+    putStr $ usageInfo usage' options
     exitSuccess
 
 -- | Parses the CLI arguments into the command string
@@ -196,15 +229,17 @@ parseFileExt file =
         _      -> Nothing
 
 inputFormat :: [Flag] -> FilePath -> IO Format
-inputFormat opts file =
-    case format opts of
-        Just f -> return f
-        Nothing -> case parseFileExt file of
-                       Nothing       -> do
-                          warn "Cannot guess input specification format. Defaulting to 'algebraic'."
-                          hint "Use conventional file extensions '.rat', '.alg' or use the --format flag."
-                          return AlgebraicF
-                       Just inFormat -> return inFormat
+inputFormat opts file = case format opts of
+    Just f -> return f
+    Nothing ->
+        case parseFileExt file of
+           Nothing       -> do
+              warn $ "Cannot guess input specification format."
+                         ++ " Defaulting to 'algebraic'."
+              hint $ "Use conventional file extensions"
+                         ++ " '.rat', '.alg' or use the --format flag."
+              return AlgebraicF
+           Just inFormat -> return inFormat
 
 getInputFormat :: [Flag] -> IO Format
 getInputFormat opts =
@@ -251,7 +286,8 @@ unrecognisedCmd :: String -> IO String
 unrecognisedCmd cmd = do
     let cmd' = quote cmd
     cmdHint <- bold $ closest (map fst commands) cmd
-    return $ "Unrecognised command " ++ cmd' ++ ". Did you meant " ++ cmdHint ++ "?"
+    return $ "Unrecognised command " ++ cmd' ++
+                ". Did you mean " ++ cmdHint ++ "?"
 
 -- | Prints parsing errors or returns the parsed system.
 getSystem :: (ShowToken t, Ord t, ShowErrorComponent e)
@@ -300,9 +336,10 @@ tuneSystem sys opts prob =
            let arg                  = T.defaultArgs sys
            let (precision, maxiter) = tuningConf sys
            sysFormat <- getInputFormat opts
-           dat <- runPaganini sysFormat sys prob (Just $ arg { T.precision = precision
-                                                             , T.maxiters  = maxiter
-                                                             })
+           dat <- runPaganini sysFormat sys prob
+                    (Just $ arg { T.precision = precision
+                                , T.maxiters  = maxiter
+                                })
            getSystem dat
         Just file -> do
             sysFormat <- getInputFormat opts
@@ -325,8 +362,10 @@ runCompiler opts = do
 
     sysFormat <- getInputFormat opts
     case sysFormat of
-        RationalF  -> R.compile (config tunedSystem moduleName compilerTimestamp :: R.Conf)
-        AlgebraicF -> A.compile (config tunedSystem moduleName compilerTimestamp :: A.Conf)
+        RationalF  -> R.compile (config tunedSystem moduleName
+                                 compilerTimestamp :: R.Conf)
+        AlgebraicF -> A.compile (config tunedSystem moduleName
+                                 compilerTimestamp :: A.Conf)
 
 samplerConf :: System Int -> [Flag] -> IO (Int, Int, Int, String)
 samplerConf sys opts =
@@ -336,11 +375,11 @@ samplerConf sys opts =
         ub  = withInt ann "upperBound" 200
         gen = withString ann "generate" (initType sys)
         in case "samples" `M.lookup` ann of
-               Just _  -> return (lb, ub, n, gen)
-               Nothing -> do
-                   let f = if Werror `elem` opts then warn' else warn
-                   f "No explicit @samples annotation. Sampling a single structure."
-                   return (lb, ub, n, gen)
+           Just _  -> return (lb, ub, n, gen)
+           Nothing -> do
+               let f = if Werror `elem` opts then warn' else warn
+               f "No explicit @samples annotation. Sampling a single structure."
+               return (lb, ub, n, gen)
 
 getSamples :: System Int -> [Flag] -> IO [Structure]
 getSamples sys opts = do
