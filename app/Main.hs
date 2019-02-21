@@ -89,7 +89,7 @@ options = [Option "i" ["input"] (ReqArg InputFile "FILE")
             "Prints this help message."]
 
 version :: String
-version = "v1.4"
+version = "v1.5"
 
 signature :: String
 signature = "Boltzmann Brain " ++ version

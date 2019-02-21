@@ -1,6 +1,18 @@
 # Changelog
 Notable major changes since version *1.2* are listed below.
 
+### [1.5.0] - 21-02-2019
+- It is now possible to sample multiple structures using the built-in sampler.
+  The number of structures is provided through a `samples` annotation.
+- *Boltzmann brain* accepts two input specification formats - an algebraic
+  format and a new rational input format. The latter input format is designed
+  for rational specifications and yields a specific *transfer matrix* sampler.
+- Generated samplers use the *Buffon machines* package. In particular,
+  they base their non-deterministic decisions on precompiled Knuth-Yao decision
+  trees. As a result, a lot less random bits are used and the sampelrs run faster.
+- *Paganini* uses a new, sparse input format. Moreover, the solver uses
+  sparse matrices and hence less memory.
+
 ### [1.4.0] - 27-07-2018
 - The command line interface of ```bb``` has changed quite a bit. *Boltzmann Brain* can
   now be used as a standalone sampler, compiler, or even generate GraphViz dotfiles. Moreover,
