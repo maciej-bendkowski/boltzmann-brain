@@ -1,10 +1,12 @@
-from __future__ import print_function
+from __future__ import unicode_literals, print_function
+import paganini.tuner as pt
+
 def main(args=None):
 
-    __author__    = "Sergey Dovgal and Maciej Bendkowski"
-    __copyright__ = "Copyright (C) 2017-2019 Sergey Dovgal and Maciej Bendkowski"
+    __author__    = "Maciej Bendkowski and Sergey Dovgal"
+    __copyright__ = "Copyright (C) 2017-2019 Maciej Bendkowski and Sergey Dovgal"
     __license__   = "Public Domain"
-    __version__   = "0.295597742522"
+    __version__   = "0.2955977425220"
 
     flag_debug = False
 
@@ -14,7 +16,6 @@ def main(args=None):
     ##
     #
 
-    #-- Stdio manipulations, read, write and stderr
     try:
         import sys
         import os
@@ -23,7 +24,7 @@ def main(args=None):
         from argparse import RawTextHelpFormatter
 
     except:
-        print ("Something went wrong, cannot import packages 'sys', 'os' or 'argparse'.")
+        print("Something went wrong, cannot import packages 'sys', 'os' or 'argparse'.")
         exit(1)
 
     if sys.version_info.major != 3:
@@ -189,25 +190,6 @@ def main(args=None):
     elif arguments.type != None:
         sys.stderr.write("Type of the grammar not recognized, using algebraic.\n")
 
-    solver = cvxpy.ECOS
-    maxiters = 20
-
-    if arguments.solver != None:
-        if (arguments.solver[0] == 'CVXOPT'):
-            solver = cvxpy.CVXOPT
-            maxiters = 20
-        elif (arguments.solver[0] == 'SCS'):
-            solver = cvxpy.SCS
-            maxiters = 2500
-        elif (arguments.solver[0] == 'ECOS'):
-            solver = cvxpy.ECOS
-            maxiters = 20
-        else:
-            sys.stderr.write("Solver not recognized. Using ECOS by default.\n")
-
-    if arguments.maxiters != None:
-        maxiters = int(arguments.maxiters[0])
-
     if filename and not os.path.isfile(filename):
         raise Exception("File doesn't exist!", filename)
 
@@ -252,90 +234,86 @@ def main(args=None):
     else:
         freq = []
 
-    sys.stderr.write("Reading the coefficients... ")
+    sys.stderr.write("Reading the coefficients...\n")
 
-    # Read the coefficients of equations
-    coeff_rows = [] # non-zero row indices
-    coeff_cols = [] # non-zero column indices
-    coeff_data = [] # non-zero data entries
-    coeff_dim  = [] # 'monomial' dimension
+    if is_rational:
+        sys_type = pt.Type.RATIONAL
+        sys_type.eps = precision
+    else:
+        sys_type = pt.Type.ALGEBRAIC
+        sys_type.feastol = precision
+
+    if arguments.solver != None:
+        if (arguments.solver[0] == 'CVXOPT'):
+            sys_type.solver = cvxpy.CVXOPT
+        elif (arguments.solver[0] == 'SCS'):
+            sys_type.solver = cvxpy.SCS
+        elif (arguments.solver[0] == 'ECOS'):
+            sys_type.solver = cvxpy.ECOS
+        else:
+            sys.stderr.write("Solver not recognized. Using ECOS by default.\n")
+
+    if arguments.maxiters != None:
+        sys_type.max_iters = int(arguments.maxiters[0])
+
+
+    params = pt.Params(sys_type)
+    spec = pt.Specification()
+
+    variables = []
+    variables.append(spec.variable()) # z
+
+    for idx in range(number_of_variables):
+        variables.append(spec.variable(freq[idx]))
+
+    for idx in range(number_of_functions):
+        variables.append(spec.variable())
 
     for n_equation in range(number_of_functions):
-
-        coeff_rows += [[]]
-        coeff_cols += [[]]
-        coeff_data += [[]]
-
         vec = FILE.readline().split()
         assert np.size(vec) >= 1,\
                 'What is the number of monomials in equation '+ n_equation + '?\n'
 
+        equation = []
         n_monomials = int(vec[0])
-        coeff_dim.append(n_monomials)
-
         for monomial in range(n_monomials):
             vec = FILE.readline().split()
+
+            definition = []
             for elem in vec:
                 arr = elem[1:-1].split(',')
-                coeff_rows[-1].append(int(monomial))
-                coeff_cols[-1].append(int(arr[1]))
-                coeff_data[-1].append(int(arr[0]))
+                a, b = int(arr[0]), int(arr[1])
+                definition.append(variables[b] ** a)
 
-    sys.stderr.write("done!\n")
-    sys.stderr.write("Composing optimization problem... ")
+            if len(vec) > 0:
+                expr = definition[0]
+                for idx in range(len(vec) - 1):
+                    expr = expr * definition[idx + 1]
 
-    z = cvxpy.Variable((number_of_variables + number_of_functions + 1))
-    obj = np.array( [[1.0] + freq + [0.0] *  number_of_functions])
+                equation.append(expr)
+            else:
+                equation.append(1) # monomial equivalent to the constant one
 
-    constraints = [
-                z[idx + number_of_variables + 1] >=
-                cvxpy.log_sum_exp(sparse.csr_matrix((np.array(coeff_data[idx]),
-                    (np.array(coeff_rows[idx]),np.array(coeff_cols[idx]))),
-                        shape=(coeff_dim[idx], total_number_of_variables)) * z)
-                for idx in range(number_of_functions)
-            ]
-    if is_rational:
-        constraints += [
-            cvxpy.norm(z, 2) <= 40
-        ]
+        spec.add(variables[1 + number_of_variables + n_equation], equation)
 
-    objective = cvxpy.Maximize( obj * z)
-
-    prob = cvxpy.Problem(objective, constraints)
-
-    sys.stderr.write("Done!\n")
-
-    sys.stderr.write("Solving the problem.\n")
+    sys.stderr.write("Solving the optimization problem... ")
 
     old_stdout = sys.stdout
     sys.stdout = sys.stderr
 
-    if solver != cvxpy.SCS:
-        try:
-            result = prob.solve(solver=solver, verbose=True, feastol=precision,
-                    max_iters=maxiters)
-        except prob.status == cvxpy.UNBOUNDED:
-            sys.stderr.write("Problem is unbounded\n")
-            sys.stderr.write("Probably the set of weights is incorrect")
-            exit(1)
-        except:
-            sys.stderr.write("Solver " + str(solver) + " failed :(")
-            exit(1)
-    else:
-        try:
-            result = prob.solve(solver=solver, verbose=True, eps=precision,
-                    max_iters=maxiters)
-        except:
-            sys.stderr.write("Solver " + str(solver) + " failed :(")
-            exit(1)
+    try:
+        status = spec.run_singular_tuner(variables[0], params)
+
+    except:
+        sys.stderr.write("Solver " + str(solver) + " failed :(")
+        exit(1)
 
     sys.stderr.write("Solved.\n")
-
     sys.stdout = old_stdout
 
     print ('\n'.join([
-            str(sympy.exp(expr).evalf())
-            for expr in z.value
+            str(v.value)
+            for v in variables
           ]))
 
 if __name__ == "__main__":
