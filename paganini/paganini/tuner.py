@@ -36,6 +36,7 @@ class Exp:
         respective exponent. The represented expression (in fact monomial) can
         be recovered by multiplying all of the variables with their exponents
         and the multiplicative coefficient."""
+        assert len(self._variables) > 0, "Expression without variables."
 
         data = deque()
         for var, e in self._variables.items():
@@ -114,8 +115,8 @@ class Specification:
         return var
 
     def variables(self, xs = None):
-        """ Returns an infinite variable generator. Given a non-empty
-        list of marking values, decorates the initial variables with respective
+        """ Returns an infinite variable generator. Given a non-empty list of
+        marking values, decorates the initial variable prefix with respective
         values of xs, see Specification.tune."""
 
         if xs is not None:
@@ -126,7 +127,11 @@ class Specification:
              yield self.variable()
 
     def add(self, variable, expressions):
-        """ Includes the given equation in the system."""
+        """ Includes the given equation in the system. Note that each equation
+        consists of a left-hand side variable and a corresponding right-hand
+        side expression list (i.e. a list a monomials comprising the right-hand
+        side sum. Each expression should be either an instance of 'Exp' or be a
+        positive integer."""
         self._equations.append((variable,expressions))
 
     def tune(self, variable, x):
@@ -190,6 +195,7 @@ class Specification:
             return params
 
     def _compose_constraints(self, var):
+        assert len(self._equations) > 0, "System without equations."
         matrices = self.specs()
         constraints = deque()
 
@@ -245,8 +251,11 @@ class Specification:
         be solved)."""
 
         params = self._init_params(params)
-
         n = self._total_variables()
+
+        assert n > 0, "System without variables."
+        assert len(self._equations) > 0, "System without equations."
+
         var = cvxpy.Variable(n)
 
         # compose the constraints
@@ -292,8 +301,11 @@ class Specification:
         be solved)."""
 
         params = self._init_params(params)
-
         n = self._total_variables()
+
+        assert n > 0, "System without variables."
+        assert len(self._equations) > 0, "System without equations."
+
         var = cvxpy.Variable(n)
 
         # compose the constraints
