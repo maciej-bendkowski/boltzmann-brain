@@ -113,16 +113,17 @@ class Specification:
 
         return var
 
-    def variables(self, n, xs = None):
-        """ Discharges 'n' new variables. If 'xs' is given, the returned
-        variables are also marked, see Specification.tune."""
+    def variables(self, xs = None):
+        """ Returns an infinite variable generator. Given a non-empty
+        list of marking values, decorates the initial variables with respective
+        values of xs, see Specification.tune."""
 
-        assert (xs is None or len(xs) == n)
+        if xs is not None:
+            for x in xs:
+                yield self.variable(x)
 
-        if xs is None:
-            return [self.variable() for _ in range(n)]
-        else:
-            return [self.variable(xs[idx]) for idx in range(n)]
+        while True:
+             yield self.variable()
 
     def add(self, variable, expressions):
         """ Includes the given equation in the system."""
