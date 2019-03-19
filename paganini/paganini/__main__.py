@@ -23,12 +23,16 @@ def main(args=None):
         import argparse
         from argparse import RawTextHelpFormatter
 
+        import logging
+        logging.basicConfig(format='[%(asctime)s] %(message)s',
+                datefmt='%d-%m-%y %H:%M:%S', level=logging.INFO)
+
     except:
         print("Something went wrong, cannot import packages 'sys', 'os' or 'argparse'.")
         exit(1)
 
     if sys.version_info.major != 3:
-        sys.stderr.write('You are using Python 2, consider using Python 3.\n')
+        logging.error('You are using Python 2, consider using Python 3.')
 
     #
     ##
@@ -55,7 +59,7 @@ def main(args=None):
 
     We want to have 40% of abstractions, so we encode all the variables and
     functions into a single vector [z, u, L, D] and start with
-    the virtual specification
+    the virtual specification:
 
     2 1
     0.4
@@ -67,8 +71,18 @@ def main(args=None):
     1 0 0 0
     1 0 0 1
 
-    Next, we compress each of the above equations using
-    the following sparse vector notation:
+    Here, the first line specifies the total number of equations and the number
+    of marking variables, respectively. The following line lists the target
+    frequencies of corresponding marking variables. Next follows the description
+    of the system equations.  For each equation we write down the number k of
+    right-hand side summands. After that, we write k lines denoting the
+    exponents of corresponding variables. And so, for instance, the first line
+    in the first equation in the above system specification encodes the
+    expression
+
+    z^1 * u^1 * L^1 * D^0
+
+    Such a virtual system description is finally 'sparsified' as follows:
 
     2 1
     0.4
@@ -81,12 +95,12 @@ def main(args=None):
     (1,0) (1,3)
 
     In other words, for each equation we write down only its non-zero monomials
-    with respective occurrences. Such an input format encodes the system
+    with respective exponents. Such an input format encodes the system
     corresponding to lambda-terms.
     """
 
     parser = argparse.ArgumentParser(
-            description= bcolors.BOLD + """Welcome to paganini.py! """ +
+            description= bcolors.BOLD + """Welcome to paganini! """ +
             bcolors.ENDC,
             epilog = example_string,
             formatter_class=RawTextHelpFormatter)
@@ -112,11 +126,11 @@ def main(args=None):
         exit(1)
 
     if arguments.from_stdin!=False and arguments.input!=None:
-        sys.stderr.write('Choose either stdin or filename for input\n')
+        logging.error('Choose either stdin or filename for input.')
         parser.print_help(sys.stderr)
         exit(1)
 
-    sys.stderr.write("Importing packages...\n")
+    logging.info("Importing packages...")
 
     #
     ##
@@ -124,7 +138,7 @@ def main(args=None):
     ##
     #
 
-    #-- Better hints at non-installed packages
+    # --- better hints at non-installed packages.
     list_of_noninstalled_packages = []
 
     # --- cvxopt is truly necessary
@@ -133,9 +147,7 @@ def main(args=None):
     except:
         list_of_noninstalled_packages += ['cvxpy']
 
-    # --- sympy is an insurance from exponent overflow
-    # -- It will be removed for practical purposes and replaced by bounded region
-    # feasible subset.
+    # --- sympy is an insurance from exponent overflow.
     try:
         import sympy
     except:
@@ -147,6 +159,7 @@ def main(args=None):
     except:
         list_of_noninstalled_packages += ['scipy']
 
+    # --- numpy's useful, in general.
     try:
         import numpy as np
     except:
@@ -158,7 +171,7 @@ def main(args=None):
         list_of_noninstalled_packages += ['six']
 
     if len(list_of_noninstalled_packages) > 0:
-        sys.stderr.write("""It seems that you need to install some packages.
+        logging.error("""It seems that you need to install some packages.
     Please be patient and type into your command line
         pip2 install """ + ' '.join(list_of_noninstalled_packages) + """
     If you have only Python2 installed, you can also try
@@ -168,11 +181,8 @@ def main(args=None):
         sys.exit(1)
 
     ### PRECISION
-
     np.set_printoptions(precision=14)
-
-
-    sys.stderr.write("Started concerto...\n")
+    logging.info("Started concerto...")
 
     filename = arguments.input[0] if arguments.input else None
     precision = 1e-20
@@ -183,12 +193,12 @@ def main(args=None):
             raise Exception("Precision should be a float!")
     is_rational = False
     if arguments.type == 'rational':
-        sys.stderr.write("System is of rational type\n")
+        logging.info("Assuming a rational input system.")
         is_rational = True
     elif arguments.type == 'algebraic':
         is_rational = False
     elif arguments.type != None:
-        sys.stderr.write("Type of the grammar not recognized, using algebraic.\n")
+        logging.info("Could not recognise the input system type. Assuming it is algebraic.")
 
     if filename and not os.path.isfile(filename):
         raise Exception("File doesn't exist!", filename)
@@ -234,8 +244,6 @@ def main(args=None):
     else:
         freq = []
 
-    sys.stderr.write("Reading the coefficients...\n")
-
     if is_rational:
         sys_type = pt.Type.RATIONAL
         sys_type.eps = precision
@@ -251,11 +259,12 @@ def main(args=None):
         elif (arguments.solver[0] == 'ECOS'):
             sys_type.solver = cvxpy.ECOS
         else:
-            sys.stderr.write("Solver not recognized. Using ECOS by default.\n")
+            logging.warning("Could not recognise the solver. Using ECOS.")
 
     if arguments.maxiters != None:
         sys_type.max_iters = int(arguments.maxiters[0])
 
+    logging.info("Composing the optimisation problem...")
 
     params = pt.Params(sys_type)
     spec = pt.Specification()
@@ -296,7 +305,7 @@ def main(args=None):
 
         spec.add(variables[1 + number_of_variables + n_equation], equation)
 
-    sys.stderr.write("Solving the optimization problem... ")
+    logging.info("Solving the problem (can take some time)...")
 
     old_stdout = sys.stdout
     sys.stdout = sys.stderr
@@ -305,10 +314,10 @@ def main(args=None):
         status = spec.run_singular_tuner(variables[0], params)
 
     except:
-        sys.stderr.write("Solver " + str(solver) + " failed :(")
+        logging.error("Solver " + str(solver) + " failed :(")
         exit(1)
 
-    sys.stderr.write("Solved.\n")
+    logging.info("Solved.")
     sys.stdout = old_stdout
 
     print ('\n'.join([
