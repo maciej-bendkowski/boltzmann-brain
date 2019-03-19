@@ -97,6 +97,7 @@ class Specification:
         self._counter          = 0
         self._equations        = deque()
         self._tuning_variables = deque()
+        self._seq_variables    = deque()
         self._all_variables    = deque()
 
     def variable(self, x = None):
@@ -132,7 +133,18 @@ class Specification:
         side expression list (i.e. a list a monomials comprising the right-hand
         side sum. Each expression should be either an instance of 'Exp' or be a
         positive integer."""
+
         self._equations.append((variable,expressions))
+
+    def Seq(self, exp):
+        """ Given an expression A, introduces to the system a new equation which
+        defines a sequence of expressions from A. The resulting variable
+        corresponding to that class is then returned."""
+
+        s = self.variable()
+        self.add(s, [1, exp * s])
+        self._seq_variables.append(s)
+        return s
 
     def tune(self, variable, x):
         """ Marks the given variable with the given value."""
@@ -175,6 +187,10 @@ class Specification:
 
     def check_type(self):
         """ Checks if the system is algebraic or rational."""
+
+        # if Seq was used, the system is algebraic.
+        if len(self._seq_variables) > 0:
+            return Type.ALGEBRAIC
 
         ts = self._type_variables()
         for (_, expressions) in self._equations:
@@ -331,8 +347,10 @@ class Specification:
 # if __name__ == "__main__":
 
     # spec = Specification()
-    # z, B = spec.variable(), spec.variable()
-    # spec.add(B, [1, z * B**2])
+    # z, T = spec.variable(), spec.variable()
+    # Ts   = spec.Seq(T)
+
+    # spec.add(T, [z * Ts])
 
     # spec.run_singular_tuner(z)
-    # print(z.value, B.value)
+    # print(z.value, T.value)
