@@ -136,15 +136,19 @@ class Specification:
 
         self._equations.append((variable,expressions))
 
-    def Seq(self, exp):
-        """ Given an expression A, introduces to the system a new equation which
-        defines a sequence of expressions from A. The resulting variable
-        corresponding to that class is then returned."""
+    def Seq(self, expressions):
+        """ Given a list of expressions X (or single expression), introduces to
+        the system a new equation which defines a sequence of structures from X.
+        The resulting variable corresponding to that class is then returned."""
 
-        s = self.variable()
-        self.add(s, [1, exp * s])
-        self._seq_variables.append(s)
-        return s
+        if isinstance(expressions, Exp):
+            expressions = [expressions]
+
+        seq = self.variable()
+        self._seq_variables.append(seq)
+        exprs = list(map(lambda expr: expr * seq, expressions))
+        self.add(seq, [1] + exprs)
+        return seq
 
     def tune(self, variable, x):
         """ Marks the given variable with the given value."""
