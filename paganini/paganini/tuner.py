@@ -96,7 +96,9 @@ class Specification:
     def __init__(self):
         self._counter          = 0
         self._equations        = {}
-        self._tuning_variables = deque()
+
+        self._tuning_variables = {}
+
         self._all_variables    = deque()
 
     def variable(self, x = None):
@@ -150,7 +152,7 @@ class Specification:
 
     def tune(self, variable, x):
         """ Marks the given variable with the given value."""
-        self._tuning_variables.append((variable, x))
+        self._tuning_variables[variable] = x
 
     def _total_variables(self):
         """ Returns the total number of discharged variables."""
@@ -282,7 +284,7 @@ class Specification:
         # compose the objective
         obj = np.zeros(n)
         obj[t._idx] = 1.0
-        for (v, x) in self._tuning_variables:
+        for (v, x) in self._tuning_variables.items():
             obj[v._idx] = -x
 
         objective = cvxpy.Minimize(obj * var)
@@ -338,7 +340,7 @@ class Specification:
         obj = np.zeros(n)
         obj[z._idx] = 1.0
 
-        for (v, x) in self._tuning_variables:
+        for (v, x) in self._tuning_variables.items():
             obj[v._idx] = x
 
         objective = cvxpy.Maximize(obj * var)
@@ -349,10 +351,10 @@ class Specification:
 # if __name__ == "__main__":
 
     # spec = Specification()
-    # z, T = spec.variable(100), spec.variable()
+    # z, T = spec.variable(), spec.variable()
     # Ts   = spec.Seq(T)
 
     # spec.add(T, [z * Ts])
 
-    # spec.run_tuner(T)
+    # spec.run_singular_tuner(z)
     # print(z.value, T.value)
