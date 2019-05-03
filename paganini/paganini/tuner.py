@@ -271,6 +271,8 @@ class Specification:
 
         assert n > 0, "System without variables."
         assert len(self._equations) > 0, "System without equations."
+        assert len(self._tuning_variables) > 0,\
+            "The given system has no tuned variables."
 
         var = cvxpy.Variable(n)
 
@@ -347,10 +349,10 @@ class Specification:
 # if __name__ == "__main__":
 
     # spec = Specification()
-    # z, T = spec.variable(), spec.variable()
+    # z, T = spec.variable(100), spec.variable()
     # Ts   = spec.Seq(T)
 
     # spec.add(T, [z * Ts])
 
-    # spec.run_singular_tuner(z)
+    # spec.run_tuner(T)
     # print(z.value, T.value)
