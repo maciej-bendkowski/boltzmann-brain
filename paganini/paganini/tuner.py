@@ -97,7 +97,6 @@ class Specification:
         self._counter          = 0
         self._equations        = deque()
         self._tuning_variables = deque()
-        self._seq_variables    = deque()
         self._all_variables    = deque()
 
     def variable(self, x = None):
@@ -145,7 +144,6 @@ class Specification:
             expressions = [expressions]
 
         seq = self.variable()
-        self._seq_variables.append(seq)
         exprs = list(map(lambda expr: expr * seq, expressions))
         self.add(seq, [1] + exprs)
         return seq
@@ -191,10 +189,6 @@ class Specification:
 
     def check_type(self):
         """ Checks if the system is algebraic or rational."""
-
-        # if Seq was used, the system is algebraic.
-        if len(self._seq_variables) > 0:
-            return Type.ALGEBRAIC
 
         ts = self._type_variables()
         for (_, expressions) in self._equations:
