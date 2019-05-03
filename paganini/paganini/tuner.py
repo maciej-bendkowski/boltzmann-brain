@@ -95,7 +95,7 @@ class Specification:
 
     def __init__(self):
         self._counter          = 0
-        self._equations        = deque()
+        self._equations        = {}
         self._tuning_variables = deque()
         self._all_variables    = deque()
 
@@ -133,10 +133,10 @@ class Specification:
         side sum. Each expression should be either an instance of 'Exp' or be a
         positive integer."""
 
-        self._equations.append((variable,expressions))
+        self._equations[variable] = expressions
 
     def Seq(self, expressions):
-        """ Given a list of expressions X (or single expression), introduces to
+        """ Given a list of expressions X or single monomial, introduces to
         the system a new equation which defines a sequence of structures from X.
         The resulting variable corresponding to that class is then returned."""
 
@@ -160,7 +160,7 @@ class Specification:
         """ Computes the sparse matrix specifications corresponding to each of
         the system equations."""
         matrices = deque()
-        for (_, expressions) in self._equations:
+        for expressions in self._equations.values():
 
             rows = 0 # row counter
             row, col, data = deque(), deque(), deque()
@@ -185,13 +185,15 @@ class Specification:
         return matrices
 
     def _type_variables(self):
-        return [v[0]._idx for v in self._equations]
+        """ Returns a list of type variables, i.e. variables
+            with corresponding equations."""
+        return [v._idx for v in self._equations]
 
     def check_type(self):
         """ Checks if the system is algebraic or rational."""
 
         ts = self._type_variables()
-        for (_, expressions) in self._equations:
+        for expressions in self._equations.values():
             for exp in expressions:
                 if isinstance(exp, Exp):
                     for v, e in exp._variables.items():
@@ -213,7 +215,7 @@ class Specification:
         matrices = self.specs()
         constraints = deque()
 
-        for idx, (eq_variable, _) in enumerate(self._equations):
+        for idx, eq_variable in enumerate(self._equations):
             log_exp = matrices[idx]
             tidx = eq_variable._idx
             constraints.append(var[tidx] >= cvxpy.log_sum_exp(log_exp * var))
