@@ -62,12 +62,6 @@ class Variable(Exp):
         xs[self._idx] = n
         return Exp(self._mul_coeff, xs)
 
-class Eq:
-
-    def __init__(self, variable, monomials):
-        self._variable  = variable
-        self._monomials = monomials
-
 class Type(Enum):
     """ Enumeration of supported system types."""
     ALGEBRAIC = 1
@@ -87,19 +81,26 @@ class Params:
         else:
             self.sys_type  = Type.ALGEBRAIC
             self.solver    = cvxpy.ECOS
-            self.max_iters = 25
+            self.max_iters = 50
             self.feastol   = 1.e-20
 
 class Specification:
     """ Class representing algebraic combinatorial systems."""
 
-    def __init__(self):
-        self._counter          = 0
-        self._equations        = {}
+    def __init__(self, truncate = 10):
 
-        self._tuning_variables = {}
+        self._counter            = 0
+        self._equations          = {}
 
-        self._all_variables    = deque()
+        self._tuning_variables   = {}
+        self._type_variable_idxs = set()
+
+        self._msets              = {} # (truncated) MSet equations.
+        self._mset_defs          = {} # original MSet expressions.
+        self._powers             = {} # accounts for expressions like T(Z^i).
+
+        self.truncate            = truncate
+        self._all_variables      = deque()
 
     def variable(self, x = None):
         """ Discharges a new, fresh variable. If 'x' is given, the returned
@@ -128,27 +129,109 @@ class Specification:
         while True:
              yield self.variable()
 
+    def _make_exprs(self, expressions):
+        if isinstance(expressions, Exp):
+            expressions = [expressions]
+
+        return expressions
+
     def add(self, variable, expressions):
         """ Includes the given equation in the system. Note that each equation
         consists of a left-hand side variable and a corresponding right-hand
-        side expression list (i.e. a list a monomials comprising the right-hand
-        side sum. Each expression should be either an instance of 'Exp' or be a
-        positive integer."""
+        side expression list (i.e. a list a monomials) or a single expression
+        defining the right-hand side sum. Each expression should be either an
+        instance of 'Exp' or be a positive integer."""
+
+        expressions = self._make_exprs(expressions)
 
         self._equations[variable] = expressions
+        self._type_variable(variable)
 
     def Seq(self, expressions):
         """ Given a list of expressions X or single monomial, introduces to
         the system a new equation which defines a sequence of structures from X.
         The resulting variable corresponding to that class is then returned."""
 
-        if isinstance(expressions, Exp):
-            expressions = [expressions]
+        expressions = self._make_exprs(expressions)
 
         seq = self.variable()
         exprs = list(map(lambda expr: expr * seq, expressions))
         self.add(seq, [1] + exprs)
         return seq
+
+    def MSet(self, expressions):
+        """ Given a list of expressions X or single monomial, introduces to
+        the system a new equation which defines a multiset of structures from X.
+        The resulting variable corresponding to that class is then returned."""
+
+        expressions = self._make_exprs(expressions)
+
+        # Note: at the time of definition, not all right-hand side's of
+        # corresponding expressions might be present. Therefore we postpone the
+        # series composition. For future reference, we safe the original
+        # definition at specification level.
+
+        mset = self.variable()
+        self._type_variable(mset)
+        self._mset_defs[mset] = expressions
+        return mset
+
+    def _power_variable(self, var, d = 1):
+        """ Given a variable, say, t = T(Z_1,...,Z_k) outputs a new variable
+        representing the dth power of t, i.e. t_i = T(Z_1^d,...,Z_k^d). The
+        variable t_i is cached within the specification and its defining
+        equation saved."""
+
+        assert d > 0, "Invalid degree parameter d."
+        assert self._is_type_variable(var), "Non-type variable."
+
+        if var not in self._powers:
+            self._powers[var] = {}
+
+        # check the variable cache.
+        if d in self._powers[var]:
+            return self._powers[var][d]
+
+        if d == 1 and var in self._equations.keys(): # special case
+            self._powers[var][d] = var
+            return var
+
+        var_d = self.variable() if d > 1 else var
+
+        self._type_variable(var_d)
+        self._powers[var][d] = var_d # memorise var[d]
+
+        if var in self._equations.keys():
+            # create respective rhs monomials.
+            monomials = self._equations[var]
+            exprs = list(map(lambda e : self._power_expr(e, d), monomials))
+            self.add(var_d, exprs)
+            return var_d
+        else:
+            # iterate and create respective rhs monomials.
+            exprs = self._mset_defs[var]
+            self._msets[var_d] = []
+            for k in range(d, self.truncate + 1, d):
+                self._msets[var_d].append(list(map(lambda e :
+                    self._power_expr(e, k), exprs))) # increase d
+
+            return var_d
+
+    def _power_expr(self, expr, d = 1):
+        """ Extends _power_variable to expressions."""
+
+        variables = {}
+        for idx in expr._variables:
+            v = self._all_variables[idx]
+            if self._is_type_variable(v):
+                # substitute the power variable.
+                x = self._power_variable(v, d)
+                variables[x._idx] = expr._variables[v._idx]
+            else:
+                # increase the exponent.
+                variables[v._idx] = d * expr._variables[v._idx]
+
+        return Exp(expr._mul_coeff, variables)
 
     def tune(self, variable, x):
         """ Marks the given variable with the given value."""
@@ -158,48 +241,56 @@ class Specification:
         """ Returns the total number of discharged variables."""
         return self._counter
 
+    def _expr_specs(self, expressions):
+        """ Given a list (i.e. series) of monomial expressions, creates a
+        corresponding sparse matrix thereof."""
+
+        rows = 0 # row counter
+        row, col, data = deque(), deque(), deque()
+        for exp in expressions:
+            if isinstance(exp, Exp):
+                for _ in range(exp._mul_coeff):
+                    for (v, e) in exp.spec():
+                        row.append(rows)
+                        col.append(v)
+                        data.append(e)
+                    rows += 1
+            else:
+                rows += exp
+
+        # create a sparse representation of the series.
+        return sparse.csr_matrix((np.array(data),
+            (np.array(row),np.array(col))), shape=(rows,
+            self._total_variables()))
+
     def specs(self):
-        """ Computes the sparse matrix specifications corresponding to each of
-        the system equations."""
+        """ Computes the sparse matrix specifications
+            corresponding to each of the system equations."""
+
         matrices = deque()
         for expressions in self._equations.values():
-
-            rows = 0 # row counter
-            row, col, data = deque(), deque(), deque()
-            for exp in expressions:
-
-                if isinstance(exp, Exp):
-                    for _ in range(exp._mul_coeff):
-                        for (v, e) in exp.spec():
-                            row.append(rows)
-                            col.append(v)
-                            data.append(e)
-                        rows += 1
-                else:
-                    rows += exp
-
-            # create a sparse representation of the equation
-            matrix = sparse.csr_matrix((np.array(data),
-                (np.array(row),np.array(col))), shape=(rows,
-                self._total_variables()))
-
+            matrix = self._expr_specs(expressions)
             matrices.append(matrix)
         return matrices
 
-    def _type_variables(self):
-        """ Returns a list of type variables, i.e. variables
-            with corresponding equations."""
-        return [v._idx for v in self._equations]
+    def _type_variable(self, variable):
+        """ Marks a type variable."""
+        self._type_variable_idxs.add(variable._idx)
+
+    def _is_type_variable(self, variable):
+        return variable._idx in self._type_variable_idxs
 
     def check_type(self):
         """ Checks if the system is algebraic or rational."""
 
-        ts = self._type_variables()
+        if len(self._mset_defs) > 0:
+            return Type.ALGEBRAIC
+
         for expressions in self._equations.values():
             for exp in expressions:
                 if isinstance(exp, Exp):
                     for v, e in exp._variables.items():
-                        if v in ts and e > 1:
+                        if v in self._type_variable_idxs and e > 1: #FIXME
                             return Type.ALGEBRAIC
 
         return Type.RATIONAL
@@ -212,15 +303,32 @@ class Specification:
         else:
             return params
 
+    def _construct_truncated_msets(self):
+        """ Assuming that the system is already defined, constructs a truncated
+        series representation for each of the MSet variables in the
+        specification."""
+
+        for mset in self._mset_defs:
+            self._power_variable(mset,1)
+
     def _compose_constraints(self, var):
         assert len(self._equations) > 0, "System without equations."
         matrices = self.specs()
         constraints = deque()
 
+        # compose regular type variable constraints.
         for idx, eq_variable in enumerate(self._equations):
             log_exp = matrices[idx]
             tidx = eq_variable._idx
             constraints.append(var[tidx] >= cvxpy.log_sum_exp(log_exp * var))
+
+        # compose MSet variable constraints.
+        for v in self._msets:
+            expressions = self._msets[v]
+            xs = [1/(i+1) * cvxpy.exp(cvxpy.sum(self._expr_specs(e) * var))
+                    for i, e in enumerate(expressions)]
+
+            constraints.append(var[v._idx] >= cvxpy.sum(xs))
 
         return constraints
 
@@ -269,17 +377,20 @@ class Specification:
         be solved)."""
 
         params = self._init_params(params)
-        n = self._total_variables()
 
-        assert n > 0, "System without variables."
+        assert self._total_variables() > 0, "System without variables."
         assert len(self._equations) > 0, "System without equations."
         assert len(self._tuning_variables) > 0,\
             "The given system has no tuned variables."
 
+        self._construct_truncated_msets() # note: might generate variables.
+        n = self._total_variables()
         var = cvxpy.Variable(n)
 
         # compose the constraints
         constraints = self._compose_constraints(var)
+
+        n = self._total_variables()
 
         # compose the objective
         obj = np.zeros(n)
@@ -321,11 +432,12 @@ class Specification:
         be solved)."""
 
         params = self._init_params(params)
-        n = self._total_variables()
 
-        assert n > 0, "System without variables."
+        assert self._total_variables() > 0, "System without variables."
         assert len(self._equations) > 0, "System without equations."
 
+        self._construct_truncated_msets() # note: might generate variables.
+        n = self._total_variables()
         var = cvxpy.Variable(n)
 
         # compose the constraints
@@ -350,11 +462,9 @@ class Specification:
 
 # if __name__ == "__main__":
 
-    # spec = Specification()
+    # spec = Specification(5)
     # z, T = spec.variable(), spec.variable()
-    # Ts   = spec.Seq(T)
-
-    # spec.add(T, [z * Ts])
-
+    # spec.add(T, [z * spec.MSet(T)])
     # spec.run_singular_tuner(z)
+
     # print(z.value, T.value)
