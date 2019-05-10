@@ -62,6 +62,40 @@ class Variable(Exp):
         xs[self._idx] = n
         return Exp(self._mul_coeff, xs)
 
+class Polynomial:
+    """ Class of polonomials of algebraic expressions."""
+
+    def __init__(self, monomials = []):
+        self._monomials = monomials
+
+    def __mul__(self, other):
+        " Polynomial multiplication."""
+        if isinstance(other, Exp):
+            other = Polynomial([other])
+
+        outcome = deque()
+        for a in self._monomials:
+            for b in other._monomials:
+                outcome.append(a * b)
+
+        return Polynomial(list(outcome))
+
+    __rmul__ = __mul__ # make multiplication commute again
+
+    def __pow__(self, n):
+        """ Naive exponentiation of polynomials."""
+        assert (isinstance(n, int))
+        assert n > 0, "Positive exponent required."
+
+        if n == 1:
+            return Polynomial(self._monomials)
+
+        if n % 2 == 1:
+            return self * self ** (n - 1)
+        else:
+            other = self ** (n >> 1)
+            return other * other
+
 class Type(Enum):
     """ Enumeration of supported system types."""
     ALGEBRAIC = 1
@@ -83,6 +117,36 @@ class Params:
             self.solver    = cvxpy.ECOS
             self.max_iters = 50
             self.feastol   = 1.e-20
+
+class Operator(Enum):
+    """ Enumeration of supported constraint signs."""
+    LEQ       = 1 # less or equal
+    GEQ       = 3 # greater or equal
+    UNBOUNDED = 4 # unbounded operator
+
+class Constraint:
+    """ Supported constraints for classes such as SEQ or MSET."""
+    def __init__(self, operator, value):
+        self.operator = operator
+        self.value    = value
+
+    @staticmethod
+    def normalise(constraint = None):
+
+        if constraint is None:
+            return Constraint(Operator.UNBOUNDED, 0)
+        else:
+            return constraint
+
+def leq(n):
+    """ Creates a less or equal constraint for the given input."""
+    assert n >= 0, "Negative constraints are not supported."
+    return Constraint(Operator.LEQ, n)
+
+def geq(n):
+    """ Creates a greater or equal constraint for the given input."""
+    assert n >= 0, "Negative constraints are not supported."
+    return Constraint(Operator.GEQ, n)
 
 class Specification:
     """ Class representing algebraic combinatorial systems."""
@@ -147,16 +211,43 @@ class Specification:
         self._equations[variable] = expressions
         self._type_variable(variable)
 
-    def Seq(self, expressions):
+    def Seq(self, expressions, constraint = None):
         """ Given a list of expressions X or single monomial, introduces to
         the system a new equation which defines a sequence of structures from X.
         The resulting variable corresponding to that class is then returned."""
 
         expressions = self._make_exprs(expressions)
+        constraint = Constraint.normalise(constraint)
 
-        seq = self.variable()
-        exprs = list(map(lambda expr: expr * seq, expressions))
-        self.add(seq, [1] + exprs)
+        if constraint.operator == Operator.UNBOUNDED:
+            # note: Seq(expr) = 1 + expr * Seq(expr).
+
+            seq = self.variable()
+            exprs = list(map(lambda expr: expr * seq, expressions))
+            self.add(seq, [1] + exprs)
+            return seq
+
+        if constraint.operator == Operator.LEQ:
+            # note: Seq(expr)_{<= k} = 1 + expr + expr^2 + ... + expr^k.
+            expr_v = self.variable()
+            self.add(expr_v, expressions)
+
+            seq = self.variable()
+            xs = list(range(1, constraint.value + 1))
+            self.add(seq, [1] + list(map(lambda k: expr_v ** k, xs)))
+            return seq
+
+        # constraint.operator == Operator.GEQ
+        # note: Seq(expr)_{>= k} = expr^k + expr^{k+1} + ...
+        #                        = expr^k (1 + expr^2 + expr^3 + ...)
+        #                        = expr^k Seq(expr).
+
+        seq = self.variable() #FIXME
+        p = Polynomial(expressions) ** constraint.value
+        v = self.Seq(expressions) # unbounded
+
+        rhs = (p * v)._monomials
+        self.add(seq, rhs)
         return seq
 
     def MSet(self, expressions):
@@ -459,12 +550,3 @@ class Specification:
         problem   = cvxpy.Problem(objective, constraints)
 
         return self._run_solver(var, problem, params)
-
-# if __name__ == "__main__":
-
-    # spec = Specification(5)
-    # z, T = spec.variable(), spec.variable()
-    # spec.add(T, [z * spec.MSet(T)])
-    # spec.run_singular_tuner(z)
-
-    # print(z.value, T.value)
