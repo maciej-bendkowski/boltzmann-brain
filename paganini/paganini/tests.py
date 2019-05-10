@@ -9,7 +9,7 @@ class TestTuner(unittest.TestCase):
 
         spec = Specification()
         z, B = spec.variable(), spec.variable()
-        spec.add(B, [1, z * B ** 2])
+        spec.add(B, 1 + z * B ** 2)
 
         spec.run_singular_tuner(z)
 
@@ -35,7 +35,7 @@ class TestTuner(unittest.TestCase):
 
         spec = Specification()
         z, M = spec.variable(), spec.variable()
-        spec.add(M, [z, z * M, z * M ** 2])
+        spec.add(M, z + z * M + z * M ** 2)
 
         spec.run_singular_tuner(z)
 
@@ -48,7 +48,7 @@ class TestTuner(unittest.TestCase):
 
         spec = Specification()
         z, T = spec.variable(), spec.variable()
-        spec.add(T, [z * spec.Seq(T)])
+        spec.add(T, z * spec.Seq(T))
 
         spec.run_singular_tuner(z)
 
@@ -61,8 +61,8 @@ class TestTuner(unittest.TestCase):
 
         spec = Specification()
         z, L, D = spec.variable(), spec.variable(), spec.variable()
-        spec.add(L, [D, z * L, z * L ** 2])
-        spec.add(D, [z, z * D])
+        spec.add(L, D + z * L + z * L ** 2)
+        spec.add(D, z + z * D)
 
         spec.run_singular_tuner(z)
 
@@ -75,7 +75,7 @@ class TestTuner(unittest.TestCase):
 
         spec = Specification()
         z, L = spec.variable(), spec.variable()
-        spec.add(L, [z * spec.Seq(z), z * L, z * L ** 2])
+        spec.add(L, z * spec.Seq(z) + z * L + z * L ** 2)
 
         spec.run_singular_tuner(z)
 
@@ -88,7 +88,7 @@ class TestTuner(unittest.TestCase):
 
         spec = Specification()
         z, T = spec.variable(), spec.variable()
-        spec.add(T, [z * spec.MSet(T)])
+        spec.add(T, z * spec.MSet(T))
 
         spec.run_singular_tuner(z)
 
@@ -104,7 +104,7 @@ class TestTuner(unittest.TestCase):
 
         spec = Specification()
         z, T = spec.variable(), spec.variable()
-        spec.add(T, [z, z * spec.Seq(T, geq(2))])
+        spec.add(T, z + z * spec.Seq(T, geq(2)))
 
         spec.run_singular_tuner(z, params)
 

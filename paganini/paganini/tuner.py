@@ -17,6 +17,16 @@ class Exp:
         self._mul_coeff = mul_coeff
         self._variables = variables
 
+    def __pow__(self, n):
+        """ Expression exponentiation."""
+        assert (isinstance(n, int))
+
+        xs = dict(self._variables)
+        for v in self._variables:
+            xs[v] *= n
+
+        return Exp(self._mul_coeff, xs)
+
     def __mul__(self, other):
         """ Multiplication of algebraic expressions."""
         if isinstance(other, int):
@@ -29,6 +39,12 @@ class Exp:
             return Exp(self._mul_coeff * other._mul_coeff, dict(x + y))
 
     __rmul__ = __mul__ # make multiplication commute again
+
+    def __add__(self, other):
+        """ Expression addition."""
+        return Polynomial(self) + other
+
+    __radd__ = __add__ # make addition commute again
 
     def spec(self):
         """ Returns a deque of pairs (partially) describing the expression. The
@@ -54,24 +70,21 @@ class Variable(Exp):
         # tuning value
         self.value = None
 
-    def __pow__(self, n):
-        """ Exponentiation of variables."""
-
-        assert (isinstance(n, int))
-        xs = dict(self._variables)
-        xs[self._idx] = n
-        return Exp(self._mul_coeff, xs)
-
 class Polynomial:
     """ Class of polonomials of algebraic expressions."""
 
-    def __init__(self, monomials = []):
+    def __init__(self, monomials):
+        if isinstance(monomials, Exp):
+            monomials = [monomials]
+
         self._monomials = monomials
 
     def __mul__(self, other):
         " Polynomial multiplication."""
         if isinstance(other, Exp):
             other = Polynomial([other])
+
+        assert isinstance(other, Polynomial)
 
         outcome = deque()
         for a in self._monomials:
@@ -84,7 +97,8 @@ class Polynomial:
 
     def __pow__(self, n):
         """ Naive exponentiation of polynomials."""
-        assert (isinstance(n, int))
+
+        assert isinstance(n, int)
         assert n > 0, "Positive exponent required."
 
         if n == 1:
@@ -95,6 +109,20 @@ class Polynomial:
         else:
             other = self ** (n >> 1)
             return other * other
+
+    def __add__(self, other):
+        """ Polynomial addition."""
+        if isinstance(other, Exp) or isinstance(other, int):
+            other = Polynomial([other])
+
+        assert isinstance(other, Polynomial)
+        # FIXME: Consider a representation without monomial duplicates.
+        return Polynomial(self._monomials + other._monomials)
+
+    __radd__ = __add__ # make addition commute again
+
+    def __iter__(self):
+        return iter(self._monomials)
 
 class Type(Enum):
     """ Enumeration of supported system types."""
@@ -193,12 +221,6 @@ class Specification:
         while True:
              yield self.variable()
 
-    def _make_exprs(self, expressions):
-        if isinstance(expressions, Exp):
-            expressions = [expressions]
-
-        return expressions
-
     def add(self, variable, expressions):
         """ Includes the given equation in the system. Note that each equation
         consists of a left-hand side variable and a corresponding right-hand
@@ -206,9 +228,7 @@ class Specification:
         defining the right-hand side sum. Each expression should be either an
         instance of 'Exp' or be a positive integer."""
 
-        expressions = self._make_exprs(expressions)
-
-        self._equations[variable] = expressions
+        self._equations[variable] = Polynomial(expressions)
         self._type_variable(variable)
 
     def Seq(self, expressions, constraint = None):
@@ -216,25 +236,24 @@ class Specification:
         the system a new equation which defines a sequence of structures from X.
         The resulting variable corresponding to that class is then returned."""
 
-        expressions = self._make_exprs(expressions)
+        expressions = Polynomial(expressions)
         constraint = Constraint.normalise(constraint)
 
         if constraint.operator == Operator.UNBOUNDED:
             # note: Seq(expr) = 1 + expr * Seq(expr).
 
             seq = self.variable()
-            exprs = list(map(lambda expr: expr * seq, expressions))
-            self.add(seq, [1] + exprs)
+            self.add(seq, 1 + expressions * seq)
             return seq
 
         if constraint.operator == Operator.LEQ:
             # note: Seq(expr)_{<= k} = 1 + expr + expr^2 + ... + expr^k.
-            expr_v = self.variable()
-            self.add(expr_v, expressions)
+            v = self.variable()
+            self.add(v, expressions)
 
             seq = self.variable()
             xs = list(range(1, constraint.value + 1))
-            self.add(seq, [1] + list(map(lambda k: expr_v ** k, xs)))
+            self.add(seq, 1 + Polynomial(list(map(lambda k: v ** k, xs))))
             return seq
 
         # constraint.operator == Operator.GEQ
@@ -244,18 +263,13 @@ class Specification:
 
         seq = self.variable() #FIXME
         p = Polynomial(expressions) ** constraint.value
-        v = self.Seq(expressions) # unbounded
-
-        rhs = (p * v)._monomials
-        self.add(seq, rhs)
+        self.add(seq, p * self.Seq(expressions)) # unbounded
         return seq
 
     def MSet(self, expressions):
         """ Given a list of expressions X or single monomial, introduces to
         the system a new equation which defines a multiset of structures from X.
         The resulting variable corresponding to that class is then returned."""
-
-        expressions = self._make_exprs(expressions)
 
         # Note: at the time of definition, not all right-hand side's of
         # corresponding expressions might be present. Therefore we postpone the
@@ -264,7 +278,7 @@ class Specification:
 
         mset = self.variable()
         self._type_variable(mset)
-        self._mset_defs[mset] = expressions
+        self._mset_defs[mset] = Polynomial(expressions)
         return mset
 
     def _power_variable(self, var, d = 1):
@@ -296,7 +310,7 @@ class Specification:
             # create respective rhs monomials.
             monomials = self._equations[var]
             exprs = list(map(lambda e : self._power_expr(e, d), monomials))
-            self.add(var_d, exprs)
+            self.add(var_d, Polynomial(exprs))
             return var_d
         else:
             # iterate and create respective rhs monomials.
