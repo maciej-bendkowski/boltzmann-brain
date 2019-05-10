@@ -25,7 +25,7 @@ class Exp:
         for v in self._variables:
             xs[v] *= n
 
-        return Exp(self._mul_coeff, xs)
+        return Exp(self._mul_coeff ** n, xs)
 
     def __mul__(self, other):
         """ Multiplication of algebraic expressions."""
