@@ -228,7 +228,10 @@ class Specification:
         defining the right-hand side sum. Each expression should be either an
         instance of 'Exp' or be a positive integer."""
 
-        self._equations[variable] = Polynomial(expressions)
+        if not isinstance(expressions, Polynomial):
+            expressions = Polynomial(expressions)
+
+        self._equations[variable] = expressions
         self._type_variable(variable)
 
     def Seq(self, expressions, constraint = None):
@@ -236,7 +239,9 @@ class Specification:
         the system a new equation which defines a sequence of structures from X.
         The resulting variable corresponding to that class is then returned."""
 
-        expressions = Polynomial(expressions)
+        if not isinstance(expressions, Polynomial):
+            expressions = Polynomial(expressions)
+
         constraint = Constraint.normalise(constraint)
 
         if constraint.operator == Operator.UNBOUNDED:
@@ -276,9 +281,12 @@ class Specification:
         # series composition. For future reference, we safe the original
         # definition at specification level.
 
+        if not isinstance(expressions, Polynomial):
+            expressions = Polynomial(expressions)
+
         mset = self.variable()
         self._type_variable(mset)
-        self._mset_defs[mset] = Polynomial(expressions)
+        self._mset_defs[mset] = expressions
         return mset
 
     def _power_variable(self, var, d = 1):
