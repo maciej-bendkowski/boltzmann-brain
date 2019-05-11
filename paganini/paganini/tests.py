@@ -111,5 +111,55 @@ class TestTuner(unittest.TestCase):
         self.assertAlmostEqual(z.value, 0.333333333333335)
         self.assertAlmostEqual(T.value, 0.499999999999993)
 
+    def test_binary_words(self):
+        """ Singular tuning of binary words.
+            B = SEQ(Z + Z). """
+
+        spec = Specification()
+        z, B = spec.variable(), spec.variable()
+        spec.add(B, spec.Seq(z + z))
+
+        spec.run_singular_tuner(z)
+        self.assertAlmostEqual(z.value, 0.5, 5)
+
+    def test_compositions(self):
+        """ Singular tuning of all compositions.
+            C = SEQ(Z * SEQ(Z)). """
+
+        params = Params(Type.RATIONAL)
+        params.max_iters = 8000 # required
+
+        spec = Specification()
+        z, C = spec.variable(), spec.variable()
+        spec.add(C, spec.Seq(z * spec.Seq(z)))
+
+        spec.run_singular_tuner(z, params)
+        self.assertAlmostEqual(z.value, 0.5, 5)
+
+    def test_compositions_with_restricted_summands(self):
+        """ Singular tuning of compositions with restricted summands in {1,2}.
+            C = SEQ(Z + Z^2). """
+
+        spec = Specification()
+        z, C = spec.variable(), spec.variable()
+        spec.add(C, spec.Seq(z + z**2))
+
+        spec.run_singular_tuner(z)
+        self.assertAlmostEqual(z.value, 0.618034527351341, 5) # golden ratio
+
+    def test_singular_partitions(self):
+        """ Singular tuning of partitions
+            P = MSET(SEQ_{k >= 1}(Z))."""
+
+        params = Params(Type.ALGEBRAIC)
+        params.max_iters = 1000 # required
+
+        spec = Specification()
+        z, P = spec.variable(), spec.variable()
+        spec.add(P, spec.MSet(z * spec.Seq(z)))
+
+        spec.run_singular_tuner(z, params)
+        self.assertAlmostEqual(z.value, 0.999992520391430, 5)
+
 if __name__ == '__main__':
     unittest.main()
