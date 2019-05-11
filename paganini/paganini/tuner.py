@@ -30,13 +30,11 @@ class Exp:
     def __mul__(self, other):
         """ Multiplication of algebraic expressions."""
         if isinstance(other, int):
-            # multiplication with a constant.
-            return Exp(self._mul_coeff * other, self._variables)
-        else:
-            assert (isinstance(other, Exp))
-            # multiplication with another expression.
-            x, y = Counter(self._variables), Counter(other._variables)
-            return Exp(self._mul_coeff * other._mul_coeff, dict(x + y))
+            other = Exp(other)
+
+        assert (isinstance(other, Exp))
+        x, y = Counter(self._variables), Counter(other._variables)
+        return Exp(self._mul_coeff * other._mul_coeff, dict(x + y))
 
     __rmul__ = __mul__ # make multiplication commute again
 
@@ -46,13 +44,16 @@ class Exp:
 
     __radd__ = __add__ # make addition commute again
 
+    def __sub__(self, other):
+        """ Expression subtraction."""
+        return Polynomial(self) - other
+
     def spec(self):
         """ Returns a deque of pairs (partially) describing the expression. The
         first component denotes a variable, whereas the second one denotes its
         respective exponent. The represented expression (in fact monomial) can
         be recovered by multiplying all of the variables with their exponents
         and the multiplicative coefficient."""
-        assert len(self._variables) > 0, "Expression without variables."
 
         data = deque()
         for var, e in self._variables.items():
@@ -81,7 +82,11 @@ class Polynomial:
 
     def __mul__(self, other):
         " Polynomial multiplication."""
-        if isinstance(other, Exp):
+
+        if isinstance(other, int): # explicit coercion
+            other = Polynomial([Exp(other)])
+
+        if isinstance(other, Exp): # explicit coercion
             other = Polynomial([other])
 
         assert isinstance(other, Polynomial)
@@ -112,7 +117,10 @@ class Polynomial:
 
     def __add__(self, other):
         """ Polynomial addition."""
-        if isinstance(other, Exp) or isinstance(other, int):
+        if isinstance(other, int): # explicit coercion
+            other = Polynomial([Exp(other)])
+
+        if isinstance(other, Exp): # explicit coercion
             other = Polynomial([other])
 
         assert isinstance(other, Polynomial)
@@ -120,6 +128,18 @@ class Polynomial:
         return Polynomial(self._monomials + other._monomials)
 
     __radd__ = __add__ # make addition commute again
+
+    def __sub__(self, other):
+        """ Polynomial subtraction."""
+        if isinstance(other, int):
+            return self + (-other)
+
+        if isinstance(other, Exp): # explicit coercion
+            other = Polynomial([other])
+
+        assert isinstance(other, Polynomial)
+        xs = list(map(lambda e: -1 * e, other._monomials))
+        return self + Polynomial(xs)
 
     def __iter__(self):
         return iter(self._monomials)
