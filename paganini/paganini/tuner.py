@@ -54,11 +54,7 @@ class Exp:
         respective exponent. The represented expression (in fact monomial) can
         be recovered by multiplying all of the variables with their exponents
         and the multiplicative coefficient."""
-
-        data = deque()
-        for var, e in self._variables.items():
-            data.append((var, e))
-        return data
+        return self._variables.items()
 
 class Variable(Exp):
     """ Class of variables (i.e. also expressions)."""
@@ -169,8 +165,8 @@ class Params:
 class Operator(Enum):
     """ Enumeration of supported constraint signs."""
     LEQ       = 1 # less or equal
-    GEQ       = 3 # greater or equal
-    UNBOUNDED = 4 # unbounded operator
+    GEQ       = 2 # greater or equal
+    UNBOUNDED = 3 # unbounded operator
 
 class Constraint:
     """ Supported constraints for classes such as SEQ or MSET."""
@@ -382,12 +378,11 @@ class Specification:
         row, col, data = deque(), deque(), deque()
         for exp in expressions:
             if isinstance(exp, Exp):
-                for _ in range(exp._mul_coeff):
-                    for (v, e) in exp.spec():
-                        row.append(rows)
-                        col.append(v)
-                        data.append(e)
-                    rows += 1
+                for (v, e) in exp.spec():
+                    row.append(rows)
+                    col.append(v)
+                    data.append(e)
+                rows += 1
             else:
                 rows += exp
 
@@ -397,14 +392,23 @@ class Specification:
             self._total_variables()))
 
     def specs(self):
-        """ Computes the sparse matrix specifications
-            corresponding to each of the system equations."""
+        """ Computes the sparse matrix specifications corresponding to each
+        of the system equations, along with monomial multiplicative coefficient
+        logarithms."""
 
-        matrices = deque()
+        matrices = []
+        coeffs   = []
+
         for expressions in self._equations.values():
             matrix = self._expr_specs(expressions)
             matrices.append(matrix)
-        return matrices
+
+            matrix_coeff = list(map(lambda e:
+                sympy.log(e._mul_coeff), expressions))
+
+            coeffs.append(matrix_coeff)
+
+        return (matrices, np.array(coeffs))
 
     def _type_variable(self, variable):
         """ Marks a type variable."""
@@ -446,14 +450,17 @@ class Specification:
 
     def _compose_constraints(self, var):
         assert len(self._equations) > 0, "System without equations."
-        matrices = self.specs()
+        matrices, coeffs = self.specs()
         constraints = deque()
 
         # compose regular type variable constraints.
         for idx, eq_variable in enumerate(self._equations):
             log_exp = matrices[idx]
+            coeff   = coeffs[idx] # c = e^{log c}
             tidx = eq_variable._idx
-            constraints.append(var[tidx] >= cvxpy.log_sum_exp(log_exp * var))
+
+            exponents = coeff + log_exp * var
+            constraints.append(var[tidx] >= cvxpy.log_sum_exp(exponents))
 
         # compose MSet variable constraints.
         for v in self._msets:
