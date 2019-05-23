@@ -8,6 +8,12 @@ from enum import Enum
 from collections import Counter
 from collections import deque
 
+def is_number(n):
+    return isinstance(n, (int,float))
+
+def is_positive(n):
+    return is_number(n) and n > 0
+
 class Exp:
     """ Class of algebraic expressions used in an algebraic equation.  An
     expression is represented using a multiplicative coefficient (constant) and
@@ -19,20 +25,19 @@ class Exp:
 
     def __pow__(self, n):
         """ Expression exponentiation."""
-        assert (isinstance(n, int))
+        assert is_positive(n), 'Positive exponent required'
 
         xs = dict(self._variables)
         for v in self._variables:
-            xs[v] *= n
+            xs[v] *= n # (a^b)^c = a^(b * c)
 
         return Exp(self._mul_coeff ** n, xs)
 
     def __mul__(self, other):
         """ Multiplication of algebraic expressions."""
-        if isinstance(other, int):
+        if not isinstance(other, Exp):
             other = Exp(other)
 
-        assert (isinstance(other, Exp))
         x, y = Counter(self._variables), Counter(other._variables)
         return Exp(self._mul_coeff * other._mul_coeff, dict(x + y))
 
@@ -49,10 +54,10 @@ class Exp:
         return Polynomial(self) - other
 
     def spec(self):
-        """ Returns a deque of pairs (partially) describing the expression. The
-        first component denotes a variable, whereas the second one denotes its
+        """ Returns a list of pairs describing the expression. The first
+        component denotes a variable, whereas the second one denotes its
         respective exponent. The represented expression (in fact monomial) can
-        be recovered by multiplying all of the variables with their exponents
+        be recovered by multiplying all of the variables (with their exponents)
         and the multiplicative coefficient."""
         return self._variables.items()
 
@@ -62,45 +67,45 @@ class Variable(Exp):
     def __init__(self, idx):
         self._idx = idx
         super(Variable,self).__init__(1,{})
-        self._variables[idx] = 1
 
-        # tuning value
-        self.value = None
+        self._variables[idx] = 1
+        self.value = None # tuning value
+
+def to_monomials(xs):
+    return [xs] if isinstance(xs, Exp) else xs
+
+def to_polynomial(xs):
+
+    if is_number(xs): # explicit cast
+        xs = Polynomial([Exp(xs)])
+
+    elif isinstance(xs, Exp): # explicit cast
+        xs = Polynomial([xs])
+
+    return xs
 
 class Polynomial:
     """ Class of polonomials of algebraic expressions."""
 
     def __init__(self, monomials):
-        if isinstance(monomials, Exp):
-            monomials = [monomials]
-
-        self._monomials = monomials
+        self._monomials = to_monomials(monomials)
 
     def __mul__(self, other):
         " Polynomial multiplication."""
+        other = to_polynomial(other)
 
-        if isinstance(other, int): # explicit coercion
-            other = Polynomial([Exp(other)])
-
-        if isinstance(other, Exp): # explicit coercion
-            other = Polynomial([other])
-
-        assert isinstance(other, Polynomial)
-
-        outcome = deque()
+        outcome = [] # naive but works
         for a in self._monomials:
             for b in other._monomials:
                 outcome.append(a * b)
 
-        return Polynomial(list(outcome))
+        return Polynomial(outcome)
 
     __rmul__ = __mul__ # make multiplication commute again
 
     def __pow__(self, n):
         """ Naive exponentiation of polynomials."""
-
-        assert isinstance(n, int)
-        assert n > 0, "Positive exponent required."
+        assert is_positive(n), 'Positive exponent required'
 
         if n == 1:
             return Polynomial(self._monomials)
@@ -113,13 +118,8 @@ class Polynomial:
 
     def __add__(self, other):
         """ Polynomial addition."""
-        if isinstance(other, int): # explicit coercion
-            other = Polynomial([Exp(other)])
+        other = to_polynomial(other)
 
-        if isinstance(other, Exp): # explicit coercion
-            other = Polynomial([other])
-
-        assert isinstance(other, Polynomial)
         # FIXME: Consider a representation without monomial duplicates.
         return Polynomial(self._monomials + other._monomials)
 
@@ -127,13 +127,12 @@ class Polynomial:
 
     def __sub__(self, other):
         """ Polynomial subtraction."""
-        if isinstance(other, int):
+        if is_number(other):
             return self + (-other)
 
-        if isinstance(other, Exp): # explicit coercion
-            other = Polynomial([other])
+        other = to_monomials(other)
+        other = Polynomial(other)
 
-        assert isinstance(other, Polynomial)
         xs = list(map(lambda e: -1 * e, other._monomials))
         return self + Polynomial(xs)
 
@@ -459,7 +458,7 @@ class Specification:
             coeff   = coeffs[idx] # c = e^{log c}
             tidx = eq_variable._idx
 
-            exponents = coeff + log_exp * var
+            exponents = log_exp * var + coeff
             constraints.append(var[tidx] >= cvxpy.log_sum_exp(exponents))
 
         # compose MSet variable constraints.
@@ -540,7 +539,6 @@ class Specification:
 
         objective = cvxpy.Minimize(obj * var)
         problem   = cvxpy.Problem(objective, constraints)
-
         return self._run_solver(var, problem, params)
 
     def run_singular_tuner(self, z, params = None):
@@ -597,5 +595,4 @@ class Specification:
 
         objective = cvxpy.Maximize(obj * var)
         problem   = cvxpy.Problem(objective, constraints)
-
         return self._run_solver(var, problem, params)
