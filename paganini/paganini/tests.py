@@ -161,5 +161,25 @@ class TestTuner(unittest.TestCase):
         spec.run_singular_tuner(z, params)
         self.assertAlmostEqual(z.value, 0.999992520391430, 5)
 
+    def test_minus_constant(self):
+
+        spec = Specification()
+        z, T = spec.variable(), spec.variable()
+        spec.add(T, spec.Seq(2*z) - 1)
+
+        spec.run_singular_tuner(z)
+        self.assertAlmostEqual(z.value, 0.5, 5)
+
+    def test_minus_constant2(self):
+
+        spec = Specification()
+        z, T = spec.variable(), spec.variable()
+        spec.add(T, z - 2 * T)
+
+        try:
+            spec.run_singular_tuner(z)
+        except ValueError:
+            self.assertTrue(z.value is None)
+
 if __name__ == '__main__':
     unittest.main()

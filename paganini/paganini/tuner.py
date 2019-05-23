@@ -61,6 +61,9 @@ class Exp:
         and the multiplicative coefficient."""
         return self._variables.items()
 
+    def is_constant(self):
+        return len(self._variables) == 0
+
 class Variable(Exp):
     """ Class of variables (i.e. also expressions)."""
 
@@ -402,8 +405,12 @@ class Specification:
             matrix = self._expr_specs(expressions)
             matrices.append(matrix)
 
-            matrix_coeff = list(map(lambda e:
-                sympy.log(e._mul_coeff), expressions))
+            matrix_coeff = []
+            for e in expressions:
+                if e._mul_coeff >= 0:
+                    matrix_coeff.append(sympy.log(e._mul_coeff))
+                else: # hide negative coefficients
+                    matrix_coeff.append(0)
 
             coeffs.append(matrix_coeff)
 
@@ -458,8 +465,17 @@ class Specification:
             coeff   = coeffs[idx] # c = e^{log c}
             tidx = eq_variable._idx
 
+            _const = 0 # allow negative, constant expressions.
+            for monomial in self._equations[eq_variable]:
+                if monomial._mul_coeff < 0:
+                    if monomial.is_constant():
+                        _const += monomial._mul_coeff
+                    else:
+                        raise ValueError('Negative monomial coefficient')
+
             exponents = log_exp * var + coeff
-            constraints.append(var[tidx] >= cvxpy.log_sum_exp(exponents))
+            constraints.append(var[tidx] >=
+                    cvxpy.log_sum_exp(exponents) + _const)
 
         # compose MSet variable constraints.
         for v in self._msets:
