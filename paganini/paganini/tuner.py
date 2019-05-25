@@ -62,6 +62,7 @@ class Exp:
         return self._variables.items()
 
     def is_constant(self):
+        """ Checks if the monomial represents a constant."""
         return len(self._variables) == 0
 
 class VariableType(Enum):
@@ -146,7 +147,7 @@ class Polynomial:
         other = to_monomials(other)
         other = Polynomial(other)
 
-        xs = list(map(lambda e: -1 * e, other._monomials))
+        xs = [-1 * e for e in other._monomials]
         return self + Polynomial(xs)
 
     def __iter__(self):
@@ -284,7 +285,7 @@ class Specification:
 
             seq = self.variable()
             xs = list(range(1, constraint.value + 1))
-            self.add(seq, 1 + Polynomial(list(map(lambda k: v ** k, xs))))
+            self.add(seq, 1 + Polynomial([v ** k for k in xs]))
             return seq
 
         else:
@@ -344,7 +345,7 @@ class Specification:
         if var in self._equations.keys():
             # create respective rhs monomials.
             monomials = self._equations[var]
-            exprs = list(map(lambda e : self._power_expr(e, d), monomials))
+            exprs = [self._power_expr(e,d) for e in monomials]
             self.add(var_d, Polynomial(exprs))
             return var_d
         else:
@@ -352,8 +353,8 @@ class Specification:
             exprs = self._mset_defs[var]
             self._msets[var_d] = []
             for k in range(d, self.truncate + 1, d):
-                self._msets[var_d].append(list(map(lambda e :
-                    self._power_expr(e, k), exprs))) # increase d
+                self._msets[var_d].append([self._power_expr(e,k)\
+                        for e in exprs]) # increase d
 
             return var_d
 
