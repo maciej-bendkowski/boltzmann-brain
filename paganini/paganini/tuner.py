@@ -64,6 +64,10 @@ class Exp:
     def is_constant(self):
         return len(self._variables) == 0
 
+class VariableType(Enum):
+    PLAIN = 1 # regular, plain variables, e.g. Z.
+    TYPE  = 2 # variables corresponding to some types, e.g. having definitions.
+
 class Variable(Exp):
     """ Class of variables (i.e. also expressions)."""
 
@@ -73,6 +77,12 @@ class Variable(Exp):
 
         self._variables[idx] = 1
         self.value = None # tuning value
+
+        self.type  = VariableType.PLAIN
+
+    def is_type_variable(self):
+        """ Checks if the variable defines a type."""
+        return self.type == VariableType.TYPE
 
 def to_monomials(xs):
     return [xs] if isinstance(xs, Exp) else xs
@@ -161,7 +171,7 @@ class Params:
         else:
             self.sys_type  = Type.ALGEBRAIC
             self.solver    = cvxpy.ECOS
-            self.max_iters = 50
+            self.max_iters = 100
             self.feastol   = 1.e-20
 
 class Operator(Enum):
@@ -203,7 +213,6 @@ class Specification:
         self._equations          = {}
 
         self._tuning_variables   = {}
-        self._type_variable_idxs = set()
 
         self._msets              = {} # (truncated) MSet equations.
         self._mset_defs          = {} # original MSet expressions.
@@ -250,7 +259,7 @@ class Specification:
             expressions = Polynomial(expressions)
 
         self._equations[variable] = expressions
-        self._type_variable(variable)
+        variable.type = VariableType.TYPE
 
     def Seq(self, expressions, constraint = None):
         """ Given a list of expressions X or single monomial, introduces to
@@ -261,7 +270,6 @@ class Specification:
             expressions = Polynomial(expressions)
 
         constraint = Constraint.normalise(constraint)
-
         if constraint.operator == Operator.UNBOUNDED:
             # note: Seq(expr) = 1 + expr * Seq(expr).
 
@@ -269,7 +277,7 @@ class Specification:
             self.add(seq, 1 + expressions * seq)
             return seq
 
-        if constraint.operator == Operator.LEQ:
+        elif constraint.operator == Operator.LEQ:
             # note: Seq(expr)_{<= k} = 1 + expr + expr^2 + ... + expr^k.
             v = self.variable()
             self.add(v, expressions)
@@ -279,15 +287,16 @@ class Specification:
             self.add(seq, 1 + Polynomial(list(map(lambda k: v ** k, xs))))
             return seq
 
-        # constraint.operator == Operator.GEQ
-        # note: Seq(expr)_{>= k} = expr^k + expr^{k+1} + ...
-        #                        = expr^k (1 + expr^2 + expr^3 + ...)
-        #                        = expr^k Seq(expr).
+        else:
+            # constraint.operator == Operator.GEQ
+            # note: Seq(expr)_{>= k} = expr^k + expr^{k+1} + ...
+            #                        = expr^k (1 + expr^2 + expr^3 + ...)
+            #                        = expr^k Seq(expr).
 
-        seq = self.variable() #FIXME
-        p = Polynomial(expressions) ** constraint.value
-        self.add(seq, p * self.Seq(expressions)) # unbounded
-        return seq
+            seq = self.variable()
+            expr = Polynomial(expressions) ** constraint.value
+            self.add(seq, expr * self.Seq(expressions)) # unbounded
+            return seq
 
     def MSet(self, expressions):
         """ Given a list of expressions X or single monomial, introduces to
@@ -303,7 +312,7 @@ class Specification:
             expressions = Polynomial(expressions)
 
         mset = self.variable()
-        self._type_variable(mset)
+        mset.type = VariableType.TYPE
         self._mset_defs[mset] = expressions
         return mset
 
@@ -314,7 +323,7 @@ class Specification:
         equation saved."""
 
         assert d > 0, "Invalid degree parameter d."
-        assert self._is_type_variable(var), "Non-type variable."
+        assert var.is_type_variable(), "Non-type variable."
 
         if var not in self._powers:
             self._powers[var] = {}
@@ -329,7 +338,7 @@ class Specification:
 
         var_d = self.variable() if d > 1 else var
 
-        self._type_variable(var_d)
+        var_d.type = VariableType.TYPE
         self._powers[var][d] = var_d # memorise var[d]
 
         if var in self._equations.keys():
@@ -354,7 +363,7 @@ class Specification:
         variables = {}
         for idx in expr._variables:
             v = self._all_variables[idx]
-            if self._is_type_variable(v):
+            if v.is_type_variable():
                 # substitute the power variable.
                 x = self._power_variable(v, d)
                 variables[x._idx] = expr._variables[v._idx]
@@ -416,13 +425,6 @@ class Specification:
 
         return (matrices, np.array(coeffs))
 
-    def _type_variable(self, variable):
-        """ Marks a type variable."""
-        self._type_variable_idxs.add(variable._idx)
-
-    def _is_type_variable(self, variable):
-        return variable._idx in self._type_variable_idxs
-
     def check_type(self):
         """ Checks if the system is algebraic or rational."""
 
@@ -433,7 +435,7 @@ class Specification:
             for exp in expressions:
                 if isinstance(exp, Exp):
                     for v, e in exp._variables.items():
-                        if v in self._type_variable_idxs and e > 1: #FIXME
+                        if self._all_variables[v].is_type_variable() and e > 1:
                             return Type.ALGEBRAIC
 
         return Type.RATIONAL
