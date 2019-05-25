@@ -411,7 +411,7 @@ class Specification:
     def specs(self):
         """ Computes the sparse matrix specifications corresponding to each
         of the system equations, along with monomial multiplicative coefficient
-        logarithms."""
+        logarithms, entering later to the optimisation problem constraints."""
 
         matrices = []
         coeffs   = []
@@ -467,7 +467,7 @@ class Specification:
         matrices, coeffs = self.specs()
         constraints = deque()
 
-        # compose regular type variable constraints.
+        # compose type variable constraints.
         for idx, eq_variable in enumerate(self._equations):
             log_exp = matrices[idx]
             coeff   = coeffs[idx] # c = e^{log c}
@@ -521,7 +521,7 @@ class Specification:
 
         sp = Specification()
         z, u, M = sp.variable(1000), sp.variable(200), sp.variable()
-        sp.add(M, [z, u * z * M, z * M **2])
+        sp.add(M, z + u * z * M + z * M **2)
 
         params = Params(Type.ALGEBRAIC)
         sp.run_tuner(M, params)
@@ -553,8 +553,6 @@ class Specification:
         # compose the constraints
         constraints = self._compose_constraints(var)
 
-        n = self._total_variables()
-
         # compose the objective
         obj = np.zeros(n)
         obj[t._idx] = 1.0
@@ -575,7 +573,7 @@ class Specification:
 
         sp = Specification()
         z, u, M = sp.variable(), sp.variable(0.4), sp.variable()
-        sp.add(M, [z, u * z * M, z * M **2])
+        sp.add(M, z + u * z * M + z * M **2)
 
         params = Params(Type.ALGEBRAIC)
         sp.run_singular_tuner(z, params)
