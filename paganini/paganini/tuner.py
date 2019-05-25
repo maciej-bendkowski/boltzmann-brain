@@ -237,6 +237,14 @@ class Specification:
 
         return var
 
+    def type_variable(self, x = None):
+        """ Discharges a new, fresh type variable. See also
+        Specification.variable."""
+
+        var = self.variable(x)
+        var.type = VariableType.TYPE
+        return var
+
     def variables(self, xs = None):
         """ Returns an infinite variable generator. Given a non-empty list of
         marking values, decorates the initial variable prefix with respective
@@ -260,7 +268,7 @@ class Specification:
             expressions = Polynomial(expressions)
 
         self._equations[variable] = expressions
-        variable.type = VariableType.TYPE
+        variable.type = VariableType.TYPE # make sure its a type variable
 
     def Seq(self, expressions, constraint = None):
         """ Given a list of expressions X or single monomial, introduces to
@@ -312,15 +320,14 @@ class Specification:
         if not isinstance(expressions, Polynomial):
             expressions = Polynomial(expressions)
 
-        mset = self.variable()
-        mset.type = VariableType.TYPE
+        mset = self.type_variable()
         self._mset_defs[mset] = expressions
         return mset
 
     def _power_variable(self, var, d = 1):
         """ Given a variable, say, t = T(Z_1,...,Z_k) outputs a new variable
-        representing the dth power of t, i.e. t_i = T(Z_1^d,...,Z_k^d). The
-        variable t_i is cached within the specification and its defining
+        representing the dth power of t, i.e. t_d = T(Z_1^d,...,Z_k^d). The
+        variable t_d is cached within the specification and its defining
         equation saved."""
 
         assert d > 0, "Invalid degree parameter d."
@@ -337,9 +344,7 @@ class Specification:
             self._powers[var][d] = var
             return var
 
-        var_d = self.variable() if d > 1 else var
-
-        var_d.type = VariableType.TYPE
+        var_d = self.type_variable() if d > 1 else var
         self._powers[var][d] = var_d # memorise var[d]
 
         if var in self._equations.keys():
