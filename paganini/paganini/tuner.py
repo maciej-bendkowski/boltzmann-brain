@@ -6,7 +6,6 @@ from scipy import sparse
 
 from enum import Enum
 from collections import Counter
-from collections import deque
 
 def is_number(n):
     return isinstance(n, (int,float))
@@ -219,8 +218,8 @@ class Specification:
         self._mset_defs          = {} # original MSet expressions.
         self._powers             = {} # accounts for expressions like T(Z^i).
 
+        self._all_variables      = []
         self.truncate            = truncate
-        self._all_variables      = deque()
 
     def variable(self, x = None):
         """ Discharges a new, fresh variable. If 'x' is given, the returned
@@ -392,7 +391,7 @@ class Specification:
         corresponding sparse matrix thereof."""
 
         rows = 0 # row counter
-        row, col, data = deque(), deque(), deque()
+        row, col, data =  [], [], []
         for exp in expressions:
             if isinstance(exp, Exp):
                 for (v, e) in exp.spec():
@@ -465,7 +464,7 @@ class Specification:
     def _compose_constraints(self, var):
         assert len(self._equations) > 0, "System without equations."
         matrices, coeffs = self.specs()
-        constraints = deque()
+        constraints = []
 
         # compose type variable constraints.
         for idx, eq_variable in enumerate(self._equations):
