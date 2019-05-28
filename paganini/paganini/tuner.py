@@ -6,6 +6,7 @@ from scipy import sparse
 
 from enum import Enum
 from collections import Counter
+from math import gcd
 
 def is_number(n):
     return isinstance(n, (int,float))
@@ -204,6 +205,17 @@ def geq(n):
     assert n >= 0, "Negative constraints are not supported."
     return Constraint(Operator.GEQ, n)
 
+def phi(n):
+    """ Euler's totient function."""
+    assert n >= 0, 'Negative integer.'
+
+    out = 0
+    for i in range(1, n + 1):
+        if gcd(n, i) == 1:
+            out += 1
+
+    return out
+
 class Specification:
     """ Class representing algebraic combinatorial systems."""
 
@@ -216,6 +228,10 @@ class Specification:
 
         self._msets              = {} # (truncated) MSet equations.
         self._mset_defs          = {} # original MSet expressions.
+
+        self._cycs               = {} # (truncated) Cyc equations.
+        self._cyc_defs           = {} # original Cyc expressions.
+
         self._powers             = {} # accounts for expressions like T(Z^i).
 
         self._all_variables      = []
@@ -323,6 +339,23 @@ class Specification:
         self._mset_defs[mset] = expressions
         return mset
 
+    def Cyc(self, expressions):
+        """ Given a list of expressions X or single monomial, introduces to
+        the system a new equation which defines 'cyclic' structures from X.
+        The resulting variable corresponding to that class is then returned."""
+
+        # Note: at the time of definition, not all right-hand side's of
+        # corresponding expressions might be present. Therefore we postpone the
+        # series composition. For future reference, we safe the original
+        # definition at specification level.
+
+        if not isinstance(expressions, Polynomial):
+            expressions = Polynomial(expressions)
+
+        cyc = self.type_variable()
+        self._cyc_defs[cyc] = expressions
+        return cyc
+
     def _power_variable(self, var, d = 1):
         """ Given a variable, say, t = T(Z_1,...,Z_k) outputs a new variable
         representing the dth power of t, i.e. t_d = T(Z_1^d,...,Z_k^d). The
@@ -339,26 +372,37 @@ class Specification:
         if d in self._powers[var]:
             return self._powers[var][d]
 
-        if d == 1 and var in self._equations.keys(): # special case
+        if d == 1 and var in self._equations: # special case
             self._powers[var][d] = var
             return var
 
         var_d = self.type_variable() if d > 1 else var
         self._powers[var][d] = var_d # memorise var[d]
 
-        if var in self._equations.keys():
+        if var in self._equations:
             # create respective rhs monomials.
             monomials = self._equations[var]
             exprs = [self._power_expr(e,d) for e in monomials]
             self.add(var_d, Polynomial(exprs))
             return var_d
-        else:
+
+        elif var in self._mset_defs:
             # iterate and create respective rhs monomials.
             exprs = self._mset_defs[var]
             self._msets[var_d] = []
             for k in range(d, self.truncate + 1, d):
                 self._msets[var_d].append([self._power_expr(e,k)\
                         for e in exprs]) # increase d
+
+            return var_d
+
+        elif var in self._cyc_defs:
+            # iterate and create respective rhs monomials.
+            exprs = self._cyc_defs[var]
+            self._cycs[var_d] = []
+            for k in range(d, self.truncate + 1, d):
+                seq_k = self.Seq([self._power_expr(e,k) for e in exprs])
+                self._cycs[var_d].append(seq_k) # increase d
 
             return var_d
 
@@ -389,6 +433,8 @@ class Specification:
     def _expr_specs(self, expressions):
         """ Given a list (i.e. series) of monomial expressions, creates a
         corresponding sparse matrix thereof."""
+
+        expressions = to_monomials(expressions)
 
         rows = 0 # row counter
         row, col, data =  [], [], []
@@ -433,7 +479,7 @@ class Specification:
     def check_type(self):
         """ Checks if the system is algebraic or rational."""
 
-        if len(self._mset_defs) > 0:
+        if len(self._mset_defs) > 0 or len(self._cyc_defs) > 0:
             return Type.ALGEBRAIC
 
         for expressions in self._equations.values():
@@ -453,13 +499,16 @@ class Specification:
         else:
             return params
 
-    def _construct_truncated_msets(self):
+    def _construct_truncated_series(self):
         """ Assuming that the system is already defined, constructs a truncated
-        series representation for each of the MSet variables in the
+        series representation for each of the MSet or Cyc variables in the
         specification."""
 
         for mset in self._mset_defs:
             self._power_variable(mset,1)
+
+        for cyc in self._cyc_defs:
+            self._power_variable(cyc,1)
 
     def _compose_constraints(self, var):
         assert len(self._equations) > 0, "System without equations."
@@ -488,6 +537,14 @@ class Specification:
         for v in self._msets:
             expressions = self._msets[v]
             xs = [1/(i+1) * cvxpy.exp(cvxpy.sum(self._expr_specs(e) * var))
+                    for i, e in enumerate(expressions)]
+
+            constraints.append(var[v._idx] >= cvxpy.sum(xs))
+
+        # compose Cyc variable constraints.
+        for v in self._cycs:
+            expressions = self._cycs[v]
+            xs = [phi(i+1)/(i+1) * self._expr_specs(e) * var
                     for i, e in enumerate(expressions)]
 
             constraints.append(var[v._idx] >= cvxpy.sum(xs))
@@ -545,7 +602,7 @@ class Specification:
         assert len(self._tuning_variables) > 0,\
             "The given system has no tuned variables."
 
-        self._construct_truncated_msets() # note: might generate variables.
+        self._construct_truncated_series() # note: might generate variables.
         n = self._total_variables()
         var = cvxpy.Variable(n)
 
@@ -595,7 +652,7 @@ class Specification:
         assert self._total_variables() > 0, "System without variables."
         assert len(self._equations) > 0, "System without equations."
 
-        self._construct_truncated_msets() # note: might generate variables.
+        self._construct_truncated_series() # note: might generate variables.
         n = self._total_variables()
         var = cvxpy.Variable(n)
 

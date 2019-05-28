@@ -181,5 +181,43 @@ class TestTuner(unittest.TestCase):
         except ValueError:
             self.assertTrue(z.value is None)
 
+    def test_binary_necklaces(self):
+        """ Singular tuning of neckleces build using two kinds of beads.
+            N = CYC(Z + Z)."""
+
+        spec = Specification()
+        z, N = spec.variable(), spec.variable()
+        spec.add(N, spec.Cyc(z + z))
+
+        spec.run_singular_tuner(z)
+        self.assertAlmostEqual(z.value, 0.5, 5)
+
+    def test_cyclic_compositions(self):
+        """ Singular tuning of cyclic compositions.
+            C = CYC(Z * SEQ(Z))."""
+
+        spec = Specification()
+        z, C = spec.variable(), spec.variable()
+        spec.add(C, spec.Cyc(z * spec.Seq(z)))
+
+        spec.run_singular_tuner(z)
+        self.assertAlmostEqual(z.value, 0.5, 5)
+
+    def test_unlabelled_functional_graphs(self):
+        """ Singular tuning of unlabelled functional graphs.
+            F = MSet(K)
+            K = CYC(U)
+            U = Z * MSet(U)."""
+
+        spec = Specification()
+        z, F = spec.variable(), spec.variable()
+        K, U = spec.variable(), spec.variable()
+        spec.add(F, spec.MSet(K))
+        spec.add(K, spec.Cyc(U))
+        spec.add(U, z * spec.MSet(U))
+
+        spec.run_singular_tuner(z)
+        self.assertAlmostEqual(z.value, 0.3383218568992077, 5)
+
 if __name__ == '__main__':
     unittest.main()
