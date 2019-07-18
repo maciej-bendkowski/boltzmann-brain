@@ -59,7 +59,7 @@ automatically detects the specification kind (either **rational** or **algebraic
 constructs a **singular**, **rejection-based analytic sampler** able to sample **uniformly random**, conditioned on size, inhabitants of the system types. Though the exact size of the outcome is a random variable, the outcome sampler allows to control the desired lower and upper bounds of the generated objects.
 
 ### Sampler tuning
-*Boltzmann Brain* supports a **target frequency calibration** using convex optimisation techniques implemented in the supplementary *Paganini* script (see the *paganini* subdirectory). Consider the following example of a specification defining Motzkin trees with some arbitrary size notion:
+*Boltzmann Brain* supports a **target frequency calibration** using convex optimisation techniques. These are implemented as a Python library *Paganini* built using *cvxpy*. *Boltzmann Brain* communicates with *Paganini* through a tiny executable called *medulla* (see the *medulla* subdirectory). Consider the following example of a specification defining Motzkin trees with some arbitrary size notion:
 
 ```hs
 -- Motzkin trees
@@ -131,7 +131,7 @@ some (small) default ones. If no `@generate` annotation is provided, *Boltzmann 
 assumes some default type.
 
 ### Advanced usage
-For parameter tuning, *Boltzmann Brain* invokes the external *Paganini* script. Usually, *Boltzmann Brain* automatically calls *Paganini* once tuning is in order. If no special handling is required, it just suffices to have `paganini` available in the system; *Boltzmann Brain* will automatically pass it necessary data and retrieve the tuning data.
+For parameter tuning, *Boltzmann Brain* invokes the external *medulla* script. Usually, *Boltzmann Brain* automatically calls *medulla* once tuning is in order. If no special handling is required, it just suffices to have `paganini` available in the system; *Boltzmann Brain* will automatically pass it necessary data and retrieve the tuning data.
 
 However, it needed, a manual tuning workflow is also supported. To tune a combinatorial specification *"by hand"*, you can start with generating a *Paganini* representation of the system, e.g. using
 
@@ -139,7 +139,7 @@ However, it needed, a manual tuning workflow is also supported. To tune a combin
 
 *Boltzmann Brain* ensures that the input specification is sound and well-founded. Otherwise, (arguably) user-friendly error messages are provided. Once the *Paganini* specification is generated, we type
 
-```paganini -i paganini.pg > bb.param```
+```medulla -i paganini.pg > bb.param```
 
 which runs *Paganini* and outputs the required tuning data for `bb`.  You
 can alter the default agruments of `paganini` scripts such as tuning precision,
@@ -152,7 +152,7 @@ might become unbounded).
 ```bb compile -o Sampler.hs -t bb.param -i specification.in ```
 
 ### Installation
-*Boltzmann Brain* consists of two executables, ```bb``` and ```paganini```. The former one is implemented in [Haskell](https://www.haskell.org/) whereas the latter is implemented in [Python](https://www.python.org/). Both applications rely on some (few) external libraries to work, such as [LAPACK](http://www.netlib.org/lapack/) or [BLAS](http://www.netlib.org/blas/). The following sections explain several common installation methods.
+*Boltzmann Brain* consists of two executables, ```bb``` and ```medulla```. The former one is implemented in [Haskell](https://www.haskell.org/) whereas the latter is implemented in [Python](https://www.python.org/). Both applications rely on some (few) external libraries to work, such as [LAPACK](http://www.netlib.org/lapack/) or [BLAS](http://www.netlib.org/blas/). The following sections explain several common installation methods.
 
 We start with the recommended method of compiling *Boltzmann Brain* from sources.
 The following section explains the compilation process under Ubuntu 16.04, however, let us note that with little modifications it should also work under other Linux distributions.
@@ -163,34 +163,35 @@ We start with installing all the required system dependencies:
 apt-get update
 apt-get install -y cmake curl git libblas-dev liblapack-dev python3 python3-pip
 ```
-The above script installs ```BLAS``` and ```LAPACK``` as well as python3 and its package manager ```pip```.  Since the target destination of both ```bb``` and ```paganini``` is going to be ```~/.local/bin```, before proceeding please make sure that it is included in your ```PATH```.
+The above script installs ```BLAS``` and ```LAPACK``` as well as python3 and its package manager ```pip```.  Since the target destination of both ```bb``` and ```medulla``` is going to be ```~/.local/bin```, before proceeding please make sure that it is included in your ```PATH```.
 
 Next, we install required python dependencies
 
 ```
  pip3 install --user --upgrade pip
  pip3 install --user numpy scipy
- pip3 install --user cvxpy six
+ pip3 install --user cvxpy
+ pip3 install --user paganini
 ```
 
-Note that the above packages play the central role in the system tuning procedure. Without them, paganini cannot not work properly. Next, we clone the current repository
+Note that the above packages play the central role in the system tuning procedure. Without them, *medulla* cannot not work properly. Next, we clone the current repository
 
 ```
 git clone https://github.com/maciej-bendkowski/boltzmann-brain.git
 ```
 
-and install ```paganini```:
+and install ```medulla```:
 ```
-cd boltzmann-brain/paganini
+cd boltzmann-brain/medulla
 python3 setup.py install --user --prefix=
 ```
 
-We can check that *Paganini* is installed by typing
+We can check that *medulla* is installed by typing
 ```
-paganini -h
+medulla -h
 ```
 
-If ```paganini``` is available, we should see a help/usage message.
+If ```medulla``` is available, we should see a help/usage message.
 
 Finally, we have to prepare to install ```bb```. For that purpose, we are going
 to download Haskell's [Stack](https://docs.haskellstack.org/en/stable/README/) tool chain. Note that stack is able to download and isolate various [GHC](https://www.haskell.org/ghc/) (Glasgow Haskell Compiler) instances, avoiding the infamous [Cabal hell](https://wiki.haskell.org/Cabal/Survival).
@@ -212,7 +213,7 @@ stack install
 
 In the following section we explain how to compile *Boltzmann Brain* in OSX.
 
-* First, you need `python` to be installed (both versions 2 or 3 are fine).
+* First, you need `python` to be installed (both versions 2 or 3 should be fine).
 If you don't have `python` installed, you can find it at
 [https://wiki.python.org/moin/BeginnersGuide/Download](https://wiki.python.org/moin/BeginnersGuide/Download).
 
@@ -260,7 +261,7 @@ example
 ```
   pip install paganini
 ```
-When you launch `paganini`, the program tells you the list of packages that are
+When you launch `medulla`, the program tells you the list of packages that are
 missing. In order to install the packages, type into the command line
  ```
  pip install six cvxpy numpy sympy
@@ -283,9 +284,8 @@ x86_64 architecture. Pre-compiled binaries of ```bb``` are available at out  [re
 
 #### Package managers
 
-We offer [Hackage](https://hackage.haskell.org/package/boltzmann-brain-1.4) and [pip](https://pypi.org/project/paganini/) packages for ```bb``` and ```paganini```, respectively. You can install by typing
+We offer [Hackage](https://hackage.haskell.org/package/boltzmann-brain-1.4). You can install it by typing
 ```
-pip install paganini
 stack install boltzmann-brain
 ```
 
