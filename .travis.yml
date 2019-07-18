@@ -48,10 +48,11 @@ before_install:
 - pip3 install --user --upgrade pip
 - pip3 install --user numpy scipy
 - pip3 install --user cvxpy six
+- pip3 install --user paganini
 
 install:
-# Install paganini.
-- cd $TRAVIS_BUILD_DIR/paganini
+# Install medulla/paganini.
+- cd $TRAVIS_BUILD_DIR/medulla
 - python3 setup.py install --user --prefix=
 - cd $TRAVIS_BUILD_DIR
 
