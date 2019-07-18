@@ -55,11 +55,11 @@ runPaganini sysFormat sys paramT arg = do
     info (printer (++) $ "Arguments: " : toArgs arg')
 
     -- Execute the paganini tuning script.
-    pp <- try' $ createProcess (proc "paganini" (toArgs arg')){ std_out = CreatePipe
+    pp <- try' $ createProcess (proc "medulla" (toArgs arg')){ std_out = CreatePipe
                                                               , std_in  = CreatePipe }
 
     case pp of
-        Left _ -> fail' "Could not locate the paganini tuner. Is is available in the PATH?"
+        Left _ -> fail' "Could not locate the medulla tuner. Is is available in the PATH?"
         Right (Just hin, Just hout, _, _) -> do
 
             -- write to paganini's stdout
@@ -84,7 +84,7 @@ runPaganini sysFormat sys paramT arg = do
                   let sys' = parametrise sysFormat sys paramT rho ts' us
                   return $ Right sys'
 
-        _ -> fail' "Could not establish inter-process communication with paganini."
+        _ -> fail' "Could not establish inter-process communication with medulla."
 
 -- | Parses the given input string as a Paganini tuning vector.
 readPaganini :: Format -> System Int -> Parametrisation -> String

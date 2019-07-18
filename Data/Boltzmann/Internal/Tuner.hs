@@ -8,9 +8,7 @@
  Stability   : experimental
  -}
 module Data.Boltzmann.Internal.Tuner
-    ( PSolver(..)
-
-    , PArg(..)
+    ( PArg(..)
     , toArgs
     , getArgs
     , defaultArgs
@@ -23,41 +21,27 @@ import Data.Maybe
 
 import Data.Boltzmann.System
 
--- | Convex program solvers.
-data PSolver = SCS
-             | ECOS
-             | CVXOPT
-
-instance Show PSolver where
-    show SCS    = "SCS"
-    show ECOS   = "ECOS"
-    show CVXOPT = "CVXOPT"
-
 -- | Paganini arguments.
-data PArg = PArg { solver    :: PSolver
-                 , precision :: Double
+data PArg = PArg { precision :: Double
                  , maxiters  :: Int
                  , sysType   :: SystemType
                  } deriving (Show)
 
 toArgs :: PArg -> [String]
 toArgs arg = ["--from-stdin"
-             ,"-s", show (solver arg)
              ,"-p", show (precision arg)
              ,"-m", show (maxiters arg)
              ,"-t", show (sysType arg)]
 
 rationalArgs :: PArg
-rationalArgs = PArg { solver    = SCS
-                    , precision = 1.0e-20
+rationalArgs = PArg { precision = 1.0e-20
                     , maxiters  = 2500
                     , sysType   = Rational
                     }
 
 algebraicArgs :: PArg
-algebraicArgs = PArg { solver    = ECOS
-                     , precision = 1.0e-20
-                     , maxiters  = 20
+algebraicArgs = PArg { precision = 1.0e-20
+                     , maxiters  = 250
                      , sysType   = Algebraic
                      }
 

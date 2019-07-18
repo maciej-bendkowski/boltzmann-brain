@@ -1,12 +1,13 @@
 from __future__ import unicode_literals, print_function
-import paganini.tuner as pt
+
+import paganini as pg
 
 def main(args=None):
 
-    __author__    = "Maciej Bendkowski and Sergey Dovgal"
-    __copyright__ = "Copyright (C) 2017-2019 Maciej Bendkowski and Sergey Dovgal"
+    __author__    = "Maciej Bendkowski"
+    __copyright__ = "Copyright (C) 2017-2019 Maciej Bendkowski"
     __license__   = "Public Domain"
-    __version__   = "0.2955977425220"
+    __version__   = "1.2.1"
 
     flag_debug = False
 
@@ -100,7 +101,7 @@ def main(args=None):
     """
 
     parser = argparse.ArgumentParser(
-            description= bcolors.BOLD + """Welcome to paganini! """ +
+            description= bcolors.BOLD + """Welcome to medulla! """ +
             bcolors.ENDC,
             epilog = example_string,
             formatter_class=RawTextHelpFormatter)
@@ -109,8 +110,6 @@ def main(args=None):
             required=False, help="Name of the input file")
     parser.add_argument('--from-stdin', dest='from_stdin', action='store_true',
             required=False, help="Take the input from stdin")
-    parser.add_argument('-s', '--solver', dest='solver', nargs=1,
-            required=False, help="Solver: [CVXOPT, SCS, ECOS]. Default is ECOS.")
     parser.add_argument('-p', '--precision', dest='precision', nargs=1,
             type=float,
             required=False, help="Precision. Defaults to 1e-20.")
@@ -141,34 +140,17 @@ def main(args=None):
     # --- better hints at non-installed packages.
     list_of_noninstalled_packages = []
 
-    # --- cvxopt is truly necessary
-    try:
-        import cvxpy
-    except:
-        list_of_noninstalled_packages += ['cvxpy']
-
     # --- sympy is an insurance from exponent overflow.
     try:
         import sympy
     except:
         list_of_noninstalled_packages += ['sympy']
 
-    # --- scipy is required for sparse matrices.
-    try:
-        from scipy import sparse
-    except:
-        list_of_noninstalled_packages += ['scipy']
-
     # --- numpy's useful, in general.
     try:
         import numpy as np
     except:
         list_of_noninstalled_packages += ['numpy']
-
-    try:
-        from six.moves import range
-    except:
-        list_of_noninstalled_packages += ['six']
 
     if len(list_of_noninstalled_packages) > 0:
         logging.error("""It seems that you need to install some packages.
@@ -214,7 +196,7 @@ def main(args=None):
 
     input_error_string = """
     Input format error in '""" + err_filename + """'!
-    Type paganini -h for help and examples.
+    Type medulla -h for help and examples.
     """
 
     FILE = open(filename,'r') if filename else sys.stdin
@@ -245,45 +227,35 @@ def main(args=None):
         freq = []
 
     if is_rational:
-        sys_type = pt.Type.RATIONAL
+        sys_type = pg.Type.RATIONAL
         sys_type.eps = precision
     else:
-        sys_type = pt.Type.ALGEBRAIC
+        sys_type = pg.Type.ALGEBRAIC
         sys_type.feastol = precision
-
-    if arguments.solver != None:
-        if (arguments.solver[0] == 'CVXOPT'):
-            sys_type.solver = cvxpy.CVXOPT
-        elif (arguments.solver[0] == 'SCS'):
-            sys_type.solver = cvxpy.SCS
-        elif (arguments.solver[0] == 'ECOS'):
-            sys_type.solver = cvxpy.ECOS
-        else:
-            logging.warning("Could not recognise the solver. Using ECOS.")
 
     if arguments.maxiters != None:
         sys_type.max_iters = int(arguments.maxiters[0])
 
     logging.info("Composing the optimisation problem...")
 
-    params = pt.Params(sys_type)
-    spec = pt.Specification()
+    params = pg.Params(sys_type)
+    spec = pg.Specification()
 
     variables = []
-    variables.append(spec.variable()) # z
+    variables.append(pg.Variable()) # z
 
     for idx in range(number_of_variables):
-        variables.append(spec.variable(freq[idx]))
+        variables.append(pg.Variable(freq[idx]))
 
     for idx in range(number_of_functions):
-        variables.append(spec.variable())
+        variables.append(pg.Variable())
 
     for n_equation in range(number_of_functions):
         vec = FILE.readline().split()
         assert np.size(vec) >= 1,\
                 'What is the number of monomials in equation '+ n_equation + '?\n'
 
-        equation = []
+        equation = pg.Polynomial(pg.Expr(0))
         n_monomials = int(vec[0])
         for monomial in range(n_monomials):
             vec = FILE.readline().split()
@@ -299,9 +271,9 @@ def main(args=None):
                 for idx in range(len(vec) - 1):
                     expr = expr * definition[idx + 1]
 
-                equation.append(expr)
+                equation += expr
             else:
-                equation.append(1) # monomial equivalent to the constant one
+                equation += 1 # monomial equivalent to the constant one
 
         spec.add(variables[1 + number_of_variables + n_equation], equation)
 
@@ -314,7 +286,7 @@ def main(args=None):
         status = spec.run_singular_tuner(variables[0], params)
 
     except:
-        logging.error("Solver " + str(solver) + " failed :(")
+        logging.error("Failed :(")
         exit(1)
 
     logging.info("Solved.")

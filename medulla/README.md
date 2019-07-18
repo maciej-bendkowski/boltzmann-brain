@@ -1,19 +1,14 @@
-## Paganini: Convex optimisation tuner for combinatorial systems
+## Medulla: Executable interface for the Paganini convex optimisation tuner for combinatorial systems
 
 ```
-Install: python3 setup.py install
-Usage: python3 paganini.py -i input.txt -p 1e-6
-Usage: python3 paganini.py -i input.txt -s CVXOPT
-Usage: python3 paganini.py -i input.txt -s SCS
-Usage: python3 paganini.py -i input.txt -s ECOS
+Install: python3 setup.py install --user
+Usage: medulla -i input.txt -p 1e-6
 ```
 
   * `input.txt` is the name of the input file
 with coefficients of algebraic
 specifications
   * `1e-6` is a float number corresponding to precision
-  * `[CVXOPT, SCS, ECOS]` stand for different convex optimization solvers.
-ECOS is more preferrable for algebraic systems, SCS for rational.
 
 ## Example
 Consider a system for marking abstractions in lambda-terms:

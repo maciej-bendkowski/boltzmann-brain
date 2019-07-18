@@ -320,7 +320,7 @@ tuningConf :: System a -> (Double, Int)
 tuningConf sys = (precision, maxiter)
     where arg       = T.defaultArgs sys
           ann       = annotations sys
-          precision = withDouble ann "precision" 1.0e-9
+          precision = withDouble ann "precision" 1.0e-20
           maxiter   = withInt ann "maxiter" (T.maxiters arg)
 
 -- | Tunes the given system by either parsing the given paganini
