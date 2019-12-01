@@ -31,19 +31,20 @@ module Data.Boltzmann.Internal.Parser
     , printError
     ) where
 
-import System.IO
-import System.Exit
 import Control.Monad (void)
-
+import Data.Void
+import System.Exit
+import System.IO
 import Text.Megaparsec
-import Text.Megaparsec.String
-import qualified Text.Megaparsec.Lexer as L
+import Text.Megaparsec.Char
+import qualified Text.Megaparsec.Char.Lexer as L
+
+type Parser = Parsec Void String
 
 -- | Identifier producer.
 identifierP :: Parser Char
             -> (Parser Char -> Parser String)
             -> Parser String
-
 identifierP p f = lexeme $ (:) <$> p <*> f (alphaNumChar <|> char '_')
 
 identifier :: Parser String
@@ -82,9 +83,7 @@ setBrackets = between (symbol "{") (symbol "}")
 
 -- | Integer parser.
 integer :: Parser Int
-integer = lexeme $ do
-    n <- L.integer
-    return $ fromIntegral n
+integer = lexeme L.decimal
 
 -- | Double parser.
 double :: Parser Double
@@ -109,14 +108,14 @@ parseN p n = do
 -- | Uses an input file for parsing.
 parseFromFile :: Parsec e String a
               -> String
-              -> IO (Either (ParseError Char e) a)
+              -> IO (Either (ParseErrorBundle String e) a)
 
 parseFromFile p file = runParser p file <$> readFile file
 
 -- | Prints the given parsing errors.
-printError :: (ShowToken t, Ord t, ShowErrorComponent e)
-           => ParseError t e -> IO a
+printError :: (Stream t, ShowErrorComponent e)
+           => ParseErrorBundle t e -> IO a
 
 printError err = do
-        hPutStr stderr $ parseErrorPretty err
+        hPutStr stderr $ errorBundlePretty err
         exitWith (ExitFailure 1)

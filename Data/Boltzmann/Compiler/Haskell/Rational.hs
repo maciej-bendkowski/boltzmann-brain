@@ -1,6 +1,6 @@
 {-|
  Module      : Data.Boltzmann.Compiler.Haskell.Matrix
- Description : Rational Boltzmann system compiler for ghc-7.10.3.
+ Description : Rational Boltzmann system compiler for GHC.
  Copyright   : (c) Maciej Bendkowski, 2017-2019
 
  License     : BSD3
@@ -23,7 +23,6 @@ import Prelude hiding (and)
 
 import Language.Haskell.Exts hiding (List,Cons)
 import qualified Language.Haskell.Exts as LHE
-import Language.Haskell.Exts.SrcLoc (noLoc)
 
 import qualified Data.Set as S
 import qualified Data.Map.Strict as M
@@ -71,20 +70,22 @@ moduleHeader sys compilerNote time =
               "-- | Singularity:  " ++ show (param sys)]
               ++ systemNote sys (show Rational))
 
-compileModule :: PSystem Double -> String -> Bool -> Module
+compileModule :: PSystem Double -> String -> Bool -> Module ()
 compileModule sys mod' withIO' =
-    Module noLoc (ModuleName mod')
-        [LanguagePragma noLoc [Ident "TemplateHaskell"]]
-        Nothing (Just $ declareExports withIO')
-            (declareImports withIO') (decls sys withIO')
+    Module ()
+    (Just $ ModuleHead () (ModuleName () mod') Nothing
+         (Just . ExportSpecList () $ declareExports withIO'))
+    [LanguagePragma () [Ident () "TemplateHaskell"]]
+    (declareImports withIO')
+    (decls sys withIO')
 
-declareExports :: Bool -> [ExportSpec]
+declareExports :: Bool -> [ExportSpec ()]
 declareExports withIO' =
     exportFunc "sampleWord"
         : exportFunc "startingState"
         : [exportFunc "sampleWordIO" | withIO']
 
-declareImports :: Bool -> [ImportDecl]
+declareImports :: Bool -> [ImportDecl ()]
 declareImports withIO' =
     [importFrom "Control.Monad.Trans" [importFunc "lift"],
      importFrom "Control.Monad.Trans.Maybe" [importType "MaybeT",
@@ -100,10 +101,10 @@ declareImports withIO' =
 
      importFrom "System.Random" [importType "RandomGen"]]
 
-importIO :: Bool -> [ImportSpec]
+importIO :: Bool -> [ImportSpec ()]
 importIO withIO' = [importFunc "runRIO" | withIO']
 
-decls :: PSystem Double -> Bool -> [Decl]
+decls :: PSystem Double -> Bool -> [Decl ()]
 decls sys withIO' = symbolDecl :
                     declWeight sys
                     ++ declSymb sys
@@ -116,9 +117,8 @@ decls sys withIO' = symbolDecl :
                     ++ concat [declSamplerIO | withIO']
 
 -- | Type synonym for alphabet letters.
-symbolDecl :: Decl
-symbolDecl = TypeDecl noLoc (Ident "Symbol") []
-    (TyCon $ unname "String")
+symbolDecl :: Decl ()
+symbolDecl = TypeDecl () (DHead () (Ident () "Symbol")) (TyCon () $ unname "String")
 
 -- | Converts the given system into
 --   corresponding a graph representation.
@@ -142,170 +142,170 @@ toGraph sys = map (typeAdj $ types sys') typs
                     n = typeIdx typs' con
                     w = fromMaybe (-1) (a `lookupLetter` lts)
 
-buffonMachineType :: Type
+buffonMachineType :: Type ()
 buffonMachineType = typeCons "BuffonMachine"
 
-maybeTType :: Type -> Type
-maybeTType = TyApp (TyApp maybeT' (TyApp buffonMachineType g'))
+maybeTType :: Type () -> Type ()
+maybeTType = TyApp () (TyApp () maybeT' (TyApp () buffonMachineType g'))
 
 letters :: PSystem Double -> [Letter]
 letters = S.toList . alphabet . system
 
-getWeights :: Int -> [Letter] -> [(Int, Rhs)]
-getWeights n (s : xs) = (n, UnGuardedRhs $ toLit (weightL s)) : xs'
+getWeights :: Int -> [Letter] -> [(Int, Rhs ())]
+getWeights n (s : xs) = (n, UnGuardedRhs () $ toLit (weightL s)) : xs'
     where xs' = getWeights (succ n) xs
 
 getWeights _ _ = []
 
-getSymbols :: Int -> [Letter] -> [(Int, Rhs)]
-getSymbols n (s : xs) = (n, UnGuardedRhs $ toString (symb s)) : xs'
+getSymbols :: Int -> [Letter] -> [(Int, Rhs ())]
+getSymbols n (s : xs) = (n, UnGuardedRhs () $ toString (symb s)) : xs'
     where xs' = getSymbols (succ n) xs
 
 getSymbols _ _ = []
 
 -- | Symbol weights.
-declWeight :: PSystem Double -> [Decl]
+declWeight :: PSystem Double -> [Decl ()]
 declWeight sys = declTFun "weight" type' ["n"] body
-    where type' = TyFun int' int'
+    where type' = TyFun () int' int'
           body  = caseInt "n" $ getWeights 0 (letters sys)
 
 -- | Symbol strings.
-declSymb :: PSystem Double -> [Decl]
+declSymb :: PSystem Double -> [Decl ()]
 declSymb sys = declTFun "symbol" type' ["n"] body
-    where type' = TyFun int' (typeCons "Symbol")
+    where type' = TyFun () int' (typeCons "Symbol")
           body  = caseInt "n" $ getSymbols 0 (letters sys)
 
-getDecisionTree :: (String, [(Cons Double, Int)]) -> Exp
+getDecisionTree :: (String, [(Cons Double, Int)]) -> Exp ()
 getDecisionTree (_, g) = spliceExp lift'
     where lift' = applyF (qVarExp "TH" "lift") [dt']
           dt'   = applyF (varExp "decisionTree") [prob]
-          prob  = LHE.List (init $ probList g)
+          prob  = LHE.List () (init $ probList g)
 
-getDecitionTrees :: Int -> [(String, [(Cons Double, Int)])] -> [(Int, Rhs)]
-getDecitionTrees n (s : xs) = (n, UnGuardedRhs $ getDecisionTree s) : xs'
+getDecitionTrees :: Int -> [(String, [(Cons Double, Int)])] -> [(Int, Rhs ())]
+getDecitionTrees n (s : xs) = (n, UnGuardedRhs () $ getDecisionTree s) : xs'
     where xs' = getDecitionTrees (succ n) xs
 
 getDecitionTrees _ _ = []
 
-declDecisionTrees :: PSystem Double -> [Decl]
+declDecisionTrees :: PSystem Double -> [Decl ()]
 declDecisionTrees sys = declTFun "decisionTrees" type' ["s"] body
-    where type' = TyFun int' decisionTreeType
+    where type' = TyFun () int' decisionTreeType
           body = caseInt "s" $ getDecitionTrees 0 (paramTypesW sys)
 
-getTerminals :: Int -> [(String, [(Cons Double, Int)])] -> [(Int, Rhs)]
-getTerminals n (s : xs) = (n, UnGuardedRhs $ getTerminal s) : xs'
+getTerminals :: Int -> [(String, [(Cons Double, Int)])] -> [(Int, Rhs ())]
+getTerminals n (s : xs) = (n, UnGuardedRhs () $ getTerminal s) : xs'
     where xs' = getTerminals (succ n) xs
 
 getTerminals _ _ = []
 
-getTerminal :: (String, [(Cons Double, Int)]) -> Exp
+getTerminal :: (String, [(Cons Double, Int)]) -> Exp ()
 getTerminal (_, g)
     | any (isAtomic . fst) g = conExp "True"
     | otherwise = conExp "False"
 
-declTerminals :: PSystem Double -> [Decl]
+declTerminals :: PSystem Double -> [Decl ()]
 declTerminals sys = declTFun "isTerminal" type' ["s"] body
-    where type' = TyForall Nothing [] (TyFun int' (typeCons "Bool"))
+    where type' = TyForall () Nothing Nothing (TyFun () int' (typeCons "Bool"))
           body = caseInt "s" $ getTerminals 0 (paramTypesW sys)
 
-declGraph :: PSystem Double -> [Decl]
+declGraph :: PSystem Double -> [Decl ()]
 declGraph sys = declTFun "transitionMatrix" type' ["n", "m"] body
-    where type' = TyForall Nothing [] (TyFun int'
-                        (TyFun int' (TyTuple Boxed [int', int'])))
+    where type' = TyForall () Nothing Nothing (TyFun () int'
+                        (TyFun () int' (TyTuple () Boxed [int', int'])))
 
           graph = toGraph sys
-          body = caseInt "n" [(i, UnGuardedRhs $ getNeighbourhood (graph !! i))
+          body = caseInt "n" [(i, UnGuardedRhs () $ getNeighbourhood (graph !! i))
                                                     | i <- [0..pred (length graph)]]
 
-getNeighbourhood :: [(Int, Int)] -> Exp
+getNeighbourhood :: [(Int, Int)] -> Exp ()
 getNeighbourhood xs =
     caseInt "m" (getNeighbourhood' 0 xs)
 
-getNeighbourhood' :: Int -> [(Int, Int)] -> [(Int, Rhs)]
-getNeighbourhood' n ((k,w) : xs) = (n, UnGuardedRhs p) : xs'
+getNeighbourhood' :: Int -> [(Int, Int)] -> [(Int, Rhs ())]
+getNeighbourhood' n ((k,w) : xs) = (n, UnGuardedRhs () p) : xs'
     where xs' = getNeighbourhood' (succ n) xs
-          p = Tuple Boxed [toLit k, toLit w]
+          p = Tuple () Boxed [toLit k, toLit w]
 
 getNeighbourhood' _ _ = []
 
-declGen :: [Decl]
+declGen :: [Decl ()]
 declGen = declTFun "genWord" type' ["ub", "s", "acc", "ct"] mainIfStmt
-    where type' = TyForall Nothing [ClassA randomGen' [g']]
-            (TyFun int' $ TyFun int' $ TyFun (TyList $ typeCons "Symbol")
-                $ TyFun int' (maybeTType $ TyTuple Boxed
-                    [TyList $ typeCons "Symbol", int']))
+    where type' = TyForall () Nothing (Just $ CxTuple () [ClassA () randomGen' [g']])
+            (TyFun () int' $ TyFun () int' $ TyFun () (TyList () $ typeCons "Symbol")
+                $ TyFun () int' (maybeTType $ TyTuple () Boxed
+                    [TyList () $ typeCons "Symbol", int']))
 
-          mainIfStmt = If (varExp "ub" `lessEq` toLit 0
+          mainIfStmt = If () (varExp "ub" `lessEq` toLit 0
                             `and` applyF (varExp "isTerminal") [varExp "s"])
-                         (App return' (Tuple Boxed [varExp "acc", varExp "ct"]))
+                         (App () return' (Tuple () Boxed [varExp "acc", varExp "ct"]))
                          mainBody
 
-          mainBody = Do [ choiceStmt
+          mainBody = Do () [ choiceStmt
                         , getNext
                         , ifStmt]
 
           choiceStmt = choiceN "n" (applyF (varExp "decisionTrees") [varExp "s"])
 
-          getNext = LetStmt (BDecls [getNext'])
-          getNext' = PatBind noLoc
-                        (PTuple Boxed [PVar $ Ident "s'", PVar $ Ident "i"])
-                        (UnGuardedRhs $ applyF (varExp "transitionMatrix")
+          getNext = LetStmt () (BDecls () [getNext'])
+          getNext' = PatBind ()
+                        (PTuple () Boxed [PVar () $ Ident () "s'", PVar () $ Ident () "i"])
+                        (UnGuardedRhs () $ applyF (varExp "transitionMatrix")
                                             [varExp "s", varExp "n"]) Nothing
 
-          ifStmt = Qualifier $ If (less (varExp "s'") (toLit 0))
-                      (App return' (Tuple Boxed [varExp "acc", varExp "ct"])) elseStmt
+          ifStmt = Qualifier () $ If () (less (varExp "s'") (toLit 0))
+                      (App () return' (Tuple () Boxed [varExp "acc", varExp "ct"])) elseStmt
 
-          elseStmt = Do [ bindSymbol
+          elseStmt = Do () [ bindSymbol
                         , recursiveCall]
 
-          bindSymbol = LetStmt (BDecls [bindSymbol'])
-          bindSymbol' = PatBind noLoc
-                            (PTuple Boxed [PVar $ Ident "a", PVar $ Ident "w"])
-                        (UnGuardedRhs $
-                            Tuple Boxed [ applyF (varExp "symbol") [varExp "i"]
+          bindSymbol = LetStmt () (BDecls () [bindSymbol'])
+          bindSymbol' = PatBind ()
+                            (PTuple () Boxed [PVar () $ Ident () "a", PVar () $ Ident () "w"])
+                        (UnGuardedRhs () $
+                            Tuple ()  Boxed [ applyF (varExp "symbol") [varExp "i"]
                                         , applyF (varExp "weight") [varExp "i"]])
                                              Nothing
 
-          recursiveCall = Qualifier $ applyF (varExp "genWord")
+          recursiveCall = Qualifier () $ applyF (varExp "genWord")
                             [varExp "ub" `sub` varExp "w", varExp "s'",
-                              InfixApp (varExp "a") (symbol ":") (varExp "acc"),
+                              InfixApp () (varExp "a") (symbol ":") (varExp "acc"),
                               varExp "w" `add` varExp "ct"]
 
 
-declSampler :: [Decl]
+declSampler :: [Decl ()]
 declSampler = declTFun "sampleWord" type' ["lb", "ub", "s"] constructSampler
-    where type' = TyForall Nothing [ClassA randomGen' [g']]
-            (TyFun int' $ TyFun int' $ TyFun int' $ TyApp (TyApp buffonMachineType g')
-                (TyList $ typeCons "Symbol"))
+    where type' = TyForall () Nothing (Just $ CxTuple () [ClassA () randomGen' [g']])
+            (TyFun () int' $ TyFun () int' $ TyFun () int' $ TyApp () (TyApp () buffonMachineType g')
+                (TyList () $ typeCons "Symbol"))
 
-constructSampler :: Exp
+constructSampler :: Exp ()
 constructSampler =
-    Do [bind "str" (applyF (varExp "runMaybeT")
-            [applyF (varExp "genWord") [varExp "lb", varExp "s", LHE.List [], toLit 0]]),
+    Do () [bind "str" (applyF (varExp "runMaybeT")
+            [applyF (varExp "genWord") [varExp "lb", varExp "s", LHE.List () [], toLit 0]]),
             caseSample]
-    where caseSample = Qualifier $ Case (varExp "str")
-                 [Alt noLoc (PApp (unname "Nothing") [])
-                        (UnGuardedRhs rec') Nothing,
-                        Alt noLoc (PApp (unname "Just")
-                 [PTuple Boxed [PVar $ Ident "w",
-                  PVar $ Ident "n"]])
-                  (UnGuardedRhs return'') Nothing]
+    where caseSample = Qualifier () $ Case () (varExp "str")
+                 [Alt () (PApp () (unname "Nothing") [])
+                        (UnGuardedRhs () rec') Nothing,
+                        Alt () (PApp () (unname "Just")
+                 [PTuple () Boxed [PVar () $ Ident () "w",
+                  PVar () $ Ident () "n"]])
+                  (UnGuardedRhs () return'') Nothing]
 
           rec' = applyF (varExp "sampleWord") [varExp "lb", varExp "ub", varExp "s"]
-          return'' = If (lessEq (varExp "lb") (varExp "n") `and` lessEq (varExp "n") (varExp "ub"))
+          return'' = If () (lessEq (varExp "lb") (varExp "n") `and` lessEq (varExp "n") (varExp "ub"))
                         (applyF (varExp "return") [varExp "w"])
                         rec'
 
-declSamplerIO :: [Decl]
+declSamplerIO :: [Decl ()]
 declSamplerIO = declTFun "sampleWordIO" type' ["lb","ub", "s"] body
     where body  = constructSamplerIO
-          type' = TyForall Nothing
-                    [] (TyFun int' (TyFun int'
-                       (TyFun int'
-                       (TyApp (typeVar "IO")
-                            (TyList $ typeCons "Symbol")))))
+          type' = TyForall () Nothing Nothing
+                    (TyFun () int' (TyFun () int'
+                                    (TyFun () int'
+                                     (TyApp () (typeVar "IO")
+                                      (TyList () $ typeCons "Symbol")))))
 
-constructSamplerIO :: Exp
+constructSamplerIO :: Exp ()
 constructSamplerIO = applyF (varExp "runRIO")
                                [applyF (varExp "sampleWord")
                                 [varExp "lb"
@@ -317,10 +317,10 @@ startingState :: PSystem Double -> Int
 startingState sys =
     gen `S.findIndex` types sys'
     where sys' = system sys
-          ann = annotations sys'
-          gen = withString ann "generate" (initType sys')
+          ann' = annotations sys'
+          gen = withString ann' "generate" (initType sys')
 
-declStartingState :: PSystem Double -> [Decl]
+declStartingState :: PSystem Double -> [Decl ()]
 declStartingState sys = declTFun "startingState" type' [] body
     where body = toLit (startingState sys)
-          type' = TyForall Nothing [] int'
+          type' = TyForall () Nothing Nothing int'

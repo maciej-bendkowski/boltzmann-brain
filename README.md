@@ -157,7 +157,7 @@ might become unbounded).
 We start with the recommended method of compiling *Boltzmann Brain* from sources.
 The following section explains the compilation process under Ubuntu 16.04, however, let us note that with little modifications it should also work under other Linux distributions.
 
-#### Linux (Ubuntu 16.04)
+#### Linux (Ubuntu 16.04 or newer)
 We start with installing all the required system dependencies:
 ```
 apt-get update
@@ -204,10 +204,42 @@ curl -L https://get.haskellstack.org/stable/linux-x86_64.tar.gz | tar xz --wildc
 
 Now, all we need is to go back to the main boltzmann-brain folder and use stack install:
 ```
-stack setup --resolver=lts-9.1
-stack install happy --resolver=lts-9.1
+stack setup --resolver=lts-14.16
+stack install happy --resolver=lts-14.16
 stack install
 ```
+
+#### Nix support (linux / macOS)
+
+[nix](https://nixos.org/) is a package manager that works under linux and macos. Support for installing dependencies and a assembling a development environment for building and running boltzmann-brain is provided by the `shell.nix` file in the top-level directory. To use it, you need to have nixpkgs installed already. Then you can install boltzmann-brain as follows:
+
+````
+git clone https://github.com/maciej-bendkowski/boltzmann-brain.git
+nix-shell # Enters a shell which provides GHC, python, paganini, and installs medulla all in one step. 
+````
+
+That's it!
+
+Now you can build bb and then run an example. For instance:
+````
+cabal build # compile and build bb 
+cabal run bb -- sample -i examples/algebraic/boolean.alg
+````
+
+Caveats:
+* Nix support was tested under nixos with ghc 8.6.5 and cabal-install 3. Earlier versions of GHC may be difficult to get working due to changes in package dependencies. As of 2019-12-05 nix support requires a recent version of the nixpkgs repostory (e.g. nixpkgs-unstable).
+
+* Additional nix derivations are currently (temporarily) needed to support `cvxpy`. After adding them to nixpkgs, you can follow the previously given instructions. Those derivations can be found in https://github.com/teh/nixpkgs/tree/cvxpy. If you mangage nixpkgs by using git, then one way to get cvxpy is to go your nixpkgs directory and enter:
+
+````
+git remote add teh git@github.com:teh/nixpkgs.git
+git checkout -b cvxpy teh/cvxpy
+git rebase nixpkgs-unstable
+````
+
+* Once support for `cxvpy` is mainstreamed into nixpkgs, step 3 will become unnecessary. Perhaps by 2020-03, at the latest.
+
+* If you get nixpkgs updates via nix channels then a custom overlay will be needed (not provided here).
 
 #### macOS >= 10.12
 

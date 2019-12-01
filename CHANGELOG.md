@@ -1,6 +1,13 @@
 # Changelog
 Notable major changes since version *1.2* are listed below.
 
+### [1.6.0]
+
+Updated code to be compatible with 8.6.5.
+Removed hard dependence on haskell-src-exts=1.17.1
+Bumped other package minimums.
+Added nix support. 
+
 ### [1.5.0] - 21-02-2019
 - It is now possible to sample multiple structures using the built-in sampler.
   The number of structures is provided through a `samples` annotation.
