@@ -45,7 +45,8 @@ library
   build-depends:       base >= 4.7 && < 5
                      , containers >= 0.5.6
                      , megaparsec >= 5.2.0
-                     , haskell-src-exts == 1.17.1
+                     , haskell-src-exts
+-- == 1.17.1
                      , mtl >= 2.2.1
                      , multiset >= 0.3.3
                      , hmatrix >= 0.18.0.0

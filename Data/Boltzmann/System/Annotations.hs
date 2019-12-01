@@ -15,9 +15,12 @@ module Data.Boltzmann.System.Annotations
 import Data.Map (Map)
 
 import Text.Megaparsec
-import Text.Megaparsec.String
+import Text.Megaparsec.Char
+import Data.Void
 
 import Data.Boltzmann.Internal.Parser
+
+type Parser = Parsec Void String
 
 annIdentifier :: Parser String
 annIdentifier = identifierP (char '@') some

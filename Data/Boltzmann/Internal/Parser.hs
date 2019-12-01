@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeFamilies #-}
+{-# language FlexibleContexts #-}
 {-|
  Module      : Data.Boltzmann.Internal.Parser
  Description : Parser utilities for combinatorial systems.
@@ -36,14 +38,17 @@ import System.Exit
 import Control.Monad (void)
 
 import Text.Megaparsec
-import Text.Megaparsec.String
-import qualified Text.Megaparsec.Lexer as L
+import Text.Megaparsec.Char
+import qualified Text.Megaparsec.Char.Lexer as L
+
+import Data.Void
+
+type Parser = Parsec Void String
 
 -- | Identifier producer.
 identifierP :: Parser Char
             -> (Parser Char -> Parser String)
             -> Parser String
-
 identifierP p f = lexeme $ (:) <$> p <*> f (alphaNumChar <|> char '_')
 
 identifier :: Parser String
@@ -83,8 +88,8 @@ setBrackets = between (symbol "{") (symbol "}")
 -- | Integer parser.
 integer :: Parser Int
 integer = lexeme $ do
-    n <- L.integer
-    return $ fromIntegral n
+    n <- L.decimal
+    return n
 
 -- | Double parser.
 double :: Parser Double
@@ -109,12 +114,12 @@ parseN p n = do
 -- | Uses an input file for parsing.
 parseFromFile :: Parsec e String a
               -> String
-              -> IO (Either (ParseError Char e) a)
+              -> IO (Either (ParseErrorBundle String e) a)
 
 parseFromFile p file = runParser p file <$> readFile file
 
 -- | Prints the given parsing errors.
-printError :: (ShowToken t, Ord t, ShowErrorComponent e)
+printError :: (Stream t, ShowErrorComponent e)
            => ParseError t e -> IO a
 
 printError err = do

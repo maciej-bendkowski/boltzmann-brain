@@ -21,7 +21,6 @@ import System.IO
 import System.Process hiding (system)
 
 import Text.Megaparsec
-import Text.Megaparsec.String
 
 import qualified Data.Map.Strict as M
 import Numeric.LinearAlgebra hiding (size,double)

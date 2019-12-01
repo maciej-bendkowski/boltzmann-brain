@@ -16,7 +16,7 @@ module Data.Boltzmann.System.Parser.Algebraic
 import Control.Monad (void)
 
 import Text.Megaparsec
-import Text.Megaparsec.String
+import Data.Void
 
 import qualified Data.Set as Z
 import qualified Data.Map.Strict as M
@@ -25,6 +25,8 @@ import Data.Boltzmann.Internal.Parser
 import qualified Data.Boltzmann.System as S
 
 import Data.Boltzmann.System.Annotations
+
+type Parser = Parsec Void String
 
 -- | Algebraic system specification parser.
 systemStmt :: Parser (S.System Int)

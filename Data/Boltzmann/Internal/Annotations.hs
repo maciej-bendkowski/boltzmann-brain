@@ -18,6 +18,7 @@ module Data.Boltzmann.Internal.Annotations
     , withBool
     ) where
 
+
 import Data.Maybe (fromMaybe)
 import Data.Char (toLower)
 
@@ -25,6 +26,7 @@ import Data.Map (Map)
 import qualified Data.Map as M
 
 import Text.Read (readMaybe)
+
 
 -- | Read a given key value of a map with a default fallback.
 withDefault :: Read a
