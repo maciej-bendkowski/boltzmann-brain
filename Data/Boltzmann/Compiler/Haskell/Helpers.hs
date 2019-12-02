@@ -177,10 +177,11 @@ declADT :: Bool -> (String, [Cons a]) -> Decl ()
 declADT withShow (t,[con]) = DataDecl () flag Nothing (DHead () (Ident () t)) 
                                [QualConDecl () Nothing Nothing (declCon con)]
                                [Deriving () Nothing [IRule () Nothing Nothing (IHCon () (unname "Show"))] | withShow]
-
     -- generate a newtype or data type?
    where flag = if length (args con) == 1 then NewType ()
                                           else DataType ()
+declADT _ _ = error "declADT given bad pattern"
+
 
 declCon :: Cons a -> ConDecl ()
 declCon expr = ConDecl () (Ident () $ func expr) ags
@@ -238,12 +239,18 @@ variableStream = map ('x' :) nat
 weightStream :: [String]
 weightStream = map ('w' :) nat
 
+-- decisionTreeType :: Type ()
+-- decisionTreeType = TyForall () Nothing []
+--     (TyApp () (typeCons "DecisionTree")  int')
+
 decisionTreeType :: Type ()
-decisionTreeType = TyForall () Nothing []
+decisionTreeType = TyForall () Nothing Nothing
     (TyApp () (typeCons "DecisionTree")  int')
 
 probList :: [(Cons Double, Int)] -> [Exp ()]
-probList = map (Lit . Frac . toRational . weight . fst)
+probList = map (\x -> Lit () (Frac () (f x) (show (f x))))
+  where f = toRational . weight . fst
+
 
 choiceN :: String -> Exp () -> Stmt ()
 choiceN v s = bind v $ applyF (varExp "lift")
