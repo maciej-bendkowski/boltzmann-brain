@@ -15,24 +15,23 @@ module Data.Boltzmann.System.Tuner
     , runPaganini
     ) where
 
-import Control.Exception
-
-import System.IO
-import System.Process hiding (system)
-
-import Text.Megaparsec
-
+import           Control.Exception
 import qualified Data.Map.Strict as M
-import Numeric.LinearAlgebra hiding (size,double)
+import           Data.Void
+import           Numeric.LinearAlgebra hiding (size,double)
+import           System.IO
+import           System.Process hiding (system)
+import           Text.Megaparsec
 
-import Data.Boltzmann.System
-import Data.Boltzmann.Internal.Parser
-import Data.Boltzmann.Internal.Logging
-import Data.Boltzmann.Internal.Tuner
-import Data.Boltzmann.Internal.Utils
-
+import           Data.Boltzmann.Internal.Logging
+import           Data.Boltzmann.Internal.Parser
+import           Data.Boltzmann.Internal.Tuner
+import           Data.Boltzmann.Internal.Utils
+import           Data.Boltzmann.System
 import qualified Data.Boltzmann.System.Tuner.Algebraic as A
 import qualified Data.Boltzmann.System.Tuner.Rational as R
+
+type Parser = Parsec Void String
 
 -- | Catch IO exceptions.
 try' :: IO a ->  IO (Either IOException a)
@@ -42,9 +41,11 @@ try' =  Control.Exception.try
 --   tuning vector for the given system. If communication is not possible,
 --   for instance due to the missing Paganini script, the current process
 --   is terminated with an error message on the standard error output.
-runPaganini :: Format -> System Int -> Parametrisation -> Maybe PArg
-            -> IO (Either (ParseError Char Dec)
-                    (PSystem Double))
+runPaganini :: Format
+            -> System Int
+            -> Parametrisation
+            -> Maybe PArg
+            -> IO (Either (ParseErrorBundle String Void) (PSystem Double))
 
 runPaganini sysFormat sys paramT arg = do
 
@@ -54,8 +55,9 @@ runPaganini sysFormat sys paramT arg = do
     info (printer (++) $ "Arguments: " : toArgs arg')
 
     -- Execute the paganini tuning script.
-    pp <- try' $ createProcess (proc "medulla" (toArgs arg')){ std_out = CreatePipe
-                                                              , std_in  = CreatePipe }
+    pp <- try' $ createProcess
+      (proc "medulla" (toArgs arg'))
+      { std_out = CreatePipe, std_in  = CreatePipe }
 
     case pp of
         Left _ -> fail' "Could not locate the medulla tuner. Is is available in the PATH?"
@@ -87,7 +89,7 @@ runPaganini sysFormat sys paramT arg = do
 
 -- | Parses the given input string as a Paganini tuning vector.
 readPaganini :: Format -> System Int -> Parametrisation -> String
-             -> IO (Either (ParseError Char Dec)
+             -> IO (Either (ParseErrorBundle String Void)
                    (PSystem Double))
 
 readPaganini sysFormat sys paramT f = do
@@ -111,7 +113,7 @@ paganiniStmt spec = do
 
 -- | Parses the given Paganini specification.
 parsePaganini :: PSpec -> String
-              -> IO (Either (ParseError Char Dec)
+              -> IO (Either (ParseErrorBundle String Void)
                     (Double, [Double], [Double]))
 
 parsePaganini spec = parseFromFile (paganiniStmt spec)

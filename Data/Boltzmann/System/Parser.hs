@@ -12,6 +12,7 @@ module Data.Boltzmann.System.Parser
     ) where
 
 import Text.Megaparsec
+import Data.Void
 
 import qualified Data.Boltzmann.System as S
 
@@ -20,7 +21,7 @@ import qualified Data.Boltzmann.System.Parser.Rational as R
 
 -- | Parses the given system specification.
 parseSpec :: S.Format -> String
-          -> IO (Either (ParseError Char Dec) (S.System Int))
+          -> IO (Either (ParseErrorBundle String Void) (S.System Int))
 
 parseSpec S.RationalF s  = return $ parse R.systemStmt "" s
 parseSpec S.AlgebraicF s = return $ parse A.systemStmt "" s

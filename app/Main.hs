@@ -12,50 +12,40 @@ module Main
     ( main
     ) where
 
-import Prelude hiding (fail)
+import           Prelude hiding (fail)
 
-import System.IO
-import System.Exit
-import System.Console.GetOpt
-import System.Environment
-
-import GHC.IO.Handle
-import System.Directory (doesFileExist)
-import System.FilePath (takeExtension)
-
-import Control.Monad (replicateM, unless)
-
-import Data.Aeson
+import           Control.Monad (replicateM, unless)
+import           Data.Aeson
 import qualified Data.ByteString.Lazy.Char8 as B
-import qualified Data.Text.Lazy.IO as T
-
-import Text.Megaparsec hiding (parse)
-
 import qualified Data.Map.Strict as M
+import qualified Data.Text.Lazy.IO as T
+import           GHC.IO.Handle
+import           System.Console.GetOpt
+import           System.Directory (doesFileExist)
+import           System.Environment
+import           System.Exit
+import           System.FilePath (takeExtension)
+import           System.IO
+import           Text.Megaparsec hiding (parse)
 
-import Data.Boltzmann.System
-import Data.Boltzmann.System.Errors
-import Data.Boltzmann.System.Warnings
-import Data.Boltzmann.System.Sampler
-import Data.Boltzmann.System.Renderer
-
-import Data.Boltzmann.System.Parser
-
-import Data.Boltzmann.Internal.Parser
-import Data.Boltzmann.Internal.Annotations
-import Data.Boltzmann.Internal.Logging
-import Data.Boltzmann.Internal.Utils
-
-import Data.Boltzmann.Internal.TH (compileTime)
-
-import Data.Boltzmann.System.Tuner
-import qualified Data.Boltzmann.Internal.Tuner as T
-import qualified Data.Boltzmann.System.Tuner.Algebraic as TA
-import qualified Data.Boltzmann.System.Tuner.Rational as TR
-
-import Data.Boltzmann.Compiler
+import           Data.Boltzmann.Compiler
 import qualified Data.Boltzmann.Compiler.Haskell.Algebraic as A
 import qualified Data.Boltzmann.Compiler.Haskell.Rational as R
+import           Data.Boltzmann.Internal.Annotations
+import           Data.Boltzmann.Internal.Logging
+import           Data.Boltzmann.Internal.Parser
+import           Data.Boltzmann.Internal.TH (compileTime)
+import qualified Data.Boltzmann.Internal.Tuner as T
+import           Data.Boltzmann.Internal.Utils
+import           Data.Boltzmann.System
+import           Data.Boltzmann.System.Errors
+import           Data.Boltzmann.System.Parser
+import           Data.Boltzmann.System.Renderer
+import           Data.Boltzmann.System.Sampler
+import           Data.Boltzmann.System.Tuner
+import qualified Data.Boltzmann.System.Tuner.Algebraic as TA
+import qualified Data.Boltzmann.System.Tuner.Rational as TR
+import           Data.Boltzmann.System.Warnings
 
 data Flag = InputFile  String  -- ^ input file location
           | OutputFile String  -- ^ output file location
@@ -290,8 +280,8 @@ unrecognisedCmd cmd = do
                 ". Did you mean " ++ cmdHint ++ "?"
 
 -- | Prints parsing errors or returns the parsed system.
-getSystem :: (ShowToken t, Ord t, ShowErrorComponent e)
-          => Either (ParseError t e) a -> IO a
+getSystem :: (Stream t, ShowErrorComponent e)
+          => Either (ParseErrorBundle t e) a -> IO a
 
 getSystem (Left err)  = printError err
 getSystem (Right sys) = return sys

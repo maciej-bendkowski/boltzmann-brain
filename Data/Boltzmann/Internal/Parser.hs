@@ -33,15 +33,13 @@ module Data.Boltzmann.Internal.Parser
     , printError
     ) where
 
-import System.IO
-import System.Exit
-import Control.Monad (void)
-
-import Text.Megaparsec
-import Text.Megaparsec.Char
+import           Control.Monad (void)
+import           Data.Void
+import           System.Exit
+import           System.IO
+import           Text.Megaparsec
+import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
-
-import Data.Void
 
 type Parser = Parsec Void String
 
@@ -120,8 +118,8 @@ parseFromFile p file = runParser p file <$> readFile file
 
 -- | Prints the given parsing errors.
 printError :: (Stream t, ShowErrorComponent e)
-           => ParseError t e -> IO a
+           => ParseErrorBundle t e -> IO a
 
 printError err = do
-        hPutStr stderr $ parseErrorPretty err
+        hPutStr stderr $ errorBundlePretty err
         exitWith (ExitFailure 1)

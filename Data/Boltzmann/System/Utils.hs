@@ -20,12 +20,13 @@ module Data.Boltzmann.System.Utils
     , polynomial
     ) where
 
-import Data.Map (Map)
+import           Prelude hiding ((<>))
+
+import           Data.Map (Map)
 import qualified Data.Map.Strict as M
+import           Numeric.LinearAlgebra hiding (size)
 
-import Numeric.LinearAlgebra hiding (size)
-
-import Data.Boltzmann.System
+import           Data.Boltzmann.System
 
 -- | Non-strict multiplication.
 (.*) :: (Num a, Eq a) => a -> a -> a

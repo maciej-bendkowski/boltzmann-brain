@@ -16,6 +16,7 @@ module Data.Boltzmann.System.Parser.Rational
 import Control.Monad (void)
 
 import Text.Megaparsec
+import Text.Megaparsec.Char
 import Data.Void
 
 import qualified Data.Set as Z
