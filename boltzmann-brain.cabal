@@ -1,5 +1,5 @@
 name:                boltzmann-brain
-version:             1.5
+version:             1.6
 synopsis:            Analytic sampler compiler for combinatorial systems.
 description:         Boltzmann Brain is a combinatorial system sampler compiler.
                      Using an easy and intuitive specification input representing a
