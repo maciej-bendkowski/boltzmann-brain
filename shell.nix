@@ -99,7 +99,7 @@ in
     };
 
     shellHook = ''
-    export HIE_HOOGLE_DATABASE="$(cat $(which hoogle) | sed -n -e 's|.*--database \(.*\.hoo\).*|\1|p')"
+    export HIE_HOOGLE_DATABASE="$(cat $(type -p hoogle) | sed -n -e 's|.*--database \(.*\.hoo\).*|\1|p')"
     #echo "HIE_HOOGLE_DATABASE=" $HIE_HOOGLE_DATABASE
     echo "${pinMessage}"
     echo "unpinned git hash:" $(git -C ~/nixpkgs rev-parse HEAD)
@@ -115,7 +115,7 @@ in
     export PYTHONPATH=$PYTHONPATH:.
     virtualenv . 
     source ./bin/activate
-    pip install --user paganini
+    pip install paganini
     easy_install medulla
     '';
 }
