@@ -209,6 +209,56 @@ stack install happy --resolver=lts-9.1
 stack install
 ```
 
+#### Nix support (linux / macOS)
+
+[nix](https://nixos.org/) is a package manager that works under linux and macos. Support for installing dependencies and a assembling a development environment for building and running boltzmann-brain is provided by the `shell.nix` file in the top-level directory. To use it, you need to have nixpkgs installed already. Then you can install boltzmann-brain as follows:
+
+````
+git clone https://github.com/maciej-bendkowski/boltzmann-brain.git
+nix-shell # Enters a shell which provides haskell compiler (ghc), python, paganini, and installs medulla all in one step. 
+````
+
+That's it!
+
+Now you can build bb and then run an example. For instance.
+````
+cabal build # compile and build bb 
+cabal run bb -- sample -i examples/algebraic/boolean.alg
+````
+should produce output similar to this...
+
+````
+Up to date
+[INF] (05-12-2019 08:47:28) Using 'algebraic' specification format.
+[INF] (05-12-2019 08:47:28) Parsing system...
+[INF] (05-12-2019 08:47:28) Sampling random structure...
+[WAR] (05-12-2019 08:47:28) No explicit @samples annotation. Sampling a single structure.
+[INF] (05-12-2019 08:47:28) Running paganini...
+[INF] (05-12-2019 08:47:28) Arguments:  --from-stdin -p 1.0e-12 -m 30 -t algebraic
+[INF] (05-12-2019 08:47:28) Writing system specification...
+[05-12-19 08:47:29] Importing packages...
+[05-12-19 08:47:29] Started concerto...
+[05-12-19 08:47:29] Composing the optimisation problem...
+[05-12-19 08:47:29] Solving the problem (can take some time)...
+[05-12-19 08:47:29] Solved.
+[INF] (05-12-2019 08:47:29) Parsing paganini output...
+[{"name":"Or","nodes":[{"name":"Variable","nodes":[{"name":"Zero","nodes":[]}]},{"name":"Neg","nodes":[{"name":"And","nodes":[{"name":"Neg","nodes":[{"name":"And","nodes":[{"name":"And","nodes":[{"name":"Neg","nodes":[{"name":"Variable","nodes":[{"name":"Zero","nodes":[]}]}]},{"name":"Variable","nodes":[{"name":"Zero","nodes":[]}]}]},{"name":"Neg","nodes":[{"name":"Variable","nodes":[{"name":"Zero","nodes":[]}]}]}]}]},{"name":"And","nodes":[{"name":"And","nodes":[{"name":"And","nodes":[{"name":"Variable","nodes":[{"name":"Succ","nodes":[{"name":"Zero","nodes":[]}]}]},{"name":"Or","nodes":[{"name":"Variable","nodes":[{"name":"Zero","nodes":[]}]},{"name":"Variable","nodes":[{"name":"Zero","nodes":[]}]}]}]},{"name":"Variable","nodes":[{"name":"Zero","nodes":[]}]}]},{"name":"And","nodes":[{"name":"Variable","nodes":[{"name":"Succ","nodes":[{"name":"Zero","nodes":[]}]}]},{"name":"Neg","nodes":[{"name":"Variable","nodes":[{"name":"Zero","nodes":[]}]}]}]}]}]}]}]}]
+(venv) 
+````
+
+Caveats:
+1) Nix support was tested under nixos with ghc 8.6.5 and cabal-install 3. Earlier versions og ghc may be difficult to get working due to changes in package dependencies. As of 2019-12-05 nix support requires a recent version of the nixpkgs repostory (e.g. nixpkgs-unstable).
+2) Additional nix derivations are currently (temporarily) needed to support `cvxpy`. After adding them to nixpkgs, you can follow the previously given instructions. Those derivations can be found in https://github.com/teh/nixpkgs/tree/cvxpy. If you mangage nixpkgs by using git, then one way to get cvxpy is to go your nixpkgs directory and enter:
+
+````
+git remote add teh git@github.com:teh/nixpkgs.git
+git checkout -b cvxpy teh/cvxpy
+git rebase nixpkgs-unstable
+````
+
+3) Once support for `cxvpy` is mainstreamed into nixpkgs, step 3 will become unnecessary. Perhaps by 2020-03, at the latest.
+4) If you get nixpkgs updates via nix channels then a custom overlay will be needed (not provided here).
+
 #### macOS >= 10.12
 
 In the following section we explain how to compile *Boltzmann Brain* in OSX.

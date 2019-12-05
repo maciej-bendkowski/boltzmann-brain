@@ -75,7 +75,8 @@ in
           ghcid
         ])))] 
     ++ (with pkgs; [
-      feh
+      
+      feh # image viewer
       # System requirements.
       readline # needed on linux? doesn't hurt
       lsb-release # currently in nixpkgs-unstable but not in nixos-19.09
@@ -91,6 +92,7 @@ in
       cvxpy
       mpmath
       sympy
+      grip # github markdown previewer utility.
     ]);
           
     env = pkgs.buildEnv {
