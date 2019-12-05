@@ -99,24 +99,27 @@ in
     };
 
     shellHook = ''
+    # Enable haskell docs
     export HIE_HOOGLE_DATABASE="$(cat $(type -p hoogle) | sed -n -e 's|.*--database \(.*\.hoo\).*|\1|p')"
-    #echo "HIE_HOOGLE_DATABASE=" $HIE_HOOGLE_DATABASE
+    # nixpkgs pinning
     echo "${pinMessage}"
     echo "unpinned git hash:" $(git -C ~/nixpkgs rev-parse HEAD)
     #TODO make something like the following work...
     #echo "unpinned git hash:" $(git -C <nixpkgs> rev-parse HEAD)
     echo "nix-shell with pinned nixpkgs? ${pkgs.lib.boolToString(pinOK)}"
-
     # python stuff
     # Allow the use of wheels.
     SOURCE_DATE_EPOCH=$(date +%s)
     # Augment the dynamic linker path
     export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${pkgs.readline}/lib  
-    export PYTHONPATH=$PYTHONPATH:.
-    virtualenv . 
-    source ./bin/activate
-    pip install paganini
-    easy_install medulla
+    echo "Setting up virtualenv"
+    virtualenv -qq --clear venv
+    source venv/bin/activate
+    echo "Installing paganini"
+    pip install -q paganini
+    echo "Installing medulla"
+    easy_install-3.7 -q medulla
+    #This should now work ... cabal build; cabal run bb -- sample -i examples/algebraic/boolean.alg"
     '';
 }
 ); }.der

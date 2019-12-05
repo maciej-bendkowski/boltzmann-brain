@@ -1,1 +1,6 @@
 .stack-work/
+venv/
+paganini/
+medulla/medulla.egg-info
+medulla/setup.cfg
+*~
