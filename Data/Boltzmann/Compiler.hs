@@ -1,7 +1,7 @@
 {-|
  Module      : Data.Boltzmann.Compiler
  Description : Compiler configuration utilities.
- Copyright   : (c) Maciej Bendkowski, 2017-2019
+ Copyright   : (c) Maciej Bendkowski, 2017-2020
 
  License     : BSD3
  Maintainer  : maciej.bendkowski@tcs.uj.edu.pl

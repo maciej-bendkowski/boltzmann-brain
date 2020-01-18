@@ -5,7 +5,7 @@ import paganini as pg
 def main(args=None):
 
     __author__    = "Maciej Bendkowski"
-    __copyright__ = "Copyright (C) 2017-2019 Maciej Bendkowski"
+    __copyright__ = "Copyright (C) 2017-2020 Maciej Bendkowski"
     __license__   = "Public Domain"
     __version__   = "1.2.1"
 

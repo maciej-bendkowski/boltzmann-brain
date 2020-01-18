@@ -1,7 +1,7 @@
 {-|
  Module      : Data.Boltzmann.System.Warnings
  Description : Various warning handling utilities.
- Copyright   : (c) Maciej Bendkowski, 2017-2019
+ Copyright   : (c) Maciej Bendkowski, 2017-2020
 
  License     : BSD3
  Maintainer  : maciej.bendkowski@tcs.uj.edu.pl
