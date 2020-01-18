@@ -55,13 +55,7 @@ before_install:
 install:
 # Install medulla/paganini.
 - cd $TRAVIS_BUILD_DIR/medulla
-- |
-  if [ $TRAVIS_OS_NAME = linux ]
-    then
-      python3 setup.py install --user --prefix=
-    else
-      python setup.py install --user --prefix=
-  fi
+- python3 setup.py install --user --prefix=
 - cd $TRAVIS_BUILD_DIR
 
 # Compile boltzmann-brain and its dependencies.
