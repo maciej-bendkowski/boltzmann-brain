@@ -20,9 +20,9 @@ addons:
     - libgmp-dev       # for cabal
     - libblas-dev      # for hmatrix
     - liblapack-dev
-    - python          # for paganini
-    - python-pip
-    - python-setuptools
+    - python3          # for paganini
+    - python3-pip
+    - python3-setuptools
 
 before_install:
 - mkdir -p ~/.local/bin
@@ -44,7 +44,24 @@ before_install:
       brew update
       brew upgrade python
       brew postinstall python -dv
+
+      # unlinking python2 as recommended by brew
+      brew unlink python@2
+      brew link --overwrite python
   fi
+
+# Simlink python on linux.
+- |
+  if [ $TRAVIS_OS_NAME = linux ]
+    then
+      # I know that it is dangerous, but we need a uniform build on linux and
+      # macos
+      alias python=python3
+      alias pip=pip3
+  fi
+
+# Console output corrent python version
+- python --version
 
 # Install paganini dependencies.
 - pip install --user --upgrade pip
