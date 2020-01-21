@@ -20,9 +20,9 @@ addons:
     - libgmp-dev       # for cabal
     - libblas-dev      # for hmatrix
     - liblapack-dev
-    - python3          # for paganini
-    - python3-pip
-    - python3-setuptools
+    - python          # for paganini
+    - python-pip
+    - python-setuptools
 
 before_install:
 - mkdir -p ~/.local/bin
@@ -37,7 +37,7 @@ before_install:
       travis_retry curl --insecure -L https://get.haskellstack.org/stable/osx-x86_64.tar.gz | tar xz --strip-components=1 --include '*/stack' -C ~/.local/bin
   fi
 
-# Install python3 on OSX.
+# Install python on OSX.
 - |
   if [ $TRAVIS_OS_NAME = osx ]
     then
@@ -47,15 +47,15 @@ before_install:
   fi
 
 # Install paganini dependencies.
-- pip3 install --user --upgrade pip
-- pip3 install --user numpy scipy
-- pip3 install --user cvxpy six
-- pip3 install --user paganini
+- pip install --user --upgrade pip
+- pip install --user numpy scipy
+- pip install --user cvxpy six
+- pip install --user paganini
 
 install:
 # Install medulla/paganini.
 - cd $TRAVIS_BUILD_DIR/medulla
-- python3 setup.py install --user --prefix=
+- python setup.py install --user --prefix=
 - cd $TRAVIS_BUILD_DIR
 
 # Compile boltzmann-brain and its dependencies.
