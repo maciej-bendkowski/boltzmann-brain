@@ -52,9 +52,12 @@ before_install:
 
       # Travis does not officialy support python on macos
       # see https://docs.travis-ci.com/user/languages/python/
-      # We need a build for both linux and macos, so I put an alias
-      alias python3='python'
-      alias pip3='pip'
+      # We need a build for both linux and macos
+      echo 'export PATH="/usr/local/opt/python@3.8/bin:$PATH"' >> ~/.bash_profile
+
+      ## alternatively, one can put an alias
+      # alias python3='/usr/local/opt/python@3.8/bin/python3'
+      # alias pip3='/usr/local/opt/python@3.8/bin/pip3'
   fi
 
 # Console output corrent python version
