@@ -53,8 +53,8 @@ before_install:
       # Travis does not officialy support python on macos
       # see https://docs.travis-ci.com/user/languages/python/
       # We need a build for both linux and macos, so I put an alias
-      alias python3 = "python"
-      alias pip3 = "pip"
+      alias python3='python'
+      alias pip3='pip'
   fi
 
 # Console output corrent python version
