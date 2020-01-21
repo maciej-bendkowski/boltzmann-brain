@@ -67,21 +67,21 @@ before_install:
 - |
   if [ $TRAVIS_OS_NAME = linux ]
     then
-      - python3 --version
+      python3 --version
       # Install paganini dependencies.
-      - pip3 install --user --upgrade pip
-      - pip3 install --user numpy scipy
-      - pip3 install --user cvxpy six
-      - pip3 install --user paganini
+      pip3 install --user --upgrade pip
+      pip3 install --user numpy scipy
+      pip3 install --user cvxpy six
+      pip3 install --user paganini
     else
       # aliasing does not work in Travis
       # I copy-pasted python address from homebrew logs
-      - /usr/local/opt/python@3.8/bin/python3 --version
+      /usr/local/opt/python@3.8/bin/python3 --version
       # Install paganini dependencies.
-      - /usr/local/opt/python@3.8/bin/pip3 install --user --upgrade pip
-      - /usr/local/opt/python@3.8/bin/pip3 install --user numpy scipy
-      - /usr/local/opt/python@3.8/bin/pip3 install --user cvxpy six
-      - /usr/local/opt/python@3.8/bin/pip3 install --user paganini
+      /usr/local/opt/python@3.8/bin/pip3 install --user --upgrade pip
+      /usr/local/opt/python@3.8/bin/pip3 install --user numpy scipy
+      /usr/local/opt/python@3.8/bin/pip3 install --user cvxpy six
+      /usr/local/opt/python@3.8/bin/pip3 install --user paganini
   fi
 
 install:
