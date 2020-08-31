@@ -374,7 +374,7 @@ samplerConf sys opts =
                f "No explicit @samples annotation. Sampling a single structure."
                return (lb, ub, n, gen)
 
-getSamples :: System Int -> [Flag] -> IO [Structure]
+getSamples :: System Int -> [Flag] -> IO [(Structure, Int)]
 getSamples sys opts = do
     (lb, ub, n, genT) <- samplerConf sys opts
     -- TODO: Consider having generic method of generating samples
@@ -415,7 +415,7 @@ runRenderer opts = do
     info "Writing dotfile output..."
 
     -- TODO: Consider rendering multiple structures.
-    dotfile <- toDotFile cs (head samples)
+    dotfile <- toDotFile cs (fst $ head samples)
     T.putStrLn dotfile
 
 runTuner :: [Flag] -> IO ()
