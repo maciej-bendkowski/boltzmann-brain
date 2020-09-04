@@ -96,19 +96,19 @@ genRandomStr = genRandomStr' . prepare
 sampleStr :: RandomGen g
           => PSystem Double
           -> String
-          -> Int -> Int -> Rand g Structure
+          -> Int -> Int -> Rand g (Structure, Int)
 
 sampleStr sys str lb ub = do
     sample <- runMaybeT (genRandomStr sys str ub)
     case sample of
         Nothing     -> sampleStr sys str lb ub
-        Just (x, s) -> if lb <= s then return x
+        Just (x, s) -> if lb <= s then return (x, s)
                                   else sampleStr sys str lb ub
 
 sampleStrIO :: PSystem Double
             -> String
             -> Int -> Int
-            -> IO Structure
+            -> IO (Structure, Int)
 
 sampleStrIO sys str lb ub =
         evalRandIO $ sampleStr sys str lb ub
