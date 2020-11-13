@@ -1,3 +1,5 @@
+@size 650
+
 -- Plain trees
 Tree = Node [Tree].
 

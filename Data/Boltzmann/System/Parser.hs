@@ -8,20 +8,18 @@
  Stability   : experimental
  -}
 module Data.Boltzmann.System.Parser
-    ( parseSpec
-    ) where
+  ( parseSpec
+  )
+where
 
-import Text.Megaparsec
-import Data.Void
+import           Text.Megaparsec
+import           Data.Void
 
-import qualified Data.Boltzmann.System as S
+import qualified Data.Boltzmann.System         as S
 
-import qualified Data.Boltzmann.System.Parser.Algebraic as A
-import qualified Data.Boltzmann.System.Parser.Rational as R
+import qualified Data.Boltzmann.System.Parser.Algebraic
+                                               as A
 
 -- | Parses the given system specification.
-parseSpec :: S.Format -> String
-          -> IO (Either (ParseErrorBundle String Void) (S.System Int))
-
-parseSpec S.RationalF s  = return $ parse R.systemStmt "" s
-parseSpec S.AlgebraicF s = return $ parse A.systemStmt "" s
+parseSpec :: String -> IO (Either (ParseErrorBundle String Void) (S.System Int))
+parseSpec s = return $ parse A.systemStmt "" s

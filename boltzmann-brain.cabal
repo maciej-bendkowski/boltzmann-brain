@@ -1,5 +1,5 @@
 name:                boltzmann-brain
-version:             1.6
+version:             2.0
 synopsis:            Analytic sampler compiler for combinatorial systems.
 description:         Boltzmann Brain is a combinatorial system sampler compiler.
                      Using an easy and intuitive specification input representing a
@@ -11,7 +11,7 @@ homepage:            https://github.com/maciej-bendkowski/boltzmann-brain
 license:             BSD3
 license-file:        LICENSE
 author:              Maciej Bendkowski
-maintainer:          maciej.bendkowski@tcs.uj.edu.pl
+maintainer:          maciej.bendkowski@gmail.com
 copyright:           2017-2020 Maciej Bendkowski
 category:            Math
 build-type:          Simple
@@ -26,12 +26,10 @@ library
                      , Data.Boltzmann.System.Warnings
                      , Data.Boltzmann.System.Tuner
                      , Data.Boltzmann.System.Tuner.Algebraic
-                     , Data.Boltzmann.System.Tuner.Rational
                      , Data.Boltzmann.System.Sampler
-                     , Data.Boltzmann.System.Renderer
+                     , Data.Boltzmann.System.Paganini
                      , Data.Boltzmann.System.Parser
                      , Data.Boltzmann.System.Parser.Algebraic
-                     , Data.Boltzmann.System.Parser.Rational
                      , Data.Boltzmann.Internal.TH
                      , Data.Boltzmann.Internal.Tuner
                      , Data.Boltzmann.Internal.Annotations
@@ -41,7 +39,6 @@ library
                      , Data.Boltzmann.Compiler
                      , Data.Boltzmann.Compiler.Haskell.Helpers
                      , Data.Boltzmann.Compiler.Haskell.Algebraic
-                     , Data.Boltzmann.Compiler.Haskell.Rational
   build-depends:       base >= 4.7 && < 5
                      , bytestring >= 0.10.8.2
                      , containers >= 0.5.6
@@ -54,13 +51,13 @@ library
                      , aeson >= 1.4.6
                      , transformers >= 0.5.6
                      , MonadRandom >= 0.5.1
-                     , graphviz >= 2999.20
                      , text >= 1.2.3
                      , random >= 1.1
                      , time >= 1.8
                      , pretty-terminal >= 0.1.0.0
                      , edit-distance >= 0.2.2.1
                      , template-haskell >= 2.11.1.0
+                     , paganini-hs >= 0.2.0.0
   ghc-options:         -O2
                        -Wall
                        -Wcompat
