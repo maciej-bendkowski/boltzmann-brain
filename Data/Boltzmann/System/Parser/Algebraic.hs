@@ -19,7 +19,6 @@ import           Control.Monad                  ( void )
 import           Text.Megaparsec
 import           Data.Void
 
-import qualified Data.Set                      as Z
 import qualified Data.Map.Strict               as M
 
 import           Data.Boltzmann.Internal.Parser
@@ -36,10 +35,7 @@ systemStmt = sc *> systemStmt' <* eof
   systemStmt' = do
     an <- annotationParser
     ds <- some defsStmt
-    return S.System { S.defs        = M.fromList ds
-                    , S.annotations = M.fromList an
-                    , S.alphabet    = Z.empty
-                    }
+    return S.System { S.defs = M.fromList ds, S.annotations = M.fromList an }
 
 defsStmt :: Parser (String, [S.Cons Int])
 defsStmt = do

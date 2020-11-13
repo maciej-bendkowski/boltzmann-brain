@@ -1,6 +1,6 @@
 {-|
  Module      : Main
- Description : Boltzmann brain executable.
+ Description : Boltzmann brain compiler executable.
  Copyright   : (c) Maciej Bendkowski, 2017-2020
 
  License     : BSD3
@@ -8,7 +8,7 @@
  Stability   : experimental
  -}
 {-# LANGUAGE TemplateHaskell #-}
-module Main
+module Tune
   ( main
   )
 where
@@ -29,11 +29,6 @@ import           System.IO
 
 import           Text.Megaparsec         hiding ( parse )
 
-import           Data.Boltzmann.Compiler
-import qualified Data.Boltzmann.Compiler.Haskell.Algebraic
-                                               as Algebraic
-
-import           Data.Boltzmann.Internal.Annotations
 import           Data.Boltzmann.Internal.Logging
 import           Data.Boltzmann.Internal.Parser
 import           Data.Boltzmann.Internal.TH     ( compileTime )
@@ -82,47 +77,14 @@ signature = "Boltzmann Brain " ++ version
 versionHeader :: String
 versionHeader = signature ++ " (c) 2017-2020."
 
--- | Available boltzmann-brain commands.
-commands :: [(String, String)]
-commands =
-  [ ( "compile"
-    , "Generates an analytic sampler corresponding to the given specification."
-    )
-  , ( "tune"
-    , "Decorates the given specification with appropriate branching probabilities."
-    )
-  ]
-
--- | Renders the given commands and its description.
-renderCmd :: (String -> String) -> (String, String) -> IO String
-renderCmd pause (cmd, desc) = do
-  cmd' <- bold cmd
-  return (cmd' ++ pause cmd ++ desc)
-
--- | Renders a commands usage note.
-commandsMsg :: IO String
-commandsMsg =
-  let cmdLen = 3 + maximum (map (length . fst) commands)
-      offset x = cmdLen - length x        -- offest computing function
-      pause x = replicate (offset x) ' '  -- treats offset as whitespace pause
-  in  do
-        cmds' <- underline "Commands:"
-        xs    <- mapM (renderCmd pause) commands
-        return (unlines $ [cmds', ""] ++ xs)
-
 usageHeader :: IO String
 usageHeader = do
-  commandsMsg' <- commandsMsg
-  usage'       <- underline "Usage:"
+  usage' <- underline "Usage:"
   return $ unlines
     [ artLogo
     , "" -- newline
-    , commandsMsg'
-    , usage' ++ " bb [COMMAND] [OPTIONS...]"
+    , usage' ++ " bb-tune [OPTIONS...]"
     ]
-
-compilerTimestamp :: String
-compilerTimestamp = signature ++ " (" ++ $compileTime ++ ")"
 
 compilerBuild :: String
 compilerBuild = "Build time: " ++ $compileTime ++ "." -- Note: computed at compilation
@@ -186,13 +148,10 @@ usage = do
 
 -- | Parses the CLI arguments into the command string
 --   and some additional (optional) flags.
-parse :: [String] -> IO (String, [Flag])
+parse :: [String] -> IO [Flag]
 parse argv = case getOpt Permute options argv of
-  (opts, cmds, [])
-    | Help `elem` opts -> usage
-    | null cmds        -> failWithUsage "Expected a single command."
-    | length cmds /= 1 -> failWithUsage "Expected a single command."
-    | otherwise        -> return (head cmds, opts)
+  (opts, _, []) | Help `elem` opts -> usage
+                | otherwise        -> return opts
 
   (_, _, errs) -> failWithUsage $ concat errs
 
@@ -217,25 +176,9 @@ handleIO opts = do
 
 main :: IO ()
 main = do
-  (cmd, opts) <- getArgs >>= parse
+  opts <- getArgs >>= parse
   handleIO opts -- set up IO handles.
-  case cmd of
-    "compile" -> runCompiler opts
-    "tune"    -> runTuner opts
-    _         -> do
-      err <- unrecognisedCmd cmd
-      failWithUsage err
-
-unrecognisedCmd :: String -> IO String
-unrecognisedCmd cmd = do
-  let cmd' = quote cmd
-  cmdHint <- bold $ closest (map fst commands) cmd
-  return
-    $  "Unrecognised command "
-    ++ cmd'
-    ++ ". Did you mean "
-    ++ cmdHint
-    ++ "?"
+  runTuner opts
 
 -- | Prints parsing errors or returns the parsed system.
 getSystem
@@ -248,7 +191,7 @@ getSystem (Right sys) = return sys
 --   and warnings checks. Returns the parsed system and its type.
 parseSystem :: [Flag] -> IO (System Int, SystemType)
 parseSystem opts = do
-  info "Parsing system..."
+  info "Parsing input system..."
   text <- getContents
   dat  <- parseSpec text
   sys  <- getSystem dat
@@ -268,23 +211,6 @@ tuneSystem :: System Int -> Tuner.Parametrisation -> IO (PSystem Double)
 tuneSystem sys prob = do
   dat <- runPaganini sys prob
   getSystem dat
-
-compilerConf :: System a -> String
-compilerConf sys = moduleName
- where
-  ann        = annotations sys
-  moduleName = withString ann "module" "Sampler"
-
--- | Runs the specification compiler.
-runCompiler :: [Flag] -> IO ()
-runCompiler opts = do
-  (sys, _) <- parseSystem opts
-  let moduleName = compilerConf sys
-
-  tunedSystem <- tuneSystem sys Tuner.Regular
-  info "Running sampler compiler..."
-
-  compile (config tunedSystem moduleName compilerTimestamp :: Algebraic.Conf)
 
 runTuner :: [Flag] -> IO ()
 runTuner opts = do

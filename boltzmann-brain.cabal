@@ -66,9 +66,9 @@ library
                        -Wredundant-constraints
   default-language:    Haskell2010
 
-executable bb
+executable bb-tune
   hs-source-dirs:      app
-  main-is:             Main.hs
+  main-is:             Tune.hs
   ghc-options:         -O2
                        -Wall
                        -Wcompat
@@ -78,6 +78,32 @@ executable bb
                        -threaded
                        -rtsopts
                        -with-rtsopts=-N
+                       -main-is Tune
+  build-depends:       aeson 
+                     , base
+                     , boltzmann-brain
+                     , bytestring
+                     , containers 
+                     , directory
+                     , filepath 
+                     , megaparsec
+                     , text 
+  default-language:    Haskell2010
+
+
+executable bb-compile
+  hs-source-dirs:      app
+  main-is:             Compile.hs
+  ghc-options:         -O2
+                       -Wall
+                       -Wcompat
+                       -Wincomplete-record-updates
+                       -Wincomplete-uni-patterns
+                       -Wredundant-constraints
+                       -threaded
+                       -rtsopts
+                       -with-rtsopts=-N
+                       -main-is Compile
   build-depends:       aeson 
                      , base
                      , boltzmann-brain

@@ -11,14 +11,9 @@
  -}
 {-# LANGUAGE OverloadedStrings #-}
 module Data.Boltzmann.System
-  ( Alphabet
-  , Letter(..)
-  , Format(..)
+  ( Format(..)
   , isAlgebraicF
   , isRationalF
-  , letterFreq
-  , letterWeight
-  , lookupLetter
   , System(..)
   , size
   , constructors
@@ -70,48 +65,6 @@ import           Data.Boltzmann.System.Annotations
 import           Data.Boltzmann.Internal.Annotations
                                                 ( withInt )
 
--- | Set of letters with auxiliary frequencies.
---   Note: Used for rational specification only.
-type Alphabet = Set Letter
-
--- | Letter symbols with optional frequencies.
-data Letter = Letter { symb    :: String
-                     , freq    :: Maybe Int
-                     , weightL :: Int
-                     } deriving (Show,Eq)
-
--- | Given a string and an alphabet, finds
---   the corresponding letter frequency.
-letterFreq :: String -> Alphabet -> Maybe Int
-letterFreq s alph =
-  let x = Letter { symb = s, freq = Nothing, weightL = 0 }
-  in  case x `S.lookupIndex` alph of
-        Nothing  -> Nothing
-        Just idx -> freq (idx `S.elemAt` alph)
-
--- | Given a string and an alphabet, finds
---   the corresponding letter weight.
-letterWeight :: String -> Alphabet -> Maybe Int
-letterWeight s alph =
-  let x = Letter { symb = s, freq = Nothing, weightL = 0 }
-  in  case x `S.lookupIndex` alph of
-        Nothing  -> Nothing
-        Just idx -> Just $ weightL (idx `S.elemAt` alph)
-
--- | Given a string and an alphabet, finds
---   the corresponding letter index.
-lookupLetter :: String -> Alphabet -> Maybe Int
-lookupLetter s alph =
-  let x = Letter { symb = s, freq = Nothing, weightL = 0 }
-  in  x `S.lookupIndex` alph
-
-instance Ord Letter where
-  compare a b = compare (symb a) (symb b) -- ignore frequencies.
-
-instance ToJSON Letter where
-  toJSON letter = object
-    ["symbol" .= symb letter, "freq" .= freq letter, "weight" .= weightL letter]
-
 -- | Input specification format.
 data Format = AlgebraicF
             | RationalF
@@ -129,21 +82,16 @@ isRationalF = not . isAlgebraicF
 
 -- | System of combinatorial structures.
 data System a = System { defs        :: Map String [Cons a] -- ^ Type definitions.
-                       , alphabet    :: Alphabet            -- ^ System alphabet.
                        , annotations :: Annotations         -- ^ System annotations.
                        } deriving (Show)
 
 data SystemT a = SystemT { systemTypes       :: [TypeT a]
-                         , systemAlphabet    :: Alphabet
                          , systemAnnotations :: Annotations
                          } deriving (Show)
 
 instance ToJSON a => ToJSON (SystemT a) where
-  toJSON sys = object
-    [ "types" .= systemTypes sys
-    , "alphabet" .= systemAlphabet sys
-    , "annotations" .= systemAnnotations sys
-    ]
+  toJSON sys =
+    object ["types" .= systemTypes sys, "annotations" .= systemAnnotations sys]
 
 data TypeT a = TypeT { typeName :: String
                      , constrs  :: [ConsT a]
@@ -176,7 +124,6 @@ instance ToJSON ArgT where
 -- | Converts a given system to an output format.
 toSystemT :: System a -> SystemT a
 toSystemT sys = SystemT { systemTypes       = map toTypeT (M.toList $ defs sys)
-                        , systemAlphabet    = alphabet sys
                         , systemAnnotations = annotations sys
                         }
 
