@@ -80,7 +80,13 @@ compileModule sys mod' withIO' withLists' withShow' = Module
                      Nothing
                      (Just $ ExportSpecList () exports)
   )
-  [LanguagePragma () [Ident () "TemplateHaskell"]]
+  [ LanguagePragma
+      ()
+      [ Ident () "TemplateHaskell"
+      , Ident () "DeriveGeneric"
+      , Ident () "DeriveAnyClass"
+      ]
+  ]
   imports
   decls
  where
@@ -98,7 +104,9 @@ compileModule sys mod' withIO' withLists' withShow' = Module
 
 declareImports :: Bool -> [ImportDecl ()]
 declareImports withIO' =
-  [ importFrom "Control.Monad"       [importFunc "guard"]
+  [ importUnQual "GHC.Generics"
+  , importUnQual "Data.Aeson"
+  , importFrom "Control.Monad"       [importFunc "guard"]
   , importFrom "Control.Monad.Trans" [importFunc "lift"]
   , importFrom "Control.Monad.Trans.Maybe"
                [importType "MaybeT", importFunc "runMaybeT"]

@@ -82,6 +82,17 @@ importQual module' synonym = ImportDecl
   , importSpecs     = Nothing
   }
 
+importUnQual :: String -> ImportDecl ()
+importUnQual module' = ImportDecl { importAnn       = ()
+                                  , importModule    = ModuleName () module'
+                                  , importQualified = False
+                                  , importSrc       = False
+                                  , importSafe      = False
+                                  , importPkg       = Nothing
+                                  , importAs        = Nothing
+                                  , importSpecs     = Nothing
+                                  }
+
 exportType :: String -> ExportSpec ()
 exportType s = EThingWith () (NoWildcard ()) (unname s) []
 
@@ -155,12 +166,10 @@ declADT withShow (t, [con]) = DataDecl
   Nothing
   (DHead () (Ident () t))
   [QualConDecl () Nothing Nothing (declCon con)]
-  [ Deriving () Nothing [IRule () Nothing Nothing (IHCon () (unname "Show"))]
-  | withShow
-  ]
-
-   -- generate a newtype or data type?
-  where flag = if length (args con) == 1 then NewType () else DataType ()
+  (declDerivations withShow)
+  where
+  -- generate a newtype or data type?
+        flag = if length (args con) == 1 then NewType () else DataType ()
 
 declADT withShow (t, cons) = DataDecl
   ()
@@ -168,9 +177,19 @@ declADT withShow (t, cons) = DataDecl
   Nothing
   (DHead () (Ident () t))
   (map (QualConDecl () Nothing Nothing . declCon) cons)
-  [ Deriving () Nothing [IRule () Nothing Nothing (IHCon () (unname "Show"))]
-  | withShow
-  ]
+  (declDerivations withShow)
+
+declDerivations :: Bool -> [Deriving ()]
+declDerivations withShow = [Deriving () Nothing rules]
+ where
+  rules        = derivGeneric : derivAeson ++ [ derivShow | withShow ]
+  derivGeneric = IRule () Nothing Nothing (IHCon () (unname "Generic"))
+  derivAeson =
+    [ IRule () Nothing Nothing (IHCon () (unname "ToJSON"))
+    , IRule () Nothing Nothing (IHCon () (unname "FromJSON"))
+    ]
+  derivShow = IRule () Nothing Nothing (IHCon () (unname "Show"))
+
 
 declCon :: Cons a -> ConDecl ()
 declCon expr = ConDecl () (Ident () $ func expr) ags

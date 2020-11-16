@@ -233,3 +233,4 @@ runCompiler opts = do
   info "Running sampler compiler..."
 
   compile (config tunedSystem moduleName compilerTimestamp :: Algebraic.Conf)
+  info "Done."
