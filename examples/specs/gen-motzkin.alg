@@ -3,13 +3,9 @@
 @precision 1.0e-12
 @maxiter   30
 
--- Sampler-specific annotations.
-@lowerBound   1000
-@upperBound   2000
-
 @generate     Motzkin
-@samples      10
+@size         1000
 
 Motzkin = Leaf
-        | Unary Motzkin [0.45]
+        | Unary Motzkin [400]
         | Binary Motzkin Motzkin.

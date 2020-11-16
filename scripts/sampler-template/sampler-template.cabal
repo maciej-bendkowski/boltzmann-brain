@@ -1,0 +1,51 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.33.0.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: c8b644f428eccd5e6609be38734020ed71f5b37231e1a6f0ce4626b760e2d09d
+
+name:           sampler-template
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/githubuser/sampler-template#readme>
+homepage:       https://github.com/mbendkowski/sampler-template#readme
+bug-reports:    https://github.com/mbendkowski/sampler-template/issues
+author:         Maciej Bendkowski
+maintainer:     maciej.bendkowski@gmail.com
+copyright:      2020 Maciej Bendkowski 
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README.md
+
+source-repository head
+  type: git
+  location: https://github.com/githubuser/sampler-template
+
+library
+  exposed-modules: Sampler
+  hs-source-dirs:  src
+  build-depends:
+      base >=4.7 && <5
+    , mtl >= 2.2.2
+    , transformers >= 0.5.6.2
+    , template-haskell >= 2.14.0.0
+    , buffon-machines >= 1.1.1.1
+    , random >= 1.1
+    , aeson
+  default-language: Haskell2010
+
+executable bb-sampler
+  main-is: Main.hs
+  hs-source-dirs:
+      app
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , sampler-template
+    , directory >= 1.3.3.0
+    , aeson
+    , bytestring
+  default-language: Haskell2010

@@ -1,6 +1,5 @@
 -- Boltzmann sampler for Boolean functions.
 
-@module    Boolean
 @precision 1.0e-12
 @maxiter   30
 
@@ -8,12 +7,15 @@
 @withLists y
 @withShow  y
 
+@size 100000
+@generate Fun
+
 -- variables.
 Index = Succ Index
       | Zero.
 
 -- Boolean functions.
 Fun = Variable Index (0)
-    | And Fun Fun [0.3]
+    | And Fun Fun [30000]
     | Or Fun Fun
     | Neg Fun.
