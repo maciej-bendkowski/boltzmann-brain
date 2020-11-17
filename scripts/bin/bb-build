@@ -33,7 +33,8 @@ def parse_spec(spec_file):
 @click.command()
 @click.option('--input', required=True, help='Input specification.')
 @click.option('--output', default='sampler', help='Sampler executable name.')
-def run(input, output):
+@click.option('--force', is_flag=True, help='Whether to use the force.')
+def run(input, output, force):
     
     with open(input, 'r') as spec_file:
 
@@ -53,7 +54,8 @@ def run(input, output):
             sampler_module = os.path.join(dirpath, "src", "Sampler.hs")
             click.echo(f"Generating sampler module at \"{sampler_module}\".")
 
-            code = subprocess.call(["bb-compile", "-i", input, "-o", sampler_module, "--force"])
+            args = ["--force"] if force else []
+            code = subprocess.call(["bb-compile", "-i", input, "-o", sampler_module] + args)
 
             if(code != 0):
                 click.echo("ERROR: Failed to compile the sampler.")
