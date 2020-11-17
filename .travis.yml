@@ -20,10 +20,6 @@ addons:
     - libgmp-dev       # for cabal
     - libblas-dev      # for hmatrix
     - liblapack-dev
-      ## We don't want apt dependencies as python is already installed
-      #    - python3          # for paganini
-      #    - python3-pip
-      #    - python3-setuptools
 
 before_install:
 - mkdir -p ~/.local/bin
@@ -40,51 +36,8 @@ before_install:
       travis_retry curl --insecure -L https://get.haskellstack.org/stable/osx-x86_64.tar.gz | tar xz --strip-components=1 --include '*/stack' -C ~/.local/bin
   fi
 
-  # # Install python on OSX.
-  # - |
-  #   if [ $TRAVIS_OS_NAME = osx ]
-  #     then
-  #       brew update
-  #       brew upgrade python
-  #       brew postinstall python -dv
-  # 
-  #       ## Travis does not officialy support python on macos
-  #       ## see https://docs.travis-ci.com/user/languages/python/
-  #       ## We need a build for both linux and macos
-  #       #echo 'export PATH="/usr/local/opt/python@3.8/bin:$PATH"' >> ~/.bash_profile
-  # 
-  #       ## alternatively, one can put an alias
-  #       ## They don't work in Travis either
-  #       #alias python3='/usr/local/opt/python@3.8/bin/python3'
-  #       #alias pip3='/usr/local/opt/python@3.8/bin/pip3'
-  #   fi
-
-  ## Console output corrent python version
-  #
-  #- |
-  #  if [ $TRAVIS_OS_NAME = linux ]
-  #    then
-  #      python3 --version
-  #      # Install paganini dependencies.
-  #      pip3 install --user --upgrade pip
-  #      pip3 install --user numpy scipy
-  #      pip3 install --user cvxpy six
-  #      pip3 install --user paganini
-  #    else
-  #      # aliasing does not work in Travis
-  #      # I copy-pasted python address from homebrew logs
-  #      /usr/local/opt/python@3.8/bin/python3 --version
-  #      # Install paganini dependencies.
-  #      /usr/local/opt/python@3.8/bin/pip3 install --user --upgrade pip
-  #      /usr/local/opt/python@3.8/bin/pip3 install --user numpy scipy
-  #      /usr/local/opt/python@3.8/bin/pip3 install --user cvxpy six
-  #      /usr/local/opt/python@3.8/bin/pip3 install --user paganini
-  #  fi
-
 install:
 # Install medulla/paganini.
-- cd $TRAVIS_BUILD_DIR/medulla
-  # - python3 setup.py install --user --prefix=
 - cd $TRAVIS_BUILD_DIR
 
 # Compile boltzmann-brain and its dependencies.
