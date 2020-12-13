@@ -1,13 +1,18 @@
 Boltzmann Brain [![Build Status](https://travis-ci.org/maciej-bendkowski/boltzmann-brain.svg?branch=master)](https://travis-ci.org/maciej-bendkowski/boltzmann-brain) [![Hackage](https://img.shields.io/badge/hackage-v1.6-blue.svg)](http://hackage.haskell.org/package/boltzmann-brain) [![License](https://img.shields.io/badge/license-BSD--3-orange.svg)](https://tldrlegal.com/license/bsd-3-clause-license-(revised))
 ---------------
 
-*Boltzmann Brain* is a [Haskell](https://www.haskell.org/) library and standalone application meant for random generation of combinatorial structures. Using an **easy** and **intuitive** context-free text input representing a combinatorial specification of rational or algebraic objects, *Boltzmann Brain* allows its users to:
+*Boltzmann Brain* is a [Haskell](https://www.haskell.org/) library and
+set of standalone applications meant for random generation of combinatorial structures.
+Using an **easy** and **intuitive** context-free text input representing a
+combinatorial specification of rational or algebraic objects, *Boltzmann Brain*
+allows its users to:
 
-- **sample** random structures following the given input specification;
-- **visualize** sampled objects using the [GraphViz](https://www.graphviz.org/) graph visualization software, and finally
+- **sample** random structures following the given input specification, and
  - **compile** a self-contained, dedicated analytic sampler for **optimal sampling efficiency**.
 
-Remarkably, using *Boltzmann Brain* it is possible to **control the outcome distribution** of generated objects and, in particular, skew it to one needs. You provide the target distribution, we handle the sampling process for you!
+Remarkably, using *Boltzmann Brain* it is possible to **control the outcome
+distribution** of generated objects and, in particular, skew it to one needs.
+You provide the target distribution, we handle the sampling process for you!
 
 **If you can specify it, you can sample it!**
 
@@ -30,10 +35,19 @@ samplers](https://epubs.siam.org/doi/10.1137/1.9781611975062.9)
 
 ### Overview
 
-*Boltzmann Brain* (*bb* for short) is an open-source analytic sampler compiler. Given a textual representation of the combinatorial system, *bb* constructs a dedicated **analytic sampler**. The sampler itself is a self-contained, and reusable [Haskell](https://www.haskell.org/) module which, by construction, is **guaranteed** to sample random objects following the given, feasible target distribution. Using state-of-the-art optimization techniques, *bb* compiles an **efficient** sampler implementation which can be further modified, incorporated in other software or used as a standalone module.
+*Boltzmann Brain* (*bb* for short) is an open-source analytic sampler compiler.
+Given a textual representation of the combinatorial system, *bb* constructs a
+dedicated **analytic sampler**. The sampler itself is a self-contained, and
+reusable [Haskell](https://www.haskell.org/) module which, by construction, is
+**guaranteed** to sample random objects following the given, feasible target
+distribution. Using state-of-the-art optimization techniques, *bb* compiles an
+**efficient** sampler implementation which can be further modified, incorporated
+in other software or used as a standalone module.
 
-The input specification format mimics that of [Haskell algebraic data types](https://wiki.haskell.org/Algebraic_data_type) where in addition each
-type constructor may be annotated with an additional *weight* parameter. For instance:
+The input specification format mimics that of [Haskell algebraic data
+types](https://wiki.haskell.org/Algebraic_data_type) where in addition each type
+constructor may be annotated with an additional *weight* parameter. For
+instance:
 
 ```hs
 -- Motzkin trees
@@ -47,7 +61,7 @@ constructors:
  - a constant ```Leaf``` of weight one (default value if not
 annotated);
 -  a unary ```Unary``` constructor of weight two, and
-- a binary contructor ```Binary``` of default weight one.
+- a binary constructor ```Binary``` of default weight one.
 
 The definition ends with an obligatory dot.
 
@@ -55,31 +69,50 @@ Each definition constitutes an algebraic data type where each inhabitant has an
 intrinsic *size*, defined as the sum of all its building constructor weights.
 
 Given a system of (possibly) mutually recursive types, *Boltzmann Brain*
-automatically detects the specification kind (either **rational** or **algebraic**) and
-constructs a **singular**, **rejection-based analytic sampler** able to sample **uniformly random**, conditioned on size, inhabitants of the system types. Though the exact size of the outcome is a random variable, the outcome sampler allows to control the desired lower and upper bounds of the generated objects.
+automatically detects the specification kind (either **rational** or
+**algebraic**) and constructs a **rejection-based analytic sampler** able to
+sample **uniformly random**, conditioned on size, inhabitants of the system
+types. Though the exact size of the outcome is a random variable, the outcome
+sampler allows its user to control the desired lower and upper bounds of the
+generated objects.
 
 ### Sampler tuning
-*Boltzmann Brain* supports a **target frequency calibration** using convex optimisation techniques. These are implemented as a Python library *Paganini* built using *cvxpy*. *Boltzmann Brain* communicates with *Paganini* through a tiny executable called *medulla* (see the *medulla* subdirectory). Consider the following example of a specification defining Motzkin trees with some arbitrary size notion:
+*Boltzmann Brain* supports **target frequency calibration** using convex
+optimisation techniques. These are implemented as a Python library *Paganini*
+built using *cvxpy*. *Boltzmann Brain* communicates with *Paganini* through a
+custom middleware and DSL *Paganini-hs*.
+
+Consider the following example of a specification defining Motzkin trees with
+some arbitrary size notion:
 
 ```hs
+@size 1000
+@generate MotzkinTree 
+
 -- Motzkin trees
 MotzkinTree = Leaf
-            | Unary MotzkinTree (2) [0.3]
+            | Unary MotzkinTree (2) [250]
             | Binary MotzkinTree MotzkinTree (2).
    ```
-Here, the ```Unary``` construct is given weight *2* and a target frequency of
-*0.3*. In consequence, the system is to be **tuned** such that the ```Unary```
-node contributes, on average, *30%* of the total size of constructed Motzkin
-trees.  It is hence possible to distort the natural frequency of each
-constructor in the given system.
+Using the ```@size``` and ```@generate``` annotation, we indicate the *target size* and *output type*.
+The ```Unary``` constructor is given weight *2* and a target frequency of
+*250*. In consequence, the system is to be **tuned** such that the size
+of generated Motzkin trees is on average *1000*. The
+total weight of ```Unary``` nodes is, in expectation, *250*.
 
-Note however, such an additional non-trivial tuning procedure causes a not insignificant change in the underlying probability model. In extreme cases, such as for instance requiring *80%* of internal nodes in plane binary trees, the constructed sampler might be virtually
-ineffective due to the sparsity of tuned structures.
+It is therefore possible to distort the natural frequency of each constructor in
+the given system. However, such an additional non-trivial tuning procedure
+causes a not insignificant change in the underlying probability model. In
+extreme cases, such as for instance requiring *80%* of internal nodes in plane
+binary trees, the sampler might unavailable or be virtually ineffective due to
+the sparsity of tuned structures.
 
 Please tune with caution!
 
 ### Basic usage
-For standard help/usage hints type ```bb -h``` (or ```paganini -h```).  For more advanced options, *Boltzmann Brain* provides its own annotation system (see example below):
+*Boltzmann Brain* ships with a few executables. To generate a sampler module you
+can use ```bb-compile``` (see ```bb-compile -h``` for standard help/usage hints).
+More advanced options, *Boltzmann Brain* provides its own annotation system (see example below):
 ```hs
 -- Motzkin trees
 @module    Sampler
@@ -90,8 +123,11 @@ For standard help/usage hints type ```bb -h``` (or ```paganini -h```).  For more
 @withLists y
 @withShow  y
 
+@generate M
+@size 100
+
 M = Leaf
-  | Unary M [0.3]
+  | Unary M [30]
   | Binary M M.
  ```
 The `@module` annotation controls the name of the generated Haskell module (it
@@ -100,59 +136,31 @@ defaults to `Sampler` if not explicitly given).  Next two annotations
 quality of the tuning procedure.  If not provided, some reasonable default values are
 assumed (depending on the detected system type). The last three parameters
 control some additional parameters used while generating the sampler code.
-Specifically, whether to generate addtional `IO` (input/output) generators, whether to generate
+Specifically, whether to generate additional `IO` (input/output) generators, whether to generate
 list samplers for each type in the system, and finally whether to include
 `deriving Show` clauses for each type in the system. By default, `@withIO` and
 `@withShow` are enabled (to disable them, set them to `n` or `no`); `@withLists`
 is by default disabled if not stated otherwise in the input specification.
 
-Using annotations it is also possible to control the sampling parameters of
-*Boltzmann Brain* . Consider the following example:
-```hs
--- Random sampling of Motzkin trees
+For parameter tuning, without sampler construction, you can use ```bb-tune```.
+To tune a combinatorial specification *"by hand"*, you can invoke
 
--- Parameters for "tuning"
-@precision 1.0e-12
-@maxiter   30
+```bb-tune -i specification.in -o specification.json```.
 
--- Sampling parameters
-@lowerBound 100
-@upperBound 10000
-@generate   M
+*Boltzmann Brain* ensures that the input specification is sound and well-founded.
+Otherwise, some custom user-friendly error messages are provided. The *tuned* system
+is converted into a suitable JSON representation and is ready for further manipulation,
+for instance sampler generation.
 
-M = Leaf
-  | Unary M [0.3]
-  | Binary M M.
- ```
-In the above example, three more annotations are used. The first two dictate the
-admissible size window of the generated structures whereas the third one specifies
-the type from which we want to generate. If no bounds are provided, *Boltzmann Brain* uses
-some (small) default ones. If no `@generate` annotation is provided, *Boltzmann Brain*
-assumes some default type.
 
-### Advanced usage
-For parameter tuning, *Boltzmann Brain* invokes the external *medulla* script. Usually, *Boltzmann Brain* automatically calls *medulla* once tuning is in order. If no special handling is required, it just suffices to have `paganini` available in the system; *Boltzmann Brain* will automatically pass it necessary data and retrieve the tuning data.
+### Sampler compilation
 
-However, it needed, a manual tuning workflow is also supported. To tune a combinatorial specification *"by hand"*, you can start with generating a *Paganini* representation of the system, e.g. using
-
-```bb spec -i specification.in -o specification.out```.
-
-*Boltzmann Brain* ensures that the input specification is sound and well-founded. Otherwise, (arguably) user-friendly error messages are provided. Once the *Paganini* specification is generated, we type
-
-```medulla -i paganini.pg > bb.param```
-
-which runs *Paganini* and outputs the required tuning data for `bb`.  You
-can alter the default agruments of `paganini` scripts such as tuning precision,
-optimisation problem solver, maximum number of iterations, and explicitly
-specify if the type of the grammar is rational (for rational specifications the optimization problem
-might become unbounded).
-
- Finally, we need to tell `bb` to use the tuning data typing, e.g.:
-
-```bb compile -o Sampler.hs -t bb.param -i specification.in ```
+In most cases, it is preferable to generate sampler **executables* instead of Haskell modules.
+For such cases you can use the ```bb-build``` python script in ```scripts/bin/```. We recommend
+you include this path in your ```PATH```. See ```bb-help --help``` for more usage details.
 
 ### Installation
-*Boltzmann Brain* consists of two executables, ```bb``` and ```medulla```. The former one is implemented in [Haskell](https://www.haskell.org/) whereas the latter is implemented in [Python](https://www.python.org/). Both applications rely on some (few) external libraries to work, such as [LAPACK](http://www.netlib.org/lapack/) or [BLAS](http://www.netlib.org/blas/). The following sections explain several common installation methods.
+*Boltzmann Brain* consists of serveral executables. They are implemented in [Haskell](https://www.haskell.org/) whereas the **Paganini**, on which they depend on, is implemented in [Python](https://www.python.org/). Both of these parts rely on (few) external libraries to work, such as [LAPACK](http://www.netlib.org/lapack/) or [BLAS](http://www.netlib.org/blas/). The following sections explain several common installation methods.
 
 We start with the recommended method of compiling *Boltzmann Brain* from sources.
 The following section explains the compilation process under Ubuntu 16.04, however, let us note that with little modifications it should also work under other Linux distributions.
@@ -180,20 +188,7 @@ Note that the above packages play the central role in the system tuning procedur
 git clone https://github.com/maciej-bendkowski/boltzmann-brain.git
 ```
 
-and install ```medulla```:
-```
-cd boltzmann-brain/medulla
-python3 setup.py install --user --prefix=
-```
-
-We can check that *medulla* is installed by typing
-```
-medulla -h
-```
-
-If ```medulla``` is available, we should see a help/usage message.
-
-Finally, we have to prepare to install ```bb```. For that purpose, we are going
+Now, we have to prepare to install *Boltzmann Brain*. For that purpose, we are going
 to download Haskell's [Stack](https://docs.haskellstack.org/en/stable/README/) tool chain. Note that stack is able to download and isolate various [GHC](https://www.haskell.org/ghc/) (Glasgow Haskell Compiler) instances, avoiding the infamous [Cabal hell](https://wiki.haskell.org/Cabal/Survival).
 
 To install stack for linux x86_64 type
@@ -219,12 +214,6 @@ nix-shell # Enters a shell which provides GHC, python, paganini, and installs me
 ````
 
 That's it!
-
-Now you can build bb and then run an example. For instance:
-````
-cabal build # compile and build bb 
-cabal run bb -- sample -i examples/algebraic/boolean.alg
-````
 
 Caveats:
 * Nix support was tested under nixos with ghc 8.6.5 and cabal-install 3. Earlier versions of GHC may be difficult to get working due to changes in package dependencies. As of 2019-12-05 nix support requires a recent version of the nixpkgs repostory (e.g. nixpkgs-unstable).
