@@ -3,7 +3,9 @@ extra-package-dbs: []
 packages:
 - .
 extra-deps:
-- haskell-src-exts-1.17.1
-- transformers-0.5.6.2
 - pretty-terminal-0.1.0.0
-resolver: lts-9.21
+- git: https://github.com/maciej-bendkowski/paganini-hs.git
+  commit: c95369b1fc245ae943a0dbc90647688128ab5c71
+- git: https://github.com/OctopiChalmers/BinderAnn
+  commit: fcae12a50c8b105f48b575b0787107752a170ec3
+resolver: lts-14.18

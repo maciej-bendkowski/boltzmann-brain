@@ -1,7 +1,7 @@
 {-|
  Module      : Data.Boltzmann.System.Annotations
  Description : Annotation utilities for combinatorial samplers.
- Copyright   : (c) Maciej Bendkowski, 2017-2019
+ Copyright   : (c) Maciej Bendkowski, 2017-2020
 
  License     : BSD3
  Maintainer  : maciej.bendkowski@tcs.uj.edu.pl
@@ -15,9 +15,12 @@ module Data.Boltzmann.System.Annotations
 import Data.Map (Map)
 
 import Text.Megaparsec
-import Text.Megaparsec.String
+import Text.Megaparsec.Char
+import Data.Void
 
 import Data.Boltzmann.Internal.Parser
+
+type Parser = Parsec Void String
 
 annIdentifier :: Parser String
 annIdentifier = identifierP (char '@') some

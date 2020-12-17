@@ -9,5 +9,6 @@
 @withShow  y
 
 @colorScheme black
+@size 100
 
-M = Leaf | Unary M [0.3] | Binary M M.
+M = Leaf | Unary M [30] | Binary M M.

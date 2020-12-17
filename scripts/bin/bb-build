@@ -1,0 +1,78 @@
+#!/usr/bin/env python3
+
+import os
+import sys
+import click
+import tempfile
+import shutil
+import subprocess
+
+def toIO(gen_type):
+    return f"sample{gen_type}IO"
+
+def parse_spec(spec_file):
+
+    spec_lines = spec_file.readlines()
+    for line in spec_lines:
+        line = line.split()
+    
+        if len(line) == 0:
+            continue
+
+        if line[0].startswith("--"):
+            continue
+
+        if line[0] == "@generate":
+            return line[1]
+
+        if not line[0].startswith("@"):
+            return line[0]
+
+    return None
+
+@click.command()
+@click.option('--input', required=True, help='Input specification.')
+@click.option('--output', default='sampler', help='Sampler executable name.')
+@click.option('--force', is_flag=True, help='Whether to use the force.')
+def run(input, output, force):
+    
+    with open(input, 'r') as spec_file:
+
+        gen_type = parse_spec(spec_file)
+        if gen_type is None:
+            click.echo("ERROR: No \"@generate\" nor type in specification file.")
+            return
+
+        try:
+            dirpath = tempfile.mkdtemp()
+            click.echo(f"Creating a temporary project stub at \"{dirpath}\".")
+            
+            script_path = os.path.abspath(os.path.dirname(sys.argv[0]))
+            sampler_template_path = os.path.join(script_path, "../sampler-template")
+            shutil.copytree(sampler_template_path, dirpath, dirs_exist_ok=True)
+
+            sampler_module = os.path.join(dirpath, "src", "Sampler.hs")
+            click.echo(f"Generating sampler module at \"{sampler_module}\".")
+
+            args = ["--force"] if force else []
+            code = subprocess.call(["bb-compile", "-i", input, "-o", sampler_module] + args)
+
+            if(code != 0):
+                click.echo("ERROR: Failed to compile the sampler.")
+                return
+
+            cabal_location =  os.path.join(dirpath, "sampler-template.cabal")
+            subprocess.call(["sed", "-i", f"s/bb-sampler/{output}/g", cabal_location])
+            
+            main_module = os.path.join(dirpath, "app", "Main.hs")
+            subprocess.call(["sed", "-i", f"s/SAMPLE_COMMAND/{toIO(gen_type)}/g", main_module])
+
+            click.echo(f"Compiling sampler.")
+            subprocess.call(["stack", "install", "--local-bin-path", script_path], cwd=dirpath)
+           
+        finally:
+            click.echo("Done.")
+            shutil.rmtree(dirpath)
+
+if __name__ == '__main__':
+    run()
