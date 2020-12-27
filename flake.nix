@@ -15,8 +15,8 @@
 
         name = "boltzmann-brain";
 
-        # paganini-hs dependency BinderAnn won't compile with later ghc versions 
-        compiler = "ghc882";  
+        # paganini-hs dependency BinderAnn breaks ghc>8.65 
+        compiler = "ghc865";  
          
         pkgs = import nixpkgs {
           inherit system;
@@ -28,28 +28,50 @@
           # overlays = [] # Add or tweak non-Haskell packages here.
         };
 
-        haskellPackages = pkgs.haskell.packages.${compiler}.override {
-          overrides = self: super: {
-            "${name}" = self.callCabal2nix name ./. {};
-            # Override other Haskell packages as needed here.
-          };
+        mylib = mach-nix.lib.${system}; # adds mkPython, mkPythonShell, etc.
+
+        # latest scs breaks on `import paganini`, 
+        paganini-custom = mylib.mkPython {
+          requirements = ''
+            paganini==1.3.3
+            cvxpy>=1.1. 7 
+            scs==2.1.1-2 # scs 2.1.2 broken 
+          '';
+        };
+
+        # 1.22 is a breaking change for us
+        haskell-src-exts-custom = pkgs.haskell.lib.overrideCabal pkgs.haskell.packages.${compiler}.haskell-src-exts {
+          version = "1.21.1";
+          sha256 = "LskRYUMl8eXu9+W+8VwIuCZZMdado85WavEJ1IZFPmA=";
         };
         
-        devEnv = haskellPackages.shellFor {
+        haskellPackages = pkgs.haskell.packages.${compiler}.override {
+          overrides = self: super: {
+            
+            "${name}" = super.callCabal2nix name ./. {
+              haskell-src-exts = haskell-src-exts-custom;
+            };
+
+            paganini-hs = super.callPackage paganini-hs.derive.${system} {
+              paganini = paganini-custom;
+            };
+
+          };
+        };
+
+        devShell = haskellPackages.shellFor {
           withHoogle = true; # Provides docs, optional. 
           packages = p: [
             p."${name}"
-            # Add other Haskell packages below if you just want a Haskell hacking env.
-            # p.lens
           ]; 
-          buildInputs = with pkgs; [
+          buildInputs = [
             haskellPackages.cabal-install
             haskellPackages.ghcid
             haskellPackages.haskell-language-server
             haskellPackages.hlint
             haskellPackages.ormolu
-            cabal2nix
-            # Add more dev tools as needed. They won't be included by `nix build`
+            haskellPackages.cabal2nix
+            paganini-custom
           ];
         };
 
@@ -58,6 +80,6 @@
       in
         rec {
           inherit devShell;
-          # defaultPackage = drv;
+          defaultPackage = drv;
         });
 }
