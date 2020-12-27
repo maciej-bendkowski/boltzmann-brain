@@ -34,7 +34,7 @@
         paganini-custom = mylib.mkPython {
           requirements = ''
             paganini==1.3.3
-            cvxpy>=1.1. 7 
+            cvxpy>=1.1.7 
             scs==2.1.1-2 # scs 2.1.2 broken 
           '';
         };
