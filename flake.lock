@@ -171,11 +171,11 @@
         "nixpkgs": "nixpkgs_4"
       },
       "locked": {
-        "lastModified": 1609109804,
-        "narHash": "sha256-pKbjhfRMrRsoxSG7dFNh5hOFwiVlVJI8f7E6v4eKAZQ=",
+        "lastModified": 1609118505,
+        "narHash": "sha256-ctXcXKDOOEyg0Lw7KYDRlMGXndjR91BRYqpBKfTEXgQ=",
         "owner": "timsears",
         "repo": "paganini-hs",
-        "rev": "0911a5ff8018e08ea8c48579967a7d84a6b1af2f",
+        "rev": "b2c66862b4fdb8980675714fd6a1ce8d5356e976",
         "type": "github"
       },
       "original": {
