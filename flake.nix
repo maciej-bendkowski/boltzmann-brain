@@ -7,7 +7,7 @@
 
   inputs.mach-nix.url = "github:DavHau/mach-nix";
   
-  inputs.paganini-hs.url = "github:timsears/paganini-hs/nix-support";
+  inputs.paganini-hs.url = "github:maciej-bendkowski/paganini-hs";
 
   outputs = { self, nixpkgs, flake-utils, mach-nix, paganini-hs }:
     flake-utils.lib.eachSystem [ "x86_64-linux" ] (system:

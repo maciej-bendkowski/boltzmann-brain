@@ -171,16 +171,15 @@
         "nixpkgs": "nixpkgs_4"
       },
       "locked": {
-        "lastModified": 1609118505,
+        "lastModified": 1609259862,
         "narHash": "sha256-ctXcXKDOOEyg0Lw7KYDRlMGXndjR91BRYqpBKfTEXgQ=",
-        "owner": "timsears",
+        "owner": "maciej-bendkowski",
         "repo": "paganini-hs",
-        "rev": "b2c66862b4fdb8980675714fd6a1ce8d5356e976",
+        "rev": "86058aa698c6f87e470ebfbeb2fc602ffcf8cb45",
         "type": "github"
       },
       "original": {
-        "owner": "timsears",
-        "ref": "nix-support",
+        "owner": "maciej-bendkowski",
         "repo": "paganini-hs",
         "type": "github"
       }
