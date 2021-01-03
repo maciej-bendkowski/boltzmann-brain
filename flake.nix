@@ -60,12 +60,13 @@
         };
 
         devShell = haskellPackages.shellFor {
-          withHoogle = true; # Provides docs, optional. 
+          withHoogle = false; # Provides docs, optional. 
           packages = p: [
             p."${name}"
           ]; 
           buildInputs = [
             haskellPackages.cabal-install
+            pkgs.stack
             haskellPackages.ghcid
             haskellPackages.haskell-language-server
             haskellPackages.hlint
