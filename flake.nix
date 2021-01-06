@@ -1,21 +1,24 @@
 {
   description = "nix support for boltzmann-brain";
 
-  inputs.nixpkgs.url = "github:NixOs/nixpkgs/nixpkgs-unstable"; 
+  inputs.nixpkgs.url = "github:NixOs/nixpkgs/nixos-20.03"; 
+
+  inputs.nixpkgs-unstable.url = "github:NixOs/nixpkgs/nixpkgs-unstable";
   
   inputs.flake-utils.url = "github:numtide/flake-utils";
 
   inputs.mach-nix.url = "github:DavHau/mach-nix";
   
-  inputs.paganini-hs.url = "github:maciej-bendkowski/paganini-hs";
+  inputs.paganini-hs.url = "github:maciej-bendkowski/paganini-hs/c95369b1fc245ae943a0dbc90647688128ab5c71";
+  inputs.paganini-hs.flake = false;
 
-  outputs = { self, nixpkgs, flake-utils, mach-nix, paganini-hs }:
+  outputs = inputs@{ self, nixpkgs, nixpkgs-unstable, flake-utils, mach-nix, paganini-hs }:
     flake-utils.lib.eachSystem [ "x86_64-linux" ] (system:
       let
 
         name = "boltzmann-brain";
 
-        # paganini-hs dependency BinderAnn breaks ghc>8.65 
+        # paganini-hs dependency BinderAnn breaks if ghc > 8.65 
         compiler = "ghc865";  
          
         pkgs = import nixpkgs {
@@ -25,7 +28,15 @@
             allowBroken = true;
             allowUnsupportedSystem = true;
           };
-          # overlays = [] # Add or tweak non-Haskell packages here.
+        };
+
+        unstable = import nixpkgs-unstable {
+          inherit system;
+          config = {
+            allowUnfree = true;
+            allowBroken = true;
+            allowUnsupportedSystem = true;
+          };
         };
 
         mylib = mach-nix.lib.${system}; # adds mkPython, mkPythonShell, etc.
@@ -39,44 +50,42 @@
           '';
         };
 
-        # 1.22 is a breaking change for us
-        haskell-src-exts-custom = pkgs.haskell.lib.overrideCabal pkgs.haskell.packages.${compiler}.haskell-src-exts {
-          version = "1.21.1";
-          sha256 = "LskRYUMl8eXu9+W+8VwIuCZZMdado85WavEJ1IZFPmA=";
-        };
-        
         haskellPackages = pkgs.haskell.packages.${compiler}.override {
           overrides = self: super: {
             
-            "${name}" = super.callCabal2nix name ./. {
-              haskell-src-exts = haskell-src-exts-custom;
-            };
+            boltzmann-brain = self.callCabal2nix "boltzmann-brain" ./. { };
 
-            paganini-hs = super.callPackage paganini-hs.derive.${system} {
-              paganini = paganini-custom;
-            };
+            # 1.22 is a breaking change. Must stop at 1.21.1.
+            haskell-src-exts = super.callHackage "haskell-src-exts" "1.21.1" {};
 
+            # from pinned github, nixos-20.03 didn't have it yet. 
+            BinderAnn = super.callHackageDirect
+              { pkg = "BinderAnn";
+                ver = "0.1.0.0";
+                sha256 = "f3EOxiOS1OJTohanKzfpeLfacgUM0VlEqOj5e+kHAuI=";} {};
+
+            paganini-hs = pkgs.haskell.lib.dontCheck (
+              super.callCabal2nix "paganini-hs" paganini-hs {});
           };
         };
 
         devShell = haskellPackages.shellFor {
           withHoogle = false; # Provides docs, optional. 
           packages = p: [
-            p."${name}"
+            p.boltzmann-brain
           ]; 
           buildInputs = [
-            haskellPackages.cabal-install
-            pkgs.stack
-            haskellPackages.ghcid
-            haskellPackages.haskell-language-server
-            haskellPackages.hlint
-            haskellPackages.ormolu
-            haskellPackages.cabal2nix
+            unstable.cabal-install
+            unstable.ghcid
+            unstable.haskell-language-server
+            unstable.hlint
+            unstable.ormolu
+            unstable.cabal2nix
             paganini-custom
           ];
         };
-
-        drv = haskellPackages."${name}";
+        
+        drv = haskellPackages.boltzmann-brain;
         
       in
         rec {
