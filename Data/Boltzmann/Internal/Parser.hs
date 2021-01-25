@@ -108,7 +108,6 @@ parseFromFile p file = runParser p file <$> readFile file
 
 -- | Prints the given parsing errors.
 printError :: (Stream t, ShowErrorComponent e) => ParseErrorBundle t e -> IO a
-
 printError err = do
   hPutStr stderr $ errorBundlePretty err
   exitWith (ExitFailure 1)

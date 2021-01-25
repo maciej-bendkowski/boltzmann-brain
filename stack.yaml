@@ -5,7 +5,8 @@ packages:
 extra-deps:
 - pretty-terminal-0.1.0.0
 - git: https://github.com/maciej-bendkowski/paganini-hs.git
-  commit: c95369b1fc245ae943a0dbc90647688128ab5c71
+  commit: 86058aa698c6f87e470ebfbeb2fc602ffcf8cb45
 - git: https://github.com/OctopiChalmers/BinderAnn
   commit: fcae12a50c8b105f48b575b0787107752a170ec3
+- buffon-machines-1.1.1.1
 resolver: lts-14.18

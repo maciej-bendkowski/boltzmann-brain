@@ -186,8 +186,9 @@ main = do
   runCompiler opts
 
 -- | Prints parsing errors or returns the parsed system.
-getSystem
-  :: (Stream t, ShowErrorComponent e) => Either (ParseErrorBundle t e) a -> IO a
+-- getSystem
+getSystem :: (Stream s, ShowErrorComponent e) =>
+             Either (ParseErrorBundle s e) b -> IO b
 
 getSystem (Left  err) = printError err
 getSystem (Right sys) = return sys
