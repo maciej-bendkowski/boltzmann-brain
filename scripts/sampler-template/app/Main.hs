@@ -27,13 +27,13 @@ options =
            ["output"]
            (ReqArg OutputFile "FILE")
            "Output file. If not given, STDOUT is used instead."
-  , Option "lb"
+  , Option "l"
            ["lower-bound"]
            (ReqArg LowerBound "N")
            "Lower bound for the structure size. Default: 10."
-  , Option "ub"
-           ["lower-bound"]
-           (ReqArg LowerBound "N")
+  , Option "u"
+           ["upper-bound"]
+           (ReqArg UpperBound "N")
            "Upper bound for the structure size. Default: 50."
   , Option "s"
            ["samples"]
