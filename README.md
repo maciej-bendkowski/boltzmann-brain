@@ -313,3 +313,4 @@ structures](http://algo.inria.fr/flajolet/Publications/DuFlLoSc04.pdf)
 - [C. Pivoteau, B. Salvy, M. Soria: Algorithms for Combinatorial Systems:
    Well-Founded Systems and Newton Iterations](https://www.sciencedirect.com/science/article/pii/S0097316512000908)
 - [O.Bodini, J. Lumbroso, N. Rolin: Analytic samplers and the combinatorial rejection method](https://dl.acm.org/citation.cfm?id=2790220&dl=ACM&coll=DL)
+- [F. Saad, C. Freer, M. Rinard, V. Mansinghka : Optimal Approximate Sampling from Discrete Probability Distributions](https://arxiv.org/pdf/2001.04555.pdf)
