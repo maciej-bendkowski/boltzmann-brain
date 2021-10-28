@@ -1,0 +1,7 @@
+cradle:
+  stack:
+    - path: "././"
+      component: "boltzmann-brain:lib"
+
+    - path: "./app/Main.hs"
+      component: "boltzmann-brain:exe:bb"

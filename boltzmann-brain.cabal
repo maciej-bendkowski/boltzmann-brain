@@ -57,7 +57,7 @@ library
                      , pretty-terminal >= 0.1.0.0
                      , edit-distance >= 0.2.2.1
                      , template-haskell >= 2.11.1.0
-                     , paganini-hs >= 0.2.0.0
+                     , paganini-hs >= 0.2.1.0
   ghc-options:         -O2
                        -Wall
                        -Wcompat

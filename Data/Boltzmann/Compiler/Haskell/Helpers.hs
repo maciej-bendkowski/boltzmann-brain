@@ -220,6 +220,9 @@ maybeT' = typeCons "MaybeT"
 buffonMachine' :: Type ()
 buffonMachine' = typeCons "BuffonMachine"
 
+vector' :: Type ()
+vector' = typeCons "Vector"
+
 int' :: Type ()
 int' = typeCons "Int"
 
@@ -248,9 +251,20 @@ decisionTreeType :: Type ()
 decisionTreeType =
   TyForall () Nothing Nothing (TyApp () (typeCons "DecisionTree") int')
 
+ddgType :: Type ()
+ddgType = TyForall () Nothing Nothing (TyApp () (typeCons "Vector") int')
+
 probList :: [(Cons Double, Int)] -> [Exp ()]
 probList = map (\x -> Lit () (Frac () (f x) (show (f x))))
   where f = toRational . weight . fst
 
+intList :: [Int] -> [Exp ()]
+intList = map (\x -> Lit () (Int () (toInteger x) (show (toInteger x))))
+
 choiceN :: String -> Exp () -> Stmt ()
-choiceN v s = bind v $ applyF (varExp "lift") [applyF (varExp "choice") [s]]
+choiceN v s = bind v $ applyF (varExp "lift") [applyF (varExp "choiceDDG") [s]]
+
+doLet :: String -> Exp () -> Stmt ()
+doLet x expr = LetStmt
+  ()
+  (BDecls () [PatBind () (PVar () (Ident () x)) (UnGuardedRhs () expr) Nothing])

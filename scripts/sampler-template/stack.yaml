@@ -36,7 +36,7 @@ packages:
 #
 extra-deps:
  - git: https://github.com/maciej-bendkowski/buffon-machines
-   commit: 1caa9265af39da65e577323502c5e1e192d8739a
+   commit: 6a98e5437e6a4d9b0b3c1e78532839fdac0325ba
 #
 # extra-deps: []
 

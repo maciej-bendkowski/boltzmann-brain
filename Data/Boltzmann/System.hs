@@ -25,6 +25,7 @@ module Data.Boltzmann.System
   , typeList
   , initType
   , paramTypes
+  , paramTypesDDG
   , paramTypesW
   , typeWeight
   , seqTypes
@@ -83,15 +84,23 @@ isRationalF = not . isAlgebraicF
 -- | System of combinatorial structures.
 data System a = System { defs        :: Map String [Cons a] -- ^ Type definitions.
                        , annotations :: Annotations         -- ^ System annotations.
+                       , typeDDGs    :: Map String [Int]
+                       , seqDDGs     :: Map String [Int]
                        } deriving (Show)
 
 data SystemT a = SystemT { systemTypes       :: [TypeT a]
                          , systemAnnotations :: Annotations
+                         , systemTypeDDGs    :: Map String [Int]
+                         , systemSeqDDGs     :: Map String [Int]
                          } deriving (Show)
 
 instance ToJSON a => ToJSON (SystemT a) where
-  toJSON sys =
-    object ["types" .= systemTypes sys, "annotations" .= systemAnnotations sys]
+  toJSON sys = object
+    [ "types" .= systemTypes sys
+    , "annotations" .= systemAnnotations sys
+    , "typeDDGs" .= systemTypeDDGs sys
+    , "seqDDGs" .= systemSeqDDGs sys
+    ]
 
 data TypeT a = TypeT { typeName :: String
                      , constrs  :: [ConsT a]
@@ -125,6 +134,8 @@ instance ToJSON ArgT where
 toSystemT :: System a -> SystemT a
 toSystemT sys = SystemT { systemTypes       = map toTypeT (M.toList $ defs sys)
                         , systemAnnotations = annotations sys
+                        , systemTypeDDGs    = typeDDGs sys
+                        , systemSeqDDGs     = seqDDGs sys
                         }
 
 toTypeT :: (String, [Cons a]) -> TypeT a
@@ -192,6 +203,18 @@ paramTypes = M.toList . defs . system
 -- | List of types with corresponding constructors and input weights.
 paramTypesW :: PSystem a -> [(String, [(Cons a, Int)])]
 paramTypesW sys = map (addW $ weights sys) xs where xs = paramTypes sys
+
+paramTypesDDG :: PSystem a -> [(String, [Int])]
+paramTypesDDG sys = map
+  (\x ->
+    ( x
+    , case x `M.lookup` typeDDGs (system sys) of
+      Just xs -> xs
+      Nothing -> []
+    )
+  )
+  (M.keys sys')
+  where sys' = defs $ system sys
 
 addW :: System Int -> (String, [a]) -> (String, [(a, Int)])
 addW sys (s, cons) = (s, zip cons ws) where ws = typeW sys s

@@ -47,18 +47,18 @@ runPaganini
   -> IO (Either (ParseErrorBundle String Void) (PSystem Double))
 
 runPaganini sys paramT = do
-
-  -- FIXME use arg
   info "Running paganini..."
   let gen = withString (annotations sys) "generate" (initType sys)
   result <- toPaganini gen sys
   case result of
-    Left  err           -> fail' (show err)
-    Right (rho, ts, us) -> do
+    Left  err                           -> fail' (show err)
+    Right (rho, ts, us, tsDDGs, lsDDGs) -> do
       info "Computing branching probabilities..."
       let ts'  = fromList ts
       let sys' = parametrise sys paramT rho ts' us
       return $ Right sys'
+        { system = (system sys') { typeDDGs = tsDDGs, seqDDGs = lsDDGs }
+        }
 
 -- | Parses the given input string as a Paganini tuning vector.
 readPaganini

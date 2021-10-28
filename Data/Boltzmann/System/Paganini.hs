@@ -23,7 +23,7 @@ mkVariables sys = do
 mkSeqVariables :: System a -> Map String Let -> Spec (Map String Def)
 mkSeqVariables sys variables = do
   let seqs = seqTypes sys
-  ds <- mapM (\(Let v) -> seq v) $ map (variables M.!) seqs
+  ds <- mapM ((\(Let v) -> seq v) . (variables M.!)) seqs
   return (M.fromList $ zip (M.keys $ defs sys) ds)
 
 mkDefinitions
@@ -106,7 +106,16 @@ toPaganini
   :: Integral a
   => String
   -> System a
-  -> IO (Either PaganiniError (Double, [Double], [Double]))
+  -> IO
+       ( Either
+           PaganiniError
+           ( Double
+           , [Double]
+           , [Double]
+           , Map String [Int]
+           , Map String [Int]
+           )
+       )
 toPaganini target sys = paganini $ do
   let n = structureSize sys
   Let z <- variable' $ fromIntegral n
@@ -117,8 +126,30 @@ toPaganini target sys = paganini $ do
 
   tuneSystem xs target
 
-  z'  <- value z
-  xs' <- getValues xs
+  z'     <- value z
+  xs'    <- getValues xs
+
+  xsDDGs <- mapM
+    (\(s, x) -> do
+      x' <- ddg x
+      return (s, fromJust x')
+    )
+    (M.toList xs)
+
+  ysDDGs <- mapM
+    (\(s, x) -> do
+      x' <- ddg x
+      return (s, fromJust x')
+    )
+    (M.toList ds)
+
+
   us' <- mapM (\(Let u) -> value u) us
 
-  return (fromJust z', toDouble xs', toDouble us')
+  return
+    ( fromJust z'
+    , toDouble xs'
+    , toDouble us'
+    , M.fromList xsDDGs
+    , M.fromList ysDDGs
+    )

@@ -35,7 +35,10 @@ systemStmt = sc *> systemStmt' <* eof
   systemStmt' = do
     an <- annotationParser
     ds <- some defsStmt
-    return S.System { S.defs = M.fromList ds, S.annotations = M.fromList an }
+    return S.System { S.defs = M.fromList ds,
+                      S.annotations = M.fromList an,
+                      S.typeDDGs = M.empty,
+                      S.seqDDGs = M.empty }
 
 defsStmt :: Parser (String, [S.Cons Int])
 defsStmt = do

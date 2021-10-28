@@ -1,5 +1,6 @@
 -- Lambda terms in unary de Bruijn notation
 @generate Lambda
+@size 1000000
 
 -- Natural size notion
 Lambda = Abs Lambda | App Lambda Lambda | Index DeBruijn (0).

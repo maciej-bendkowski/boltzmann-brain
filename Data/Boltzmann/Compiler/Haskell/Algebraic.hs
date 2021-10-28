@@ -94,7 +94,7 @@ compileModule sys mod' withIO' withLists' withShow' = Module
   imports = declareImports withIO'
   decls =
     declareADTs withShow' sys
-      ++ declareDecisionTrees sys
+      ++ declareDDGs sys
       ++ declareListDecisionTrees sys withLists'
       ++ declareGenerators sys
       ++ declareListGenerators sys withLists'
@@ -115,11 +115,11 @@ declareImports withIO' =
     (  [ importType' "BuffonMachine"
        , importType "DecisionTree"
        , importFunc "decisionTree"
-       , importFunc "choice"
+       , importFunc "choiceDDG"
        ]
     ++ importIO withIO'
     )
-  , importQual "Language.Haskell.TH.Syntax" "TH"
+  , importFrom "Data.Vector"   [importType "Vector", importFunc "fromList"]
   , importFrom "System.Random" [importType "RandomGen"]
   ]
 
@@ -130,8 +130,8 @@ importIO withIO' = [ importFunc "runRIO" | withIO' ]
 genName :: ShowS
 genName = (++) "genRandom"
 
-decisionTreeName :: ShowS
-decisionTreeName = (++) "decisionTree"
+ddgName :: ShowS
+ddgName = (++) "ddg"
 
 decisionTreeListName :: ShowS
 decisionTreeListName = (++) "decisionTreeList"
@@ -199,8 +199,18 @@ guardian :: String -> Stmt ()
 guardian v =
   Qualifier () $ App () (varExp "guard") (varExp v `greater` toLit 0)
 
-declareDecisionTrees :: PSystem Double -> [Decl ()]
-declareDecisionTrees sys = concatMap declareDecisionTree (paramTypesW sys)
+declareDDGs :: PSystem Double -> [Decl ()]
+declareDDGs sys = concatMap declareDDG (paramTypesDDG sys)
+
+declareDDG :: (String, [Int]) -> [Decl ()]
+declareDDG (t, ddg) = declTFun name' type' [] body
+ where
+  type' = ddgType
+  name' = ddgName t
+  body  = spliceExp quote
+  quote = QuasiQuote () "" (prettyPrint dt')
+  dt'   = applyF (varExp "fromList") [ddg']
+  ddg'  = LHE.List () (intList ddg)
 
 declareDecisionT :: Exp () -> String -> [Decl ()]
 declareDecisionT prob name' = declTFun name' type' [] body
@@ -209,12 +219,6 @@ declareDecisionT prob name' = declTFun name' type' [] body
   body  = spliceExp lift'
   lift' = applyF (qVarExp "TH" "lift") [dt']
   dt'   = applyF (varExp "decisionTree") [prob]
-
-declareDecisionTree :: (String, [(Cons Double, Int)]) -> [Decl ()]
-declareDecisionTree (t, g) = declareDecisionT prob name'
- where
-  name' = decisionTreeName t
-  prob  = LHE.List () (init $ probList g)
 
 declareGenerators :: PSystem Double -> [Decl ()]
 declareGenerators sys = concatMap declGenerator (paramTypesW sys)
@@ -230,7 +234,7 @@ constrGenerator _ [(constr, w)] = rec True constr w
 constrGenerator t cs            = Do () (initSteps ++ branching)
  where
   branching = [Qualifier () $ Case () (varExp "n") (constrGenerator' 0 cs)]
-  initSteps = [guardian "ub", choiceN "n" (varExp $ decisionTreeName t)]
+  initSteps = [guardian "ub", choiceN "n" (varExp $ ddgName t)]
 
 constrGenerator' :: Int -> [(Cons Double, Int)] -> [Alt ()]
 constrGenerator' _ [(constr, w)] =
@@ -319,7 +323,7 @@ constrListGenerator :: String -> Exp ()
 constrListGenerator t = Do () (initSteps ++ branching)
  where
   branching = [Qualifier () $ Case () (varExp "n") (constrListGenerator' 0 t)]
-  initSteps = [guardian "ub", choiceN "n" (varExp $ decisionTreeListName t)]
+  initSteps = [guardian "ub", choiceN "n" (varExp $ ddgName t)]
 
 constrListGenerator' :: Int -> String -> [Alt ()]
 constrListGenerator' n t =
