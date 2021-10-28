@@ -1,58 +1,79 @@
--- | Compiler:     Boltzmann Brain v1.6 (30-12-2019 18:01:59)
--- | Generated at: 30-12-2019 18:03:16
--- | Singularity:  0.173015595712479
--- | System:       (Types: 2, Constr: 6)
+-- | Compiler:     Boltzmann Brain v2.0 (28-10-2021 19:43:25)
+-- | Generated at: 28-10-2021 20:30:17
+-- | Singularity:  0.173013128066611
 -- | System type:  algebraic
+-- | Target size:  100000
 -- | Stability:    experimental
-{-# LANGUAGE TemplateHaskell #-}
-module Boolean
+{-# LANGUAGE TemplateHaskell, DeriveGeneric, DeriveAnyClass #-}
+module Sampler
        (Fun(), Index(), genRandomFun, genRandomIndex, genRandomFunList,
         genRandomIndexList, sample, sampleFunIO, sampleIndexIO,
         sampleFunListIO, sampleIndexListIO)
        where
+import GHC.Generics
+import Data.Aeson
 import Control.Monad (guard)
 import Control.Monad.Trans (lift)
 import Control.Monad.Trans.Maybe (MaybeT(..), runMaybeT)
 import Data.Buffon.Machine
-       (BuffonMachine, DecisionTree(..), decisionTree, choice, runRIO)
-import qualified Language.Haskell.TH.Syntax as TH
+       (BuffonMachine, DecisionTree(..), decisionTree, choiceDDG, runRIO)
+import Data.Vector (Vector(..), fromList)
 import System.Random (RandomGen(..))
 
 data Fun = Variable Index
          | And Fun Fun
          | Or Fun Fun
          | Neg Fun
-             deriving Show
+             deriving (Generic, ToJSON, FromJSON, Show)
 
 data Index = Succ Index
            | Zero
-               deriving Show
+               deriving (Generic, ToJSON, FromJSON, Show)
 
-decisionTreeFun :: DecisionTree Int
-decisionTreeFun
+ddgFun :: Vector Int
+ddgFun
   = $(
-      TH.lift
-        (decisionTree
-           [0.4134922021437745, 0.3259523393568867, 8.753986278686217e-2])
+      [|fromList
+  [2, 189, 4, 185, 6, 181, 8, 177, 10, 173, 12, 169, 14, 165, 16,
+   158, 18, 154, 20, 150, 22, 146, 24, 142, 26, 141, 28, 137, 30, 133,
+   32, 129, 34, 128, 36, 121, 38, 114, 40, 107, 42, 103, 44, 99, 46,
+   95, 48, 91, 50, 87, 52, 80, 54, 76, 56, 72, 58, 68, 60, 67, 62, 66,
+   64, 65, -4, -1, -4, -4, 70, 71, -3, -1, 74, 75, -4, -3, 78, 79, -4,
+   -3, 82, 86, 84, 85, -2, -1, -3, 89, 90, -2, -1, 93, 94, -4, -1, 97,
+   98, -3, -1, 101, 102, -4, -1, 105, 106, -4, -3, 109, 113, 111, 112,
+   -2, -1, -3, 116, 120, 118, 119, -2, -1, -4, 123, 127, 125, 126, -3,
+   -2, -3, -4, 131, 132, -3, -2, 135, 136, -2, -1, 139, 140, -4, -1,
+   -4, 144, 145, -3, -1, 148, 149, -2, -1, 152, 153, -3, -2, 156, 157,
+   -4, -3, 160, 164, 162, 163, -2, -1, -1, 167, 168, -2, -1, 171, 172,
+   -3, -2, 175, 176, -4, -3, 179, 180, -4, -1, 183, 184, -3, -2, 187,
+   188, -4, -1, 191, 192, -2, -1]|]
       )
 
-decisionTreeIndex :: DecisionTree Int
-decisionTreeIndex
-  = $( TH.lift (decisionTree [0.17301559571247896]) )
+ddgIndex :: Vector Int
+ddgIndex
+  = $(
+      [|fromList
+  [2, 96, 4, 95, 6, 94, 8, 93, 10, 92, 12, 91, 14, 90, 16, 89, 18,
+   88, 20, 87, 22, 86, 24, 85, 26, 84, 28, 83, 30, 82, 32, 81, 34, 80,
+   36, 79, 38, 78, 40, 77, 42, 76, 44, 75, 46, 74, 48, 73, 50, 72, 52,
+   71, 54, 70, 56, 69, 58, 68, 60, 67, 62, 66, 64, 65, -2, -1, -1, -1,
+   -1, -1, -2, -2, -1, -2, -1, -1, -2, -1, -2, -2, -1, -2, -1, -2, -1,
+   -2, -2, -1, -2, -2, -2, -1, -1, -2, -1, -2, -2]|]
+      )
 
 decisionTreeListFun :: DecisionTree Int
 decisionTreeListFun
-  = $( TH.lift (decisionTree [0.505965155490016]) )
+  = $( TH.lift (decisionTree [0.505948272455738]) )
 
 decisionTreeListIndex :: DecisionTree Int
 decisionTreeListIndex
-  = $( TH.lift (decisionTree [0.209212646351584]) )
+  = $( TH.lift (decisionTree [0.209209038182904]) )
 
 genRandomFun ::
                (RandomGen g) => Int -> MaybeT (BuffonMachine g) (Fun, Int)
 genRandomFun ub
   = do guard (ub > 0)
-       n <- lift (choice decisionTreeFun)
+       n <- lift (choiceDDG ddgFun)
        case n of
            0 -> do (x0, w0) <- genRandomIndex ub
                    return (Variable x0, w0)
@@ -69,7 +90,7 @@ genRandomIndex ::
                  (RandomGen g) => Int -> MaybeT (BuffonMachine g) (Index, Int)
 genRandomIndex ub
   = do guard (ub > 0)
-       n <- lift (choice decisionTreeIndex)
+       n <- lift (choiceDDG ddgIndex)
        case n of
            0 -> do (x0, w0) <- genRandomIndex (ub - 1)
                    return (Succ x0, 1 + w0)
@@ -79,7 +100,7 @@ genRandomFunList ::
                    (RandomGen g) => Int -> MaybeT (BuffonMachine g) ([Fun], Int)
 genRandomFunList ub
   = do guard (ub > 0)
-       n <- lift (choice decisionTreeListFun)
+       n <- lift (choiceDDG ddgFun)
        case n of
            0 -> do (x, w) <- genRandomFun ub
                    (xs, ws) <- genRandomFunList (ub - w)
@@ -90,7 +111,7 @@ genRandomIndexList ::
                      (RandomGen g) => Int -> MaybeT (BuffonMachine g) ([Index], Int)
 genRandomIndexList ub
   = do guard (ub > 0)
-       n <- lift (choice decisionTreeListIndex)
+       n <- lift (choiceDDG ddgIndex)
        case n of
            0 -> do (x, w) <- genRandomIndex ub
                    (xs, ws) <- genRandomIndexList (ub - w)

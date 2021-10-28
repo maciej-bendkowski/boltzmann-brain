@@ -1,31 +1,33 @@
--- | Compiler:     Boltzmann Brain v1.6 (30-12-2019 18:01:59)
--- | Generated at: 30-12-2019 18:05:12
--- | Singularity:  0.25
--- | System:       (Types: 1, Constr: 1)
+-- | Compiler:     Boltzmann Brain v2.0 (28-10-2021 19:43:25)
+-- | Generated at: 28-10-2021 20:31:55
+-- | Singularity:  0.249999851843161
 -- | System type:  algebraic
+-- | Target size:  650
 -- | Stability:    experimental
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, DeriveGeneric, DeriveAnyClass #-}
 module Sampler
        (Tree(), genRandomTree, genRandomTreeList, sample, sampleTreeIO,
         sampleTreeListIO)
        where
+import GHC.Generics
+import Data.Aeson
 import Control.Monad (guard)
 import Control.Monad.Trans (lift)
 import Control.Monad.Trans.Maybe (MaybeT(..), runMaybeT)
 import Data.Buffon.Machine
-       (BuffonMachine, DecisionTree(..), decisionTree, choice, runRIO)
-import qualified Language.Haskell.TH.Syntax as TH
+       (BuffonMachine, DecisionTree(..), decisionTree, choiceDDG, runRIO)
+import Data.Vector (Vector(..), fromList)
 import System.Random (RandomGen(..))
 
 newtype Tree = Node [Tree]
-                 deriving Show
+                 deriving (Generic, ToJSON, FromJSON, Show)
 
-decisionTreeTree :: DecisionTree Int
-decisionTreeTree = $( TH.lift (decisionTree []) )
+ddgTree :: Vector Int
+ddgTree = $( [|fromList []|] )
 
 decisionTreeListTree :: DecisionTree Int
 decisionTreeListTree
-  = $( TH.lift (decisionTree [0.500000000000001]) )
+  = $( TH.lift (decisionTree [0.49961508852964]) )
 
 genRandomTree ::
                 (RandomGen g) => Int -> MaybeT (BuffonMachine g) (Tree, Int)
@@ -38,7 +40,7 @@ genRandomTreeList ::
                     (RandomGen g) => Int -> MaybeT (BuffonMachine g) ([Tree], Int)
 genRandomTreeList ub
   = do guard (ub > 0)
-       n <- lift (choice decisionTreeListTree)
+       n <- lift (choiceDDG ddgTree)
        case n of
            0 -> do (x, w) <- genRandomTree ub
                    (xs, ws) <- genRandomTreeList (ub - w)
