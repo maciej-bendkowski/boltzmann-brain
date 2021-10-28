@@ -1,14 +1,17 @@
-Boltzmann Brain [![Build Status](https://travis-ci.org/maciej-bendkowski/boltzmann-brain.svg?branch=master)](https://travis-ci.org/maciej-bendkowski/boltzmann-brain) [![Hackage](https://img.shields.io/badge/hackage-v1.6-blue.svg)](http://hackage.haskell.org/package/boltzmann-brain) [![License](https://img.shields.io/badge/license-BSD--3-orange.svg)](https://tldrlegal.com/license/bsd-3-clause-license-(revised))
+Boltzmann Brain [![Build
+Status](https://travis-ci.org/maciej-bendkowski/boltzmann-brain.svg?branch=master)](https://travis-ci.org/maciej-bendkowski/boltzmann-brain)
+[![Hackage](https://img.shields.io/badge/hackage-v1.6-blue.svg)](http://hackage.haskell.org/package/boltzmann-brain)
+[![License](https://img.shields.io/badge/license-BSD--3-orange.svg)](https://tldrlegal.com/license/bsd-3-clause-license-(revised))
 ---------------
 
-*Boltzmann Brain* is a [Haskell](https://www.haskell.org/) library and
-set of standalone applications meant for random generation of combinatorial structures.
+*Boltzmann Brain* is a [Haskell](https://www.haskell.org/) library and set of
+standalone applications meant for random generation of combinatorial structures.
 Using an **easy** and **intuitive** context-free text input representing a
 combinatorial specification of rational or algebraic objects, *Boltzmann Brain*
 allows its users to:
 
 - **sample** random structures following the given input specification, and
- - **compile** a self-contained, dedicated analytic sampler for **optimal sampling efficiency**.
+- **compile** a self-contained, dedicated analytic sampler for **optimal sampling efficiency**.
 
 Remarkably, using *Boltzmann Brain* it is possible to **control the outcome
 distribution** of generated objects and, in particular, skew it to one needs.
@@ -58,9 +61,8 @@ MotzkinTree = Leaf
 In the above example, a ```MotzkinTree``` data type is defined. It contains three
 constructors:
 
- - a constant ```Leaf``` of weight one (default value if not
-annotated);
--  a unary ```Unary``` constructor of weight two, and
+- a constant ```Leaf``` of weight one (default value if not annotated);
+- a unary ```Unary``` constructor of weight two, and
 - a binary constructor ```Binary``` of default weight one.
 
 The definition ends with an obligatory dot.
@@ -80,13 +82,15 @@ generated objects.
 *Boltzmann Brain* supports **target frequency calibration** using convex
 optimisation techniques. These are implemented as a Python library *Paganini*
 built using *cvxpy*. *Boltzmann Brain* communicates with *Paganini* through a
-custom middleware and DSL *Paganini-hs*.
+custom middleware and EDSL called *Paganini-hs*.
 
 Consider the following example of a specification defining Motzkin trees with
 some arbitrary size notion:
 
 ```hs
-@size 1000
+@module   Sampler
+@size     1000
+
 @generate MotzkinTree 
 
 -- Motzkin trees
@@ -95,6 +99,7 @@ MotzkinTree = Leaf
             | Binary MotzkinTree MotzkinTree (2).
    ```
 Using the ```@size``` and ```@generate``` annotation, we indicate the *target size* and *output type*.
+The ```@module``` annotation defines the name of the outcome sampler module.
 The ```Unary``` constructor is given weight *2* and a target frequency of
 *250*. In consequence, the system is to be **tuned** such that the size
 of generated Motzkin trees is on average *1000*. The
@@ -104,10 +109,10 @@ It is therefore possible to distort the natural frequency of each constructor in
 the given system. However, such an additional non-trivial tuning procedure
 causes a not insignificant change in the underlying probability model. In
 extreme cases, such as for instance requiring *80%* of internal nodes in plane
-binary trees, the sampler might unavailable or be virtually ineffective due to
+binary trees, the sampler might be unavailable or virtually ineffective due to
 the sparsity of tuned structures.
 
-Please tune with caution!
+**Please tune with caution!**
 
 ### Basic usage
 *Boltzmann Brain* ships with a few executables. To generate a sampler module you
@@ -152,7 +157,6 @@ Otherwise, some custom user-friendly error messages are provided. The *tuned* sy
 is converted into a suitable JSON representation and is ready for further manipulation,
 for instance sampler generation.
 
-
 ### Sampler compilation
 
 In most cases, it is preferable to generate sampler **executables* instead of Haskell modules.
@@ -171,7 +175,7 @@ We start with installing all the required system dependencies:
 apt-get update
 apt-get install -y cmake curl git libblas-dev liblapack-dev python3 python3-pip
 ```
-The above script installs ```BLAS``` and ```LAPACK``` as well as python3 and its package manager ```pip```.  Since the target destination of both ```bb``` and ```medulla``` is going to be ```~/.local/bin```, before proceeding please make sure that it is included in your ```PATH```.
+The above script installs ```BLAS``` and ```LAPACK``` as well as python3 and its package manager ```pip```.  Since the target destination of executables is going to be ```~/.local/bin```, before proceeding please make sure that it is included in your ```PATH```.
 
 Next, we install required python dependencies
 
@@ -182,7 +186,7 @@ Next, we install required python dependencies
  pip3 install --user paganini
 ```
 
-Note that the above packages play the central role in the system tuning procedure. Without them, *medulla* cannot not work properly. Next, we clone the current repository
+Note that the above packages play the central role in the system tuning procedure. Without them, *paganini* cannot not work properly. Next, we clone the current repository
 
 ```
 git clone https://github.com/maciej-bendkowski/boltzmann-brain.git
@@ -259,7 +263,7 @@ or `python3 >= 3.4`. Otherwise see
 * If some of your packages, for example `numpy` are installed but outdated, the
   installation process sometimes gives an error. For such packages try
 ```
-   pip install --upgrade numpy sympy cvxpy
+   pip install --upgrade six numpy sympy cvxpy
 ```
 
 * The package manager `pip` should not be used with `sudo`. If you don't have
@@ -274,21 +278,9 @@ example
 ```
   pip install paganini
 ```
-When you launch `medulla`, the program tells you the list of packages that are
-missing. In order to install the packages, type into the command line
- ```
- pip install six cvxpy numpy sympy
- ```
+
  Note that the last two packages come by default with [Scientific Computing
 Tools for Python](https://www.scipy.org/about.html)
-
-* The `hmatrix` package in `Haskell` requires prominent linear algebra packages
-`LAPACK` and `BLAS` (which are sometimes called "one of the achievements of the
-human species"). For some systems these packages are already included, but if
-they are not, you can follow the instructions on the [official
-website](http://www.netlib.org/lapack/).
-
-For more help on installation, please consult also our Travis CI tool chain.
 
 #### Pre-compiled binaries
 
