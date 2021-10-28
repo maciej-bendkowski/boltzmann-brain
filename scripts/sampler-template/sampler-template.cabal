@@ -13,7 +13,7 @@ homepage:       https://github.com/mbendkowski/sampler-template#readme
 bug-reports:    https://github.com/mbendkowski/sampler-template/issues
 author:         Maciej Bendkowski
 maintainer:     maciej.bendkowski@gmail.com
-copyright:      2020 Maciej Bendkowski 
+copyright:      2021 Maciej Bendkowski 
 license:        BSD3
 license-file:   LICENSE
 build-type:     Simple

@@ -1,7 +1,7 @@
 {-|
  Module      : Data.Boltzmann.System.Tuner
  Description : Interface utilities with the Paganini tuner.
- Copyright   : (c) Maciej Bendkowski, 2017-2020
+ Copyright   : (c) Maciej Bendkowski, 2017-2021
 
  License     : BSD3
  Maintainer  : maciej.bendkowski@tcs.uj.edu.pl

@@ -1,7 +1,7 @@
 {-|
  Module      : Data.Boltzmann.System.Parser
  Description : General system parsing utilities.
- Copyright   : (c) Maciej Bendkowski, 2017-2020
+ Copyright   : (c) Maciej Bendkowski, 2017-2021
 
  License     : BSD3
  Maintainer  : maciej.bendkowski@tcs.uj.edu.pl

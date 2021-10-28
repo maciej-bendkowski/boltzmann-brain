@@ -1,7 +1,7 @@
 {-|
  Module      : Main
  Description : Boltzmann brain compiler executable.
- Copyright   : (c) Maciej Bendkowski, 2017-2020
+ Copyright   : (c) Maciej Bendkowski, 2017-2021
 
  License     : BSD3
  Maintainer  : maciej.bendkowski@tcs.uj.edu.pl
@@ -77,7 +77,7 @@ signature :: String
 signature = "Boltzmann Brain " ++ version
 
 versionHeader :: String
-versionHeader = signature ++ " (c) 2017-2020."
+versionHeader = signature ++ " (c) 2017-2021."
 
 usageHeader :: IO String
 usageHeader = do

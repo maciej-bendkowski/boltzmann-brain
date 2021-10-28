@@ -77,7 +77,7 @@ signature :: String
 signature = "Boltzmann Brain " ++ version
 
 versionHeader :: String
-versionHeader = signature ++ " (c) 2017-2020."
+versionHeader = signature ++ " (c) 2017-2021."
 
 logoHeader :: String
 logoHeader = align s versionHeader
