@@ -307,4 +307,4 @@ structures](http://algo.inria.fr/flajolet/Publications/DuFlLoSc04.pdf)
 - [O.Bodini, J. Lumbroso, N. Rolin: Analytic samplers and the combinatorial rejection method](https://dl.acm.org/citation.cfm?id=2790220&dl=ACM&coll=DL)
 - [F. Saad, C. Freer, M. Rinard, V. Mansinghka : Optimal Approximate Sampling from Discrete Probability Distributions](https://arxiv.org/pdf/2001.04555.pdf)
 
-See also [generic-boltzmann-brain](https://github.com/maciej-bendkowski/boltzmann-brain).
+See also [generic-boltzmann-brain](https://github.com/maciej-bendkowski/generic-boltzmann-brain).
