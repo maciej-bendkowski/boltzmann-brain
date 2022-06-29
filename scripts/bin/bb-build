@@ -7,6 +7,8 @@ import tempfile
 import shutil
 import subprocess
 
+from pathlib import Path
+
 def toIO(gen_type):
     return f"sample{gen_type}IO"
 
@@ -35,7 +37,8 @@ def parse_spec(spec_file):
 @click.option('--output', default='sampler', help='Sampler executable name.')
 @click.option('--force', is_flag=True, help='Whether to use the force.')
 def run(input, output, force):
-    
+    output = Path(output).absolute()
+
     with open(input, 'r') as spec_file:
 
         gen_type = parse_spec(spec_file)
@@ -62,13 +65,13 @@ def run(input, output, force):
                 return
 
             cabal_location =  os.path.join(dirpath, "sampler-template.cabal")
-            subprocess.call(["sed", "-i", f"s/bb-sampler/{output}/g", cabal_location])
+            subprocess.call(["sed", "-i", f"s/bb-sampler/{output.name}/g", cabal_location])
             
             main_module = os.path.join(dirpath, "app", "Main.hs")
             subprocess.call(["sed", "-i", f"s/SAMPLE_COMMAND/{toIO(gen_type)}/g", main_module])
 
             click.echo(f"Compiling sampler.")
-            subprocess.call(["stack", "install", "--local-bin-path", script_path], cwd=dirpath)
+            subprocess.call(["stack", "install", "--local-bin-path", output.parent], cwd=dirpath)
            
         finally:
             click.echo("Done.")
