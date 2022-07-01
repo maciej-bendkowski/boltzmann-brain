@@ -32,9 +32,10 @@ def parse_spec(spec_file):
 
     return None
 
+
 @click.command()
 @click.option('--input', required=True, help='Input specification.')
-@click.option('--output', default='sampler', help='Sampler executable name.')
+@click.option('--output', default='sampler', help='path to the generated executable')
 @click.option('--force', is_flag=True, help='Whether to use the force.')
 def run(input, output, force):
     output = Path(output).absolute()
