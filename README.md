@@ -38,6 +38,15 @@ cite the accompanying papers:
 
 - [Polynomial tuning of multiparametric combinatorial samplers](https://epubs.siam.org/doi/10.1137/1.9781611975062.9)
 
+### DEPRECATED
+
+*Boltzmann Brain* is no longer actively developed.  While we still might fix
+certain bugs, we do not plan to include new major features. 
+
+We encourage users to consider using the actively developed
+[generic-boltzmann-brain](https://github.com/maciej-bendkowski/boltzmann-brain)
+instead.
+
 ### Overview
 
 *Boltzmann Brain* (*bb* for short) is an open-source analytic sampler compiler.
