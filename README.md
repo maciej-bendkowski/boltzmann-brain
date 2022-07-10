@@ -44,7 +44,7 @@ cite the accompanying papers:
 certain bugs, we do not plan to include new major features. 
 
 We encourage users to consider using the actively developed
-[generic-boltzmann-brain](https://github.com/maciej-bendkowski/boltzmann-brain)
+[generic-boltzmann-brain](https://github.com/maciej-bendkowski/generic-boltzmann-brain)
 instead.
 
 ### Overview
